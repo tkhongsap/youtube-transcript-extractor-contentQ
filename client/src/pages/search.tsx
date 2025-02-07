@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,33 +7,36 @@ import CategoryFilter from "@/components/category-filter";
 import SortOptions from "@/components/sort-options";
 import { Search as SearchIcon } from "lucide-react";
 import type { Video } from "@shared/schema";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export default function Search() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("all");
-  const [sortBy, setSortBy] = useState("date");
+  const [sortBy, setSortBy] = useState("relevance");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const { data: videos = [], isLoading, refetch } = useQuery<Video[]>({
+  const { data: videos = [], isLoading: isLoadingQuery, refetch } = useQuery<Video[]>({
     queryKey: ["/api/videos", { q: searchTerm, topic: selectedTopic, sortBy }],
     enabled: true,
   });
 
-  const handleSearch = () => {
-    console.log('Searching with:', { searchTerm, selectedTopic, sortBy });
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Searching for:", searchTerm, "sorted by:", sortBy);
     refetch();
   };
 
   const handleTopicChange = (topic: string) => {
-    console.log('Topic changed to:', topic);
+    console.log("Topic changed to:", topic);
     setSelectedTopic(topic);
-    // Clear search term when changing topics
-    setSearchTerm("");
-    // Force a refetch with the new topic
+    setSearchTerm(""); // Clear search when changing topics
     refetch();
   };
 
   const handleSortChange = (sort: string) => {
-    console.log('Sort changed to:', sort);
+    console.log("Sort changed to:", sort);
     setSortBy(sort);
     refetch();
   };
@@ -42,36 +45,33 @@ export default function Search() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Discover Videos</h1>
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex gap-4 flex-1">
+      <form onSubmit={handleSearch} className="mb-8">
+        <div className="flex gap-4">
           <Input
             type="search"
             placeholder="Search videos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            className="flex-grow"
           />
-          <Button onClick={handleSearch} disabled={isLoading}>
+          <SortOptions value={sortBy} onValueChange={handleSortChange} />
+          <Button type="submit" disabled={isLoadingQuery}>
             <SearchIcon className="mr-2 h-4 w-4" />
-            {isLoading ? "Searching..." : "Search"}
+            {isLoadingQuery ? "Searching..." : "Search"}
           </Button>
         </div>
-        <SortOptions value={sortBy} onValueChange={handleSortChange} />
-      </div>
+      </form>
+
+      <Alert className="mb-4">
+        <Info className="h-4 w-4" />
+        <AlertDescription>Showing videos with 10,000+ views only</AlertDescription>
+      </Alert>
 
       <div className="mb-6">
-        <CategoryFilter
-          selected={selectedTopic}
-          onSelect={handleTopicChange}
-        />
+        <CategoryFilter selected={selectedTopic} onSelect={handleTopicChange} />
       </div>
 
-      <div className="text-sm text-muted-foreground mb-4">
-        Showing videos with 10,000+ views only
-      </div>
-
-      <VideoGrid videos={videos} isLoading={isLoading} />
+      <VideoGrid videos={videos} isLoading={isLoadingQuery} />
     </div>
   );
 }

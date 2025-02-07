@@ -5,7 +5,7 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 type SortOption = "date" | "relevance" | "rating" | "viewCount";
 
-export async function searchVideos(query: string = "", topic: string = "all", sortBy: SortOption = "date"): Promise<Video[]> {
+export async function searchVideos(query: string = "", topic: string = "all", sortBy: SortOption = "relevance"): Promise<Video[]> {
   console.log('Search parameters:', { query, topic, sortBy, hasApiKey: !!YOUTUBE_API_KEY });
 
   if (!YOUTUBE_API_KEY) {
@@ -32,7 +32,7 @@ export async function searchVideos(query: string = "", topic: string = "all", so
   const searchUrl = "https://www.googleapis.com/youtube/v3/search";
   const searchParams = new URLSearchParams({
     part: "snippet",
-    maxResults: (50).toString(), // Fetch more results to account for filtering
+    maxResults: (40).toString(), // Fetch more results to account for filtering
     key: YOUTUBE_API_KEY,
     type: "video",
     q: searchQuery,
@@ -79,10 +79,7 @@ export async function searchVideos(query: string = "", topic: string = "all", so
         views: parseInt(video.statistics?.viewCount || "0", 10),
         date: new Date(video.snippet?.publishedAt || "").toLocaleDateString(),
       }))
-      .filter((video: Video) => {
-        // Only include videos with at least 10,000 views
-        return video.views >= 10000;
-      })
+      .filter((video: Video) => video.views >= 10000)
       .slice(0, 20); // Return top 20 videos
 
     console.log(`Found ${videos.length} videos after filtering for topic: ${topic}`);
