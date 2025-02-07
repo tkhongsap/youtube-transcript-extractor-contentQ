@@ -6,6 +6,8 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 type SortOption = "date" | "relevance" | "rating" | "viewCount";
 
 export async function searchVideos(query: string = "", topic: string = "all", sortBy: SortOption = "date"): Promise<Video[]> {
+  console.log('Search parameters:', { query, topic, sortBy, hasApiKey: !!YOUTUBE_API_KEY });
+
   if (!YOUTUBE_API_KEY) {
     throw new Error("YouTube API key not found");
   }
@@ -13,43 +15,40 @@ export async function searchVideos(query: string = "", topic: string = "all", so
   // Build search query by combining user query and topic
   let searchQuery = query;
   if (topic !== "all") {
-    // Convert topic ID to search term (e.g., "ai-ml" -> "AI ML")
     const topicTerm = topic
       .split("-")
       .map(word => word.toUpperCase())
       .join(" ");
-    searchQuery = `${searchQuery} ${topicTerm}`.trim();
+    searchQuery = searchQuery ? `${searchQuery} ${topicTerm}` : topicTerm;
   }
+
+  console.log('Final search query:', searchQuery);
 
   const searchUrl = "https://www.googleapis.com/youtube/v3/search";
   const searchParams = new URLSearchParams({
     part: "snippet",
-    maxResults: "50", // Fetch more results to account for filtering
+    maxResults: "50",
     key: YOUTUBE_API_KEY,
     type: "video",
-    q: searchQuery || "tech", // Default to tech videos if no query
+    q: searchQuery || "tech news", // Use more specific default query
     order: sortBy,
   });
 
   try {
     const searchResponse = await fetch(`${searchUrl}?${searchParams}`);
+    const searchData = await searchResponse.json();
 
     if (!searchResponse.ok) {
-      console.error("YouTube API search response not OK:", searchResponse.status, searchResponse.statusText);
-      const errorBody = await searchResponse.text();
-      console.error("Error body:", errorBody);
+      console.error("YouTube API search error:", searchData);
       return [];
     }
 
-    const searchData = await searchResponse.json();
-
-    if (!searchData || !searchData.items || !Array.isArray(searchData.items)) {
-      console.error("Unexpected API response structure:", searchData);
+    if (!searchData.items?.length) {
+      console.log("No videos found in search response");
       return [];
     }
 
     const videoIds = searchData.items.map((item: any) => item.id.videoId).join(",");
-
     const videoUrl = "https://www.googleapis.com/youtube/v3/videos";
     const videoParams = new URLSearchParams({
       part: "statistics,snippet",
@@ -58,17 +57,14 @@ export async function searchVideos(query: string = "", topic: string = "all", so
     });
 
     const videoResponse = await fetch(`${videoUrl}?${videoParams}`);
+    const videoData = await videoResponse.json();
 
     if (!videoResponse.ok) {
-      console.error("YouTube API video response not OK:", videoResponse.status, videoResponse.statusText);
-      const errorBody = await videoResponse.text();
-      console.error("Error body:", errorBody);
+      console.error("YouTube API videos error:", videoData);
       return [];
     }
 
-    const videoData = await videoResponse.json();
-
-    return videoData.items
+    const videos = videoData.items
       .map((video: any) => ({
         id: video.id || "",
         title: video.snippet?.title || "",
@@ -79,6 +75,8 @@ export async function searchVideos(query: string = "", topic: string = "all", so
       .filter((video: Video) => video.views >= 10000)
       .slice(0, 20);
 
+    console.log(`Found ${videos.length} videos after filtering`);
+    return videos;
   } catch (error) {
     console.error("Error fetching YouTube videos:", error);
     return [];

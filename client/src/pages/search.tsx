@@ -19,6 +19,19 @@ export default function Search() {
   });
 
   const handleSearch = () => {
+    console.log('Searching with:', { searchTerm, selectedTopic, sortBy });
+    refetch();
+  };
+
+  const handleTopicChange = (topic: string) => {
+    console.log('Topic changed to:', topic);
+    setSelectedTopic(topic);
+    refetch();
+  };
+
+  const handleSortChange = (sort: string) => {
+    console.log('Sort changed to:', sort);
+    setSortBy(sort);
     refetch();
   };
 
@@ -41,16 +54,13 @@ export default function Search() {
             {isLoading ? "Searching..." : "Search"}
           </Button>
         </div>
-        <SortOptions value={sortBy} onValueChange={setSortBy} />
+        <SortOptions value={sortBy} onValueChange={handleSortChange} />
       </div>
 
       <div className="mb-6">
         <CategoryFilter
           selected={selectedTopic}
-          onSelect={(topic) => {
-            setSelectedTopic(topic);
-            refetch(); 
-          }}
+          onSelect={handleTopicChange}
         />
       </div>
 
