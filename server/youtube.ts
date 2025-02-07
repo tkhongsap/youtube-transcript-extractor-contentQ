@@ -22,16 +22,23 @@ export async function searchVideos(query: string = "", topic: string = "all", so
     searchQuery = searchQuery ? `${searchQuery} ${topicTerm}` : topicTerm;
   }
 
+  // If no search query and no specific topic, use a default tech-related query
+  if (!searchQuery) {
+    searchQuery = topic === "all" ? "technology trending" : searchQuery;
+  }
+
   console.log('Final search query:', searchQuery);
 
   const searchUrl = "https://www.googleapis.com/youtube/v3/search";
   const searchParams = new URLSearchParams({
     part: "snippet",
-    maxResults: "50",
+    maxResults: (50).toString(), // Fetch more results to account for filtering
     key: YOUTUBE_API_KEY,
     type: "video",
-    q: searchQuery || "tech news", // Use more specific default query
+    q: searchQuery,
     order: sortBy,
+    relevanceLanguage: "en", // Prioritize English content
+    videoDuration: "medium", // Filter for medium length videos
   });
 
   try {
@@ -72,10 +79,13 @@ export async function searchVideos(query: string = "", topic: string = "all", so
         views: parseInt(video.statistics?.viewCount || "0", 10),
         date: new Date(video.snippet?.publishedAt || "").toLocaleDateString(),
       }))
-      .filter((video: Video) => video.views >= 10000)
-      .slice(0, 20);
+      .filter((video: Video) => {
+        // Only include videos with at least 10,000 views
+        return video.views >= 10000;
+      })
+      .slice(0, 20); // Return top 20 videos
 
-    console.log(`Found ${videos.length} videos after filtering`);
+    console.log(`Found ${videos.length} videos after filtering for topic: ${topic}`);
     return videos;
   } catch (error) {
     console.error("Error fetching YouTube videos:", error);

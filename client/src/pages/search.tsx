@@ -26,6 +26,8 @@ export default function Search() {
   const handleTopicChange = (topic: string) => {
     console.log('Topic changed to:', topic);
     setSelectedTopic(topic);
+    // Clear search term when changing topics to get pure topic-based results
+    setSearchTerm("");
     refetch();
   };
 
