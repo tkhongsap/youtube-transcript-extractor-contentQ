@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { CopyButton } from "@/components/ui/copy-button";
 
 const Extractions: FC = () => {
   const [url, setUrl] = useState("");
@@ -40,7 +41,6 @@ const Extractions: FC = () => {
         throw new Error(data.message || "Failed to extract transcript");
       }
 
-      // Parse the JSON string to get the actual transcript
       const parsedData = JSON.parse(data.transcript);
       if (parsedData.success && parsedData.transcript) {
         setTranscript(parsedData.transcript);
@@ -66,7 +66,6 @@ const Extractions: FC = () => {
     <div className="p-8">
       <h1 className="text-3xl font-bold mb-6">Your Extractions</h1>
 
-      {/* Search Bar */}
       <div className="relative mb-6 flex gap-4 items-center">
         <div className="relative flex-1 max-w-xl">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -77,10 +76,7 @@ const Extractions: FC = () => {
             onChange={(e) => setUrl(e.target.value)}
           />
         </div>
-        <Button 
-          onClick={handleExtract} 
-          disabled={isLoading}
-        >
+        <Button onClick={handleExtract} disabled={isLoading}>
           {isLoading ? "Extracting..." : "Extract Now"}
         </Button>
       </div>
@@ -96,7 +92,10 @@ const Extractions: FC = () => {
         <TabsContent value="transcript">
           <Card>
             <CardHeader>
-              <CardTitle>Full Transcript</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Full Transcript</CardTitle>
+                {transcript && <CopyButton value={transcript} />}
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px] w-full rounded-md border p-4">
@@ -109,10 +108,7 @@ const Extractions: FC = () => {
                 ) : transcript ? (
                   <div className="space-y-4">
                     {transcript.split('\n').map((line, index) => (
-                      <p 
-                        key={index} 
-                        className="text-sm leading-relaxed py-2 border-b border-border last:border-0"
-                      >
+                      <p key={index} className="text-sm leading-relaxed py-2 border-b border-border last:border-0">
                         {line}
                       </p>
                     ))}
@@ -130,7 +126,10 @@ const Extractions: FC = () => {
         <TabsContent value="hooks">
           <Card>
             <CardHeader>
-              <CardTitle>Video Hooks</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Video Hooks</CardTitle>
+                <CopyButton value="AI-generated hooks will appear here." />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -150,7 +149,10 @@ const Extractions: FC = () => {
         <TabsContent value="summaries">
           <Card>
             <CardHeader>
-              <CardTitle>Content Summary</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Content Summary</CardTitle>
+                <CopyButton value="The AI-generated summary will appear here." />
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px] w-full rounded-md border p-4">
@@ -166,7 +168,10 @@ const Extractions: FC = () => {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Flashcard Preview</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Flashcard Preview</CardTitle>
+                  <CopyButton value="AI-generated flashcards will appear here." />
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
