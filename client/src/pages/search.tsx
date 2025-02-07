@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,10 @@ import type { Video } from "@shared/schema";
 export default function Search() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("all");
-  const [sortBy, setSortBy] = useState("date"); // Default to date sorting
+  const [sortBy, setSortBy] = useState("date");
 
   const { data: videos = [], isLoading, refetch } = useQuery<Video[]>({
-    queryKey: ["/api/videos", { q: searchTerm, sortBy }],
+    queryKey: ["/api/videos", { q: searchTerm, topic: selectedTopic, sortBy }],
     enabled: true,
   });
 
@@ -47,7 +47,10 @@ export default function Search() {
       <div className="mb-6">
         <CategoryFilter
           selected={selectedTopic}
-          onSelect={setSelectedTopic}
+          onSelect={(topic) => {
+            setSelectedTopic(topic);
+            refetch(); 
+          }}
         />
       </div>
 

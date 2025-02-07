@@ -10,8 +10,9 @@ export function registerRoutes(app: Express) {
   app.get("/api/videos", async (req, res) => {
     try {
       const query = req.query.q as string || '';
+      const topic = req.query.topic as string || 'all';
       const sortBy = (req.query.sortBy as string) || 'date';
-      const videos = await searchVideos(query, sortBy as any);
+      const videos = await searchVideos(query, topic, sortBy as any);
       res.json(videos);
     } catch (error: any) {
       console.error('Error fetching videos:', error);
@@ -29,7 +30,7 @@ export function registerRoutes(app: Express) {
     try {
       const transcript = await getVideoTranscript(videoId);
       const analysis = await analyzeVideo(transcript, llmProvider);
-      
+
       const sessionId = req.session.id;
       const result = await storage.createAnalysis({
         ...analysis,
@@ -46,7 +47,7 @@ export function registerRoutes(app: Express) {
 
   app.get("/api/analysis/:videoId", async (req, res) => {
     const { videoId } = req.params;
-    
+
     try {
       const analysis = await storage.getAnalysisByVideoId(videoId);
       if (!analysis) {

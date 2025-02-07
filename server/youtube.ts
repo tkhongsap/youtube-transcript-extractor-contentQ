@@ -5,9 +5,20 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
 type SortOption = "date" | "relevance" | "rating" | "viewCount";
 
-export async function searchVideos(query: string = "", sortBy: SortOption = "date"): Promise<Video[]> {
+export async function searchVideos(query: string = "", topic: string = "all", sortBy: SortOption = "date"): Promise<Video[]> {
   if (!YOUTUBE_API_KEY) {
     throw new Error("YouTube API key not found");
+  }
+
+  // Build search query by combining user query and topic
+  let searchQuery = query;
+  if (topic !== "all") {
+    // Convert topic ID to search term (e.g., "ai-ml" -> "AI ML")
+    const topicTerm = topic
+      .split("-")
+      .map(word => word.toUpperCase())
+      .join(" ");
+    searchQuery = `${searchQuery} ${topicTerm}`.trim();
   }
 
   const searchUrl = "https://www.googleapis.com/youtube/v3/search";
@@ -16,7 +27,7 @@ export async function searchVideos(query: string = "", sortBy: SortOption = "dat
     maxResults: "50", // Fetch more results to account for filtering
     key: YOUTUBE_API_KEY,
     type: "video",
-    q: query || "tech", // Default to tech videos if no query
+    q: searchQuery || "tech", // Default to tech videos if no query
     order: sortBy,
   });
 
