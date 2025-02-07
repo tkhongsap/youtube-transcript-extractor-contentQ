@@ -6,7 +6,10 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Search from "@/pages/search";
 import Analysis from "@/pages/analysis";
-import NavBar from "@/components/nav-bar";
+import Extractions from "@/pages/extractions";
+import History from "@/pages/history";
+import SavedContent from "@/pages/saved-content";
+import Sidebar from "@/components/sidebar";
 
 function Router() {
   return (
@@ -14,6 +17,9 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/search" component={Search} />
       <Route path="/analysis/:videoId" component={Analysis} />
+      <Route path="/extractions" component={Extractions} />
+      <Route path="/history" component={History} />
+      <Route path="/saved-content" component={SavedContent} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -22,9 +28,9 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background">
-        <NavBar />
-        <main>
+      <div className="min-h-screen bg-background flex">
+        <Sidebar />
+        <main className="flex-1">
           <Router />
         </main>
       </div>
