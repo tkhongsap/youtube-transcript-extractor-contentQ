@@ -1,0 +1,389 @@
+[Music]
+open ey have just launched their very
+first B2B agent it's a sales agent they
+did it all the way over in Tokyo at a
+closed event and demo the product but we
+got the exclusive we're going to take
+you through the demo and give you a good
+overview of what it's going to do and
+what it means for all of us doing
+knowledge work let's get into today's
+episode of marketing against the
+greens okay so opening had a big event
+in Tokyo they're all out hanging out
+there in Japan having a good time they
+had a a really big event and they showed
+some future product use cases in this
+event and one of them caught my eye
+because it was a sales agent now why is
+it so interesting because open AI for
+the most part has focused on consumer
+products and they do have a large
+Enterprise uh sales team and a large
+Enterprise team serviceing B2B companies
+but it's mostly how they use the
+foundation model and this is really the
+first example of open building a
+vertical agent right they're building an
+agent that actually helps knowledge
+workers do their work and they're
+building a use case that really does
+work it's in sales and so I want to go
+through the demo show you exactly what
+it does and kind of give you some of my
+thoughts as we go along in this
+two-minute demo all right so here's the
+demo it's a pretty uh lowly lit kind of
+place but again it's not meant to be
+stream live but there's so much interest
+in this stuff someone recorded it and so
+let's get into the the demo this is just
+the sales agent it's very short 2
+minutes but I think it gives a really
+good indication of where open AR going
+with these vertical agents this is a
+small demonstration just to hopefully
+inspire you and give you something you
+can bring back as you look ahead to the
+rest of this year let's start with
+something we know sales we have a sales
+contact form where someone is trying to
+reach out to open AI to learn about chat
+GPT the first thing we should really
+note here because I posted about this
+and there was a lot of Hysteria where
+people were saying oh my God like open
+the eye or going to kill the human part
+of sales right they're going to kill the
+human to human connection we need your
+in sales so first of all I want to make
+sure you all understand and that as part
+of that actually what they were saying
+was hey I don't want to be I don't want
+open I don't want open AI having a sales
+bot that reaches out to me sends me cold
+emails so the reason I'm making that
+point is because what got lost I think
+on people is this is an inband lead
+which means that it is someone who is
+signed up to a forum and they want to
+actually contact your sales team so
+intent really matters the way you feel
+about your AI experience will really be
+dependent upon the intent and how well
+AI makes that experience better for you
+I think for the most part humans will
+not care whether something is AI or is
+not AI if they have the intent to do
+something and AI helps them do that
+thing now we know how this usually works
+someone submits this form it goes into
+into a system and then a team of people
+accountant Associates are reviewing the
+leads to reach out and fair how best to
+respond and this right like I think in
+B2B we've had work in automation for a
+long time we've used machine learning
+and data science for a long time to be
+able to qualify and prioritize leads
+that somewhat I think not all companies
+uh do that what could it look like if
+you had agents inside of your Workforce
+working for you right now so the other
+really important thing is I think the
+way autonomous are going to work best
+within the workforce is they are going
+to work within your workflow and they
+are going to be connected to your tasks
+and actually your tasks will be the
+starting point for the agent starting to
+do its work what do I mean by that
+someone filling at the form here is the
+trigger and that trigger triggers an
+agent to go do work and that means you
+are in that agent is part of the
+workflow it does it's not separate or
+tangental to workflow right you have
+these triggers that actually go tell
+agents to go do work and that work is
+part of the consistent knowledge workers
+daily tasks right it's part of how they
+do work it's not separate to how they do
+work it's just like integrated to their
+daily workflows it's how they actually
+do work and it's all triggered based
+upon what the customer and buyer is
+doing across your customer Journey so
+first we'll submit the lead
+here and we'll come over to our
+system here you can see what a virtual
+teammate a virtual sales associate could
+be doing this is a good uh indication of
+what I meant which is like if you're a
+sales rep this is what you do anyway
+it's in your workflow but now you have
+these small autonomous agents enriching
+the data for you enriching that contact
+for you and I think he's going to get
+into this what I think is a great use of
+their technology is their deep research
+that they've just launched that has
+reasoning connected to the web is able
+to enrich the contact records for them
+if we open the task here we'll see that
+the agent is picking up work for you
+already to try to help this lead the
+account email came in and already it's
+doing what a sales associate might do on
+their own and researching that lead
+figuring out the industry the revenue
+title and other information think back
+to deep research that you just saw and
+imagine the ways that this could plug
+exactly so this is like standard phog
+graphic data but deep research with deep
+research you're going to get like really
+tailored information per company and per
+contacts in that company so what he's
+shown here is like again when you look
+at the use case don't look at these use
+cases and think to yourself Ah that's
+kind of underwhelming I already do that
+too many people do that look at this use
+case and then think about the technology
+that exists within open AI like a deep
+research which is like a reasoning agent
+fine-tuned on Research connected to the
+web and the create how you can get
+really creative using that data in terms
+of how you enrich this contact record to
+provide reps with interest in data to be
+able to reach out to that person to book
+a meeting now in this case the agent was
+able to see that this is a really good
+Prospect open AI wants to buy open AI so
+we think they're a good customer and so
+we're going to get the calendar
+availability one thing that will happen
+very soon is the agent will be able to
+pattern match against previous if this
+is connected into your cram or something
+else it can pattern match the it
+enriches the contact and then it pattern
+matches that contact against other
+contacts you've closed in the past and
+that's how we will know whether it's a
+good contact to reach CH to or not and
+that will be a pretty simple addition
+for open ey to make and figure out when
+we might on theone
+them then it's it's there we kind of
+scooped over it so basically it connects
+into a tool so again open AI I think be
+the kind of this is shown they're going
+to be the orchestration layer and then
+that orchestration layer will have this
+agent will be able to call different
+tools and I suspect companies will be
+able to build into their agent these
+different tools that work with different
+software so the first tool he showed us
+is this agent calls a tool to enrich the
+contact record and showed us a pretty
+basic version of that like phone number
+email whatever company name but where
+this will go is you'll be able to call
+Deep research and that would be a
+phenomenally powerful thing to call a
+lot of perplexity one of the great use
+cases for B2B and perplexity is
+perplexity is actually really great for
+external research of companies and
+contacts open the ey are obviously going
+to usurp that and allow you to use deep
+research which is a great reason engine
+uh focused on re reasoning agent focused
+on Research connected to the web and
+you'll be able to call that tool as part
+of this agent's you know list of tools
+that it can it can actually call hey
+everyone remember that episode we had
+with daresh well daresh has exclusively
+gifted us access to agent. A's company
+research agent just for all of you so if
+you're looking to spy on your
+competitors so you can get a deeper
+deeper dive into their strategy this is
+the agent for you you'll get access to
+their key demographics their web traffic
+Trends and you'll stay ahead of them
+with all of the competitor analysis
+tools so if you want it you can grab it
+at the link in the description below now
+let's get back to Today's show the
+second tool it calls is it actually has
+access to the calendar so you can go and
+look at the rep's calendar and say well
+you have free time available uh in these
+slots and then then it calls a different
+tool to craft the email and get back to
+them so it's added the time slots and
+has the email in this case this agent
+hasn't been told to write in any
+specific language it's really smart IT
+realizes that the prospect wrote in
+Japanese so it's going to write back in
+that huge right so like the way
+companies have to go ational is they
+have to wait until they have
+international capabilities or language
+capabilities when each country they're
+trying to go into with agents you
+actually don't need a lot of that
+because the agent itself knows a
+prospect can in through a form within a
+certain IP location and actually can
+adjust its language to match that IP
+location and sure enough if we come over
+to our inbox we can see that email right
+here waiting for you again this is a
+small demonstration that we wanted to
+pull together to help you see what it
+could look like you can imagine the
+applications for this are endless if you
+start to look around your organization
+think about all the small tasks that
+people on your team small tasks I really
+want to make this point the first wave
+of Agents the ones that really will
+stick are going to be small autonomous
+agents that do small tasks and are
+triggered off the person doing work so
+as the person does work they create
+triggers triggers get sent to small
+agents that do single tasks single tasks
+get inte back into that person's
+workflow so they're never outside of the
+workflow it's just like part of what
+they're already doing you have all of
+these micro agents doing small tasks for
+you and it's going to seem it's going to
+be great because the first wave is going
+to take all of the mundane tasks off you
+right it's really all of the mundane
+born things you probably don't want to
+do these small agents are going to be
+able to do for you and that's that's
+really what I want he like he really
+mentioned it here he said small tasks
+and I think there's a reason he said
+small tasks because these micro agents
+doing single tasks taking mundane off
+work people is going to be the first
+wave of agents that really stick and the
+ways those add up this doesn't have to
+be an all that's really important as
+well you have a 50 micro agents doing 50
+tasks for you you get back a lot of time
+you can really chip away at this and
+bring the latest technology into your
+Workforce now and help save your team
+time and focus on the next steps after
+that I hope this is inspiring and I
+can't wait to hear what you do with this
+deep research and everything awesome so
+I think this is a great example of it's
+hard to know where these large companies
+are begin and end so open AI is now
+getting into the vertical agents there's
+a whole industry of vertical agents
+built on top of AI open AI so that's
+like one takea away is like it's just
+hard to understand where the the kind of
+these companies begin and end what use
+cases will they build won't you Cas use
+cases won't they build I think in this
+case they're going to build vertical
+agents but in some cases will they get
+the of single companies focused on that
+specific problem if you're a startup and
+all you do is try to focus on sales and
+solving that problem will open the eye
+every be as good because it's one of
+hundreds of things that they are trying
+to solve for and that's a debatable but
+the second thing is it's another great
+example of the future that we are
+heading towards where you will have a
+single uh knowledge worker like pseudo
+AI knowledge worker who can complete a
+bunch of tasks for you but really what
+they're doing is it's an agent that's
+calling tools and completing a variety
+of tasks and those agents uh these these
+kind of micro agents exist across your
+workflow so as you do work you create
+triggers and these triggers trigger
+agents to go do things for you and they
+all come back and integrated they all
+come back and integrated into your
+workflow because adoption and usage is
+two of the biggest problems with AI
+people see it use it to begin with and
+they're like oh this is cool and then
+they just go back to their normal
+workflows and the reason they go back to
+their normal workflows is because the AI
+stuff lives outside of what they do
+day-to-day they have to remember oh I
+have to go use the AI assistant I have
+to go use the AI agent over here it's
+going to make my life better and I use
+it for the first time the second time
+but then I just kind of default back
+into what I was doing anyway user
+behavior is the hardest thing to change
+but you can imagine what they're showing
+here is this is all just part of how
+sales rep works right the agent takes
+the contact record enriches it the agent
+actually looks at your calendar and
+books the meet in the agent actually uh
+books the meet in for the sales rep and
+crafts the email and books meeting for
+the sales rep and the sales rep just
+what happens for the sales rep their
+their work is now just a little further
+up the stock so now they just have
+meetings appearing in their calendar
+with good fit leads and what sales rep
+wouldn't want to live in that future
+most people don't want to do the mundane
+work of the qualification they send that
+the email to see if you want actually
+book a me and going back and forth with
+calendars but I do think there's like
+really important things here and I think
+one of the most important things is
+first wave of Agents likely going to be
+these micro tasks that get built into
+your workflow and get triggered off the
+things that you do the work that you do
+and those tasks will add up to lots of
+time saved so open AI sales agent I
+think it's a great example great demo of
+where this is going and some examples
+like where I think agents will start to
+become really prevalent and where open
+AI will be able to kind continue to
+build in all the work that we do hope
+this was useful we will see you again on
+the next episode
+this data is wrong every freaking time
+have you heard of
+HubSpot HubSpot is a CRM platform where
+everything is fully integrated wa I can
+see the client's whole history calls
+support tickets emails and here's a task
+from 3 days ago I totally missed HubSpot
+grow better
