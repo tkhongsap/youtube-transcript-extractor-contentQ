@@ -1,95 +1,77 @@
 import { YoutubeTranscript } from 'youtube-transcript';
-import { z } from "zod";
 import { Video } from "@shared/schema";
 
-const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
-const MIN_VIEWS = 10000;
 
-interface YouTubeVideo {
-  id: { videoId: string };
-  snippet: {
-    title: string;
-    thumbnails: {
-      high: { url: string };
-    };
-    publishedAt: string;
-  };
-  statistics?: {
-    viewCount: string;
-  };
-}
+type SortOption = "date" | "relevance" | "rating" | "viewCount";
 
-export async function searchVideos(query: string, category: string, sortBy = "date"): Promise<Video[]> {
+export async function searchVideos(query: string = "", sortBy: SortOption = "date"): Promise<Video[]> {
   if (!YOUTUBE_API_KEY) {
     throw new Error("YouTube API key not found");
   }
 
-  // Convert category to search query
-  const categoryQuery = category === "all" ? "" : category.replace("-", " ");
-  const searchQuery = `${query || ""} ${categoryQuery}`.trim();
-
-  // Map sort options to YouTube API parameters
-  const sortMapping: Record<string, string> = {
-    date: "date",
-    rating: "rating",
-    viewCount: "viewCount",
-    relevance: "relevance",
-  };
-
-  // First, search for videos
+  const searchUrl = "https://www.googleapis.com/youtube/v3/search";
   const searchParams = new URLSearchParams({
     part: "snippet",
+    maxResults: "50", // Fetch more results to account for filtering
+    key: YOUTUBE_API_KEY,
     type: "video",
-    maxResults: "50", // Get more results to filter by views
-    q: searchQuery || categoryQuery || "tech", // Default to tech if no query
-    order: sortMapping[sortBy] || "date",
-    key: YOUTUBE_API_KEY,
-    videoDuration: "medium", // Filter out very short and very long videos
+    q: query || "tech", // Default to tech videos if no query
+    order: sortBy,
   });
 
-  const searchResponse = await fetch(
-    `${YOUTUBE_API_BASE}/search?${searchParams.toString()}`
-  );
+  try {
+    const searchResponse = await fetch(`${searchUrl}?${searchParams}`);
 
-  if (!searchResponse.ok) {
-    throw new Error(`YouTube API error: ${await searchResponse.text()}`);
+    if (!searchResponse.ok) {
+      console.error("YouTube API search response not OK:", searchResponse.status, searchResponse.statusText);
+      const errorBody = await searchResponse.text();
+      console.error("Error body:", errorBody);
+      return [];
+    }
+
+    const searchData = await searchResponse.json();
+
+    if (!searchData || !searchData.items || !Array.isArray(searchData.items)) {
+      console.error("Unexpected API response structure:", searchData);
+      return [];
+    }
+
+    const videoIds = searchData.items.map((item: any) => item.id.videoId).join(",");
+
+    const videoUrl = "https://www.googleapis.com/youtube/v3/videos";
+    const videoParams = new URLSearchParams({
+      part: "statistics,snippet",
+      id: videoIds,
+      key: YOUTUBE_API_KEY,
+    });
+
+    const videoResponse = await fetch(`${videoUrl}?${videoParams}`);
+
+    if (!videoResponse.ok) {
+      console.error("YouTube API video response not OK:", videoResponse.status, videoResponse.statusText);
+      const errorBody = await videoResponse.text();
+      console.error("Error body:", errorBody);
+      return [];
+    }
+
+    const videoData = await videoResponse.json();
+
+    return videoData.items
+      .map((video: any) => ({
+        id: video.id || "",
+        title: video.snippet?.title || "",
+        thumbnail: video.snippet?.thumbnails?.high?.url || "",
+        views: parseInt(video.statistics?.viewCount || "0", 10),
+        date: new Date(video.snippet?.publishedAt || "").toLocaleDateString(),
+      }))
+      .filter((video: Video) => video.views >= 10000)
+      .slice(0, 20);
+
+  } catch (error) {
+    console.error("Error fetching YouTube videos:", error);
+    return [];
   }
-
-  const searchData = await searchResponse.json();
-  const videoIds = searchData.items.map((item: YouTubeVideo) => item.id.videoId);
-
-  // Then, get video statistics to filter by view count
-  const statsParams = new URLSearchParams({
-    part: "statistics,snippet",
-    id: videoIds.join(","),
-    key: YOUTUBE_API_KEY,
-  });
-
-  const statsResponse = await fetch(
-    `${YOUTUBE_API_BASE}/videos?${statsParams.toString()}`
-  );
-
-  if (!statsResponse.ok) {
-    throw new Error(`YouTube API error: ${await statsResponse.text()}`);
-  }
-
-  const statsData = await statsResponse.json();
-
-  // Filter and transform the videos
-  return statsData.items
-    .filter((video: YouTubeVideo) => {
-      const viewCount = parseInt(video.statistics?.viewCount || "0");
-      return viewCount >= MIN_VIEWS;
-    })
-    .slice(0, 20) // Limit to 20 videos
-    .map((video: YouTubeVideo) => ({
-      id: video.id.videoId,
-      title: video.snippet.title,
-      thumbnail: video.snippet.thumbnails.high.url,
-      views: parseInt(video.statistics?.viewCount || "0"),
-      date: new Date(video.snippet.publishedAt).toLocaleDateString(),
-    }));
 }
 
 export async function getVideoTranscript(videoId: string): Promise<string> {

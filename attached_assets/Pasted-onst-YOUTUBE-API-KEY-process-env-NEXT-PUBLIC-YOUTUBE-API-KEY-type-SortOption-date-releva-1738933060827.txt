@@ -1,0 +1,74 @@
+onst YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY
+
+type SortOption = "date" | "relevance" | "rating" | "viewCount"
+
+export async function fetchYouTubeVideos(query: string, maxResults = 20, sortBy: SortOption = "relevance") {
+  const searchUrl = "https://www.googleapis.com/youtube/v3/search"
+  const searchParams = new URLSearchParams({
+    part: "snippet",
+    maxResults: (maxResults * 2).toString(), // Fetch more results to account for filtering
+    key: YOUTUBE_API_KEY,
+    type: "video",
+    q: query,
+    order: sortBy,
+  })
+
+  try {
+    const searchResponse = await fetch(`${searchUrl}?${searchParams}`)
+
+    if (!searchResponse.ok) {
+      console.error("YouTube API search response not OK:", searchResponse.status, searchResponse.statusText)
+      const errorBody = await searchResponse.text()
+      console.error("Error body:", errorBody)
+      return []
+    }
+
+    const searchData = await searchResponse.json()
+
+    if (!searchData || !searchData.items || !Array.isArray(searchData.items)) {
+      console.error("Unexpected API response structure:", searchData)
+      return []
+    }
+
+    const videoIds = searchData.items.map((item: any) => item.id.videoId).join(",")
+
+    const videoUrl = "https://www.googleapis.com/youtube/v3/videos"
+    const videoParams = new URLSearchParams({
+      part: "statistics",
+      id: videoIds,
+      key: YOUTUBE_API_KEY,
+    })
+
+    const videoResponse = await fetch(`${videoUrl}?${videoParams}`)
+
+    if (!videoResponse.ok) {
+      console.error("YouTube API video response not OK:", videoResponse.status, videoResponse.statusText)
+      const errorBody = await videoResponse.text()
+      console.error("Error body:", errorBody)
+      return []
+    }
+
+    const videoData = await videoResponse.json()
+
+    const filteredVideos = searchData.items
+      .map((item: any) => {
+        const videoStats = videoData.items.find((v: any) => v.id === item.id.videoId)
+        return {
+          id: item.id.videoId || "",
+          title: item.snippet?.title || "",
+          thumbnail: item.snippet?.thumbnails?.medium?.url || "",
+          channelTitle: item.snippet?.channelTitle || "",
+          publishedAt: item.snippet?.publishedAt || "",
+          viewCount: videoStats?.statistics?.viewCount || "0",
+          likeCount: videoStats?.statistics?.likeCount || "0",
+        }
+      })
+      .filter((video: any) => Number.parseInt(video.viewCount, 10) >= 10000)
+      .slice(0, maxResults)
+
+    return filteredVideos
+  } catch (error) {
+    console.error("Error fetching YouTube videos:", error)
+    return []
+  }
+}
