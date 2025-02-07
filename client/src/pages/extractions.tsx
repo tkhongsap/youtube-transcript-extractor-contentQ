@@ -111,9 +111,9 @@ const Extractions: FC = () => {
                     <Skeleton className="h-4 w-4/5" />
                   </div>
                 ) : transcript ? (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {transcript.split('\n').map((line, index) => (
-                      <p key={index} className="text-sm leading-relaxed py-2 border-b border-[#E2E8F0] last:border-0 text-black">
+                      <p key={index} className="text-sm leading-relaxed text-gray-800 px-2 py-1 rounded hover:bg-gray-50">
                         {line}
                       </p>
                     ))}
