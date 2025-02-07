@@ -40,11 +40,17 @@ const Extractions: FC = () => {
         throw new Error(data.message || "Failed to extract transcript");
       }
 
-      setTranscript(data.transcript);
-      toast({
-        title: "Success",
-        description: "Transcript extracted successfully",
-      });
+      // Parse the JSON string to get the actual transcript
+      const parsedData = JSON.parse(data.transcript);
+      if (parsedData.success && parsedData.transcript) {
+        setTranscript(parsedData.transcript);
+        toast({
+          title: "Success",
+          description: "Transcript extracted successfully",
+        });
+      } else {
+        throw new Error(parsedData.error || "Failed to parse transcript");
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -101,7 +107,16 @@ const Extractions: FC = () => {
                     <Skeleton className="h-4 w-4/5" />
                   </div>
                 ) : transcript ? (
-                  <p className="whitespace-pre-wrap">{transcript}</p>
+                  <div className="space-y-4">
+                    {transcript.split('\n').map((line, index) => (
+                      <p 
+                        key={index} 
+                        className="text-sm leading-relaxed py-2 border-b border-border last:border-0"
+                      >
+                        {line}
+                      </p>
+                    ))}
+                  </div>
                 ) : (
                   <p className="text-muted-foreground">
                     The full transcript will appear here once a video is processed.
