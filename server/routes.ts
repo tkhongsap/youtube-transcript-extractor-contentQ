@@ -3,6 +3,13 @@ import { createServer } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
 import { searchVideos } from "./youtube";
+import { spawn } from "child_process";
+import { promisify } from "util";
+
+// Schema for video URL validation
+const videoUrlSchema = z.object({
+  url: z.string().url()
+});
 
 export function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -17,6 +24,42 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       console.error('Error fetching videos:', error);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // New endpoint for transcript extraction
+  app.post("/api/extract-transcript", async (req, res) => {
+    try {
+      const { url } = videoUrlSchema.parse(req.body);
+
+      const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', url]);
+      let transcript = '';
+      let error = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        transcript += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        error += data.toString();
+      });
+
+      await new Promise((resolve, reject) => {
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve(transcript);
+          } else {
+            reject(new Error(`Python script failed with error: ${error}`));
+          }
+        });
+      });
+
+      res.json({ transcript });
+    } catch (error: any) {
+      console.error('Error extracting transcript:', error);
+      res.status(error.status || 500).json({ 
+        message: error.message || 'Failed to extract transcript' 
+      });
     }
   });
 
