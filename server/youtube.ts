@@ -2,6 +2,8 @@ import { YoutubeTranscript } from 'youtube-transcript';
 import { Video } from "@shared/schema";
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const searchCache = new Map<string, { data: Video[], timestamp: number }>();
 
 type SortOption = "date" | "relevance" | "rating" | "viewCount";
 
@@ -12,12 +14,22 @@ export async function searchVideos(query: string = "", topic: string = "all", so
     throw new Error("YouTube API key not found");
   }
 
+  // Generate cache key
+  const cacheKey = `${query}-${topic}-${sortBy}`;
+  const cachedResult = searchCache.get(cacheKey);
+
+  // Return cached result if valid
+  if (cachedResult && (Date.now() - cachedResult.timestamp) < CACHE_DURATION) {
+    console.log('Returning cached results for:', cacheKey);
+    return cachedResult.data;
+  }
+
   // Build search query by combining user query and topic
   let searchQuery = query;
   if (topic !== "all") {
     const topicTerm = topic
       .split("-")
-      .map(word => word.toUpperCase())
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
     searchQuery = searchQuery ? `${searchQuery} ${topicTerm}` : topicTerm;
   }
@@ -32,13 +44,13 @@ export async function searchVideos(query: string = "", topic: string = "all", so
   const searchUrl = "https://www.googleapis.com/youtube/v3/search";
   const searchParams = new URLSearchParams({
     part: "snippet",
-    maxResults: (40).toString(), // Fetch more results to account for filtering
+    maxResults: "12", // Reduced from 40 to save quota
     key: YOUTUBE_API_KEY,
     type: "video",
     q: searchQuery,
     order: sortBy,
-    relevanceLanguage: "en", // Prioritize English content
-    videoDuration: "medium", // Filter for medium length videos
+    relevanceLanguage: "en",
+    videoDuration: "medium",
   });
 
   try {
@@ -46,6 +58,11 @@ export async function searchVideos(query: string = "", topic: string = "all", so
     const searchData = await searchResponse.json();
 
     if (!searchResponse.ok) {
+      if (searchData.error?.code === 403) {
+        console.error("YouTube API quota exceeded");
+        // Return empty array but don't cache the error
+        return [];
+      }
       console.error("YouTube API search error:", searchData);
       return [];
     }
@@ -79,8 +96,10 @@ export async function searchVideos(query: string = "", topic: string = "all", so
         views: parseInt(video.statistics?.viewCount || "0", 10),
         date: new Date(video.snippet?.publishedAt || "").toLocaleDateString(),
       }))
-      .filter((video: Video) => video.views >= 10000)
-      .slice(0, 20); // Return top 20 videos
+      .filter((video: Video) => video.views >= 10000);
+
+    // Cache the results
+    searchCache.set(cacheKey, { data: videos, timestamp: Date.now() });
 
     console.log(`Found ${videos.length} videos after filtering for topic: ${topic}`);
     return videos;
