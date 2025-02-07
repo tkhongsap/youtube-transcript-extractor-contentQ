@@ -17,9 +17,21 @@ export default function Search() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { data: videos = [], isLoading: isLoadingQuery, refetch } = useQuery<Video[]>({
+  const { data: videos = [], isLoading: isLoadingQuery, refetch } = useQuery<
+    Video[],
+    Error,
+    Video[],
+    [string, { q: string; topic: string; sortBy: string }]
+  >({
     queryKey: ["/api/videos", { q: searchTerm, topic: selectedTopic, sortBy }],
-    enabled: true,
+    queryFn: async ({ queryKey }: { queryKey: [string, { q: string; topic: string; sortBy: string }] }) => {
+      const [_key, params] = queryKey;
+      const response = await fetch(`/api/videos?q=${encodeURIComponent(params.q)}&topic=${params.topic}&sortBy=${params.sortBy}`);
+      if (!response.ok) {
+        throw new Error("Error fetching videos");
+      }
+      return (await response.json()) as Video[];
+    }
   });
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -32,13 +44,13 @@ export default function Search() {
     console.log("Topic changed to:", topic);
     setSelectedTopic(topic);
     setSearchTerm(""); // Clear search when changing topics
-    refetch();
+    // No explicit refetch; useQuery will refetch on queryKey change
   };
 
   const handleSortChange = (sort: string) => {
     console.log("Sort changed to:", sort);
     setSortBy(sort);
-    refetch();
+    // No explicit refetch; useQuery will refetch on queryKey change
   };
 
   return (
