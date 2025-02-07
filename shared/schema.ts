@@ -23,3 +23,12 @@ export const insertAnalysisSchema = createInsertSchema(analyses).omit({
 
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 export type Analysis = typeof analyses.$inferSelect;
+
+// Add Video type for frontend
+export interface Video {
+  id: string;
+  title: string;
+  thumbnail: string;
+  views: number;
+  date: string;
+}

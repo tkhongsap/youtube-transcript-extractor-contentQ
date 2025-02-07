@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import VideoGrid from "@/components/video-grid";
 import CategoryFilter from "@/components/category-filter";
 import { Search as SearchIcon } from "lucide-react";
+import type { Video } from "@shared/schema";
 
 const categories = [
   "All", "AI & ML", "Tech News", "Programming", "Tech Podcasts",
@@ -15,7 +16,7 @@ export default function Search() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const { data: videos, isLoading } = useQuery({
+  const { data: videos = [], isLoading } = useQuery<Video[]>({
     queryKey: ["/api/videos", search, selectedCategory],
     enabled: !!search
   });
@@ -23,7 +24,7 @@ export default function Search() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Discover Videos</h1>
-      
+
       <div className="flex gap-4 mb-6">
         <Input
           placeholder="Search videos..."
@@ -45,7 +46,7 @@ export default function Search() {
         />
       </div>
 
-      <VideoGrid videos={videos || []} isLoading={isLoading} />
+      <VideoGrid videos={videos} isLoading={isLoading} />
     </div>
   );
 }

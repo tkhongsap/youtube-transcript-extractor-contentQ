@@ -3,11 +3,12 @@ import { useParams } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Analysis } from "@shared/schema";
 
 export default function Analysis() {
   const { videoId } = useParams();
-  
-  const { data: analysis, isLoading } = useQuery({
+
+  const { data: analysis, isLoading } = useQuery<Analysis>({
     queryKey: ["/api/analysis", videoId],
     enabled: !!videoId
   });
