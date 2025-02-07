@@ -2,24 +2,19 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
-import { searchVideos, getVideoTranscript } from "./youtube";
-import { analyzeVideo } from "./llm";
+import { searchVideos } from "./youtube";
 
 export function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
   app.get("/api/videos", async (req, res) => {
-    const query = req.query.q as string;
-    const category = req.query.category as string;
-    
-    if (!query) {
-      return res.status(400).json({ message: "Query is required" });
-    }
-
     try {
-      const videos = await searchVideos(query, category);
+      const query = req.query.q as string || '';
+      const sortBy = (req.query.sortBy as string) || 'date';
+      const videos = await searchVideos(query, sortBy as any);
       res.json(videos);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error fetching videos:', error);
       res.status(500).json({ message: error.message });
     }
   });
