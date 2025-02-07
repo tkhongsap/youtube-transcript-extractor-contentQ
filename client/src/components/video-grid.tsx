@@ -19,8 +19,8 @@ interface VideoGridProps {
 export default function VideoGrid({ videos, isLoading }: VideoGridProps) {
   if (isLoading) {
     return (
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {Array(6).fill(0).map((_, i) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Array(20).fill(0).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-0">
               <Skeleton className="h-48 rounded-t-lg" />
@@ -36,10 +36,10 @@ export default function VideoGrid({ videos, isLoading }: VideoGridProps) {
   }
 
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {videos.map((video) => (
-        <Card key={video.id}>
-          <CardContent className="p-0">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {videos.slice(0, 20).map((video) => (
+        <Card key={video.id} className="flex flex-col">
+          <CardContent className="p-0 flex-1">
             <img
               src={video.thumbnail}
               alt={video.title}
