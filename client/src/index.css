@@ -3,11 +3,57 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --black: #000000;
+    --white: #FFFFFF;
+    --purple: #6638F0;
+    --pink: #E960A4;
+    --light-gray: #F6F8FC;
+    --muted-blue: #809BCE;
+    --subtle-gray: #6B7280;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-white text-black;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#8661E9] to-[#E960A4];
+  }
+
+  .bg-gradient {
+    @apply bg-gradient-to-r from-[#8661E9] to-[#E960A4];
+  }
+
+  .section-bg {
+    @apply bg-[#F6F8FC];
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[#6638F0] text-white hover:bg-[#5528E0] transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-black border border-black hover:bg-[#F6F8FC] transition-colors;
+  }
+
+  .text-secondary {
+    @apply text-[#6B7280];
+  }
+
+  .card {
+    @apply bg-white shadow-sm hover:shadow-md transition-shadow;
   }
 }
