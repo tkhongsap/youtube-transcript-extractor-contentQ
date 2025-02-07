@@ -3,11 +3,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 const Extractions: FC = () => {
   return (
     <div className="p-8">
       <h1 className="text-3xl font-bold mb-6">Your Extractions</h1>
+
+      {/* Search Bar */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input 
+          placeholder="Search your extractions..." 
+          className="pl-10 w-full max-w-xl"
+        />
+      </div>
 
       <Tabs defaultValue="transcript" className="w-full">
         <TabsList className="mb-4">
