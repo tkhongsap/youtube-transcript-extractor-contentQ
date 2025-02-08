@@ -29,7 +29,29 @@ const Extractions: FC = () => {
   const [flashcards, setFlashcards] = useState<
     Array<{ question: string; answer: string }>
   >([]);
+  const [analysisPerformed, setAnalysisPerformed] = useState({
+    hooks: false,
+    summary: false,
+    flashcards: false,
+  });
   const { toast } = useToast();
+
+  const handleClear = () => {
+    setUrl("");
+    setTranscript("");
+    setHooks([]);
+    setSummary("");
+    setFlashcards([]);
+    setAnalysisPerformed({
+      hooks: false,
+      summary: false,
+      flashcards: false,
+    });
+    toast({
+      title: "Cleared",
+      description: "All content has been cleared. You can start fresh now.",
+    });
+  };
 
   const handleExtract = async () => {
     if (!url) {
@@ -40,6 +62,15 @@ const Extractions: FC = () => {
       });
       return;
     }
+
+    setHooks([]);
+    setSummary("");
+    setFlashcards([]);
+    setAnalysisPerformed({
+      hooks: false,
+      summary: false,
+      flashcards: false,
+    });
 
     setIsTranscriptLoading(true);
     try {
@@ -81,6 +112,10 @@ const Extractions: FC = () => {
   const handleTabChange = async (value: string) => {
     if (!transcript || isAnalysisLoading) return;
 
+    if (value === "transcript" || analysisPerformed[value as keyof typeof analysisPerformed]) {
+      return;
+    }
+
     setIsAnalysisLoading(true);
     try {
       const response = await fetch(`/api/analyze/${value}`, {
@@ -103,12 +138,15 @@ const Extractions: FC = () => {
       switch (value) {
         case "hooks":
           setHooks(data);
+          setAnalysisPerformed(prev => ({ ...prev, hooks: true }));
           break;
         case "summary":
           setSummary(data);
+          setAnalysisPerformed(prev => ({ ...prev, summary: true }));
           break;
         case "flashcards":
           setFlashcards(data);
+          setAnalysisPerformed(prev => ({ ...prev, flashcards: true }));
           break;
       }
     } catch (error: any) {
@@ -159,6 +197,13 @@ const Extractions: FC = () => {
             className="btn-primary"
           >
             {isTranscriptLoading ? "Extracting..." : "Extract Now"}
+          </Button>
+          <Button
+            onClick={handleClear}
+            variant="outline"
+            className="border-[#E2E8F0] hover:bg-gray-50"
+          >
+            Clear
           </Button>
         </div>
       </div>
