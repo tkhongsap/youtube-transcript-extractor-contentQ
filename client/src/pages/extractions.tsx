@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const Extractions: FC = () => {
   const [url, setUrl] = useState("");
   const [transcript, setTranscript] = useState("");
-  const [llmProvider, setLLMProvider] = useState("deepseek");
+  const [llmProvider, setLLMProvider] = useState("deepseek-r1");
   const [isTranscriptLoading, setIsTranscriptLoading] = useState(false);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [hooks, setHooks] = useState<string[]>([]);
@@ -116,35 +116,39 @@ const Extractions: FC = () => {
       <h1 className="text-4xl font-bold mb-2 gradient-text">Your Extractions</h1>
       <p className="text-subtle-gray mb-8">Extract and analyze your video content</p>
 
-      <div className="relative mb-6 flex gap-4 items-center">
-        <div className="relative flex-1 max-w-xl">
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Paste your YouTube URL here..."
-            className="pl-10 bg-white border-[#E2E8F0] focus:border-[#6638F0]"
+            className="pl-10 bg-white border-[#E2E8F0] focus:border-[#6638F0] w-full"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
         </div>
-        <Select
-          value={llmProvider}
-          onValueChange={setLLMProvider}
-        >
-          <SelectTrigger className="w-[180px] bg-white border-[#E2E8F0]">
-            <SelectValue placeholder="Select Model" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="deepseek">DeepSeek</SelectItem>
-            <SelectItem value="openai">OpenAI</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button 
-          onClick={handleExtract} 
-          disabled={isTranscriptLoading}
-          className="btn-primary"
-        >
-          {isTranscriptLoading ? "Extracting..." : "Extract Now"}
-        </Button>
+        <div className="flex flex-wrap gap-4 items-center">
+          <Select
+            value={llmProvider}
+            onValueChange={setLLMProvider}
+          >
+            <SelectTrigger className="w-[180px] bg-white border-[#E2E8F0]">
+              <SelectValue placeholder="Select Model" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="deepseek-v3">DeepSeek V3</SelectItem>
+              <SelectItem value="deepseek-r1">DeepSeek R1</SelectItem>
+              <SelectItem value="gpt-4o-mini">GPT-4O Mini</SelectItem>
+              <SelectItem value="o3-mini">O3 Mini</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button 
+            onClick={handleExtract} 
+            disabled={isTranscriptLoading}
+            className="btn-primary"
+          >
+            {isTranscriptLoading ? "Extracting..." : "Extract Now"}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="transcript" className="w-full" onValueChange={handleTabChange}>

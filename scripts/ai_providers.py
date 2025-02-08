@@ -9,12 +9,12 @@ class AIProvider(ABC):
         pass
 
 class DeepSeekProvider(AIProvider):
-    def __init__(self):
+    def __init__(self, model_name: str = "deepseek-reasoner"):
         self.client = OpenAI(
             api_key=os.environ.get("DEEPSEEK_API_KEY"),
             base_url="https://api.deepseek.com"
         )
-        self.model = "deepseek-chat"
+        self.model = model_name
 
     def generate_completion(self, messages: list) -> str:
         try:
@@ -28,9 +28,9 @@ class DeepSeekProvider(AIProvider):
             raise Exception(f"DeepSeek API error: {str(e)}")
 
 class OpenAIProvider(AIProvider):
-    def __init__(self):
+    def __init__(self, model_name: str = "gpt-4o-mini"):
         self.client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        self.model = "gpt-4o-mini"  # Using the latest model as specified
+        self.model = model_name
 
     def generate_completion(self, messages: list) -> str:
         try:
@@ -42,7 +42,16 @@ class OpenAIProvider(AIProvider):
         except Exception as e:
             raise Exception(f"OpenAI API error: {str(e)}")
 
-def get_ai_provider(provider_name: str = "deepseek") -> AIProvider:
-    if provider_name.lower() == "openai":
-        return OpenAIProvider()
-    return DeepSeekProvider()  # Default to DeepSeek
+def get_ai_provider(provider_name: str = "deepseek-r1") -> AIProvider:
+    providers = {
+        "deepseek-v3": ("deepseek-chat", DeepSeekProvider),
+        "deepseek-r1": ("deepseek-reasoner", DeepSeekProvider),
+        "gpt-4o-mini": ("gpt-4o-mini", OpenAIProvider),
+        "o3-mini": ("o3-mini", OpenAIProvider)
+    }
+    
+    if provider_name not in providers:
+        raise ValueError(f"Unknown provider: {provider_name}")
+        
+    model_name, provider_class = providers[provider_name]
+    return provider_class(model_name)

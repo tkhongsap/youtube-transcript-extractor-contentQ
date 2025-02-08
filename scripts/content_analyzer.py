@@ -6,7 +6,7 @@ from ai_providers import get_ai_provider
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def analyze_hooks(transcript: str, provider: str = "deepseek") -> List[str]:
+def analyze_hooks(transcript: str, provider: str = "deepseek-r1") -> List[str]:
     """Generate attention-grabbing hooks from the transcript."""
     ai = get_ai_provider(provider)
     logger.info(f"Generating hooks using {provider} provider")
@@ -25,7 +25,7 @@ def analyze_hooks(transcript: str, provider: str = "deepseek") -> List[str]:
         logger.error(f"Hook generation failed: {str(e)}")
         raise Exception(f"Failed to generate hooks: {str(e)}")
 
-def generate_summary(transcript: str, provider: str = "deepseek") -> str:
+def generate_summary(transcript: str, provider: str = "deepseek-r1") -> str:
     """Generate a concise summary of the transcript."""
     ai = get_ai_provider(provider)
     logger.info(f"Generating summary using {provider} provider")
@@ -41,7 +41,7 @@ def generate_summary(transcript: str, provider: str = "deepseek") -> str:
         logger.error(f"Summary generation failed: {str(e)}")
         raise Exception(f"Failed to generate summary: {str(e)}")
 
-def create_flashcards(transcript: str, provider: str = "deepseek") -> List[Dict[str, str]]:
+def create_flashcards(transcript: str, provider: str = "deepseek-r1") -> List[Dict[str, str]]:
     """Generate study flashcards from the transcript."""
     ai = get_ai_provider(provider)
     logger.info(f"Generating flashcards using {provider} provider")
