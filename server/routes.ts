@@ -6,9 +6,10 @@ import { searchVideos } from "./youtube";
 import { spawn } from "child_process";
 import { promisify } from "util";
 
-// Schema for video URL validation
-const videoUrlSchema = z.object({
-  url: z.string().url()
+// Schema for video URL and analysis options
+const analysisOptionsSchema = z.object({
+  videoId: z.string(),
+  llmProvider: z.enum(["deepseek", "openai"]).default("deepseek")
 });
 
 export function registerRoutes(app: Express) {
@@ -30,7 +31,7 @@ export function registerRoutes(app: Express) {
   // New endpoint for transcript extraction
   app.post("/api/extract-transcript", async (req, res) => {
     try {
-      const { url } = videoUrlSchema.parse(req.body);
+      const { url } = z.object({ url: z.string().url() }).parse(req.body);
 
       const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', url]);
       let transcript = '';
@@ -64,26 +65,87 @@ export function registerRoutes(app: Express) {
   });
 
   app.post("/api/analysis", async (req, res) => {
-    const { videoId, llmProvider = "deepseek" } = req.body;
-
-    if (!videoId) {
-      return res.status(400).json({ message: "Video ID is required" });
-    }
-
     try {
-      const transcript = await getVideoTranscript(videoId);
-      const analysis = await analyzeVideo(transcript, llmProvider);
+      const { videoId, llmProvider } = analysisOptionsSchema.parse(req.body);
 
-      const sessionId = req.session.id;
+      // First, get the transcript
+      const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', videoId]);
+      let transcriptOutput = '';
+      let transcriptError = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        transcriptOutput += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        transcriptError += data.toString();
+      });
+
+      await new Promise((resolve, reject) => {
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve(transcriptOutput);
+          } else {
+            reject(new Error(`Transcript extraction failed: ${transcriptError}`));
+          }
+        });
+      });
+
+      const transcriptData = JSON.parse(transcriptOutput);
+      if (!transcriptData.success) {
+        throw new Error(transcriptData.error || "Failed to extract transcript");
+      }
+
+      // Now analyze the content
+      const analyzerProcess = spawn('python3', [
+        'scripts/content_analyzer.py',
+        transcriptData.transcript,
+        llmProvider
+      ]);
+
+      let analysisOutput = '';
+      let analysisError = '';
+
+      analyzerProcess.stdout.on('data', (data) => {
+        analysisOutput += data.toString();
+      });
+
+      analyzerProcess.stderr.on('data', (data) => {
+        analysisError += data.toString();
+      });
+
+      await new Promise((resolve, reject) => {
+        analyzerProcess.on('close', (code) => {
+          if (code === 0) {
+            resolve(analysisOutput);
+          } else {
+            reject(new Error(`Content analysis failed: ${analysisError}`));
+          }
+        });
+      });
+
+      const analysisData = JSON.parse(analysisOutput);
+      if (!analysisData.success) {
+        throw new Error(analysisData.error || "Failed to analyze content");
+      }
+
+      // Save the analysis results
+      const sessionId = Math.random().toString(36).substring(7); // Generate a simple session ID
       const result = await storage.createAnalysis({
-        ...analysis,
         videoId,
+        title: transcriptData.title || "Untitled Video",
+        thumbnail: transcriptData.thumbnail || "",
+        hooks: analysisData.data.hooks,
+        summary: analysisData.data.summary,
+        flashcards: analysisData.data.flashcards,
+        keyPoints: analysisData.data.hooks, // Using hooks as key points for now
         llmProvider,
         sessionId
       });
 
       res.json(result);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Analysis error:', error);
       res.status(500).json({ message: error.message });
     }
   });
