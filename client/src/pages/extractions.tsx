@@ -290,7 +290,6 @@ const Extractions: FC = () => {
                 ) : hooks.length > 0 ? (
                   <div className="grid gap-4">
                     {hooks.map((hook, index) => {
-                      const hookType = hook.match(/\*\*(.*?)\*\*/)?.[1] || "Hook";
                       const hookContent = hook.replace(/\*\*.*?\*\*/, "").trim();
                       
                       return (
@@ -299,13 +298,7 @@ const Extractions: FC = () => {
                           className="p-4 bg-white rounded-lg border border-[#E2E8F0] hover:border-purple-400 transition-colors duration-200 shadow-sm"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="min-w-[24px] h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 text-sm font-medium px-2">
-                              {index + 1}
-                            </div>
                             <div className="flex-1">
-                              <div className="text-sm font-medium text-purple-600 mb-1">
-                                {hookType}
-                              </div>
                               <div className="text-gray-700">
                                 {hookContent}
                               </div>

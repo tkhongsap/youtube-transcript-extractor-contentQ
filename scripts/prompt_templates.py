@@ -8,7 +8,7 @@ The hooks should be concise, intriguing, and encourage viewers to keep watching.
 """
 
 HOOK_USER_PROMPT = """
-Generate five engaging hooks from the following transcript. Each hook should be:
+Generate 5 engaging hooks from the following transcript. Each hook should be:
 - Short (1-2 sentences)
 - Attention-grabbing
 - Designed to spark curiosity, emotion, or surprise
@@ -18,7 +18,6 @@ Use techniques like:
 - Bold claims: "This will change how you think about..."
 - Emotional appeal: "You won’t believe what happened next..."
 
-Format as a numbered list.
 
 Transcript:
 {transcript}
