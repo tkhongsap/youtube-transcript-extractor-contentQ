@@ -200,8 +200,8 @@ const Extractions: FC = () => {
           </Button>
           <Button
             onClick={handleClear}
-            variant="outline"
-            className="border-[#E2E8F0] hover:bg-gray-50"
+            variant="destructive"
+            className="bg-red-600 text-white hover:bg-red-700 transition-colors duration-200"
           >
             Clear
           </Button>
