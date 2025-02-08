@@ -32,10 +32,10 @@ Avoid using words from the BAN LIST, AI buzzwords, and overused phrases.
 """
 
 SUMMARY_USER_PROMPT = """
-Create a structured and engaging summary of the following transcript. The summary should:
+Create a structured and engaging report of the following transcript. The summary should:
 - Start with a strong, engaging headline
-- Follow with a compelling hook that grabs attention
-- Follow a structured format with an introduction, body, and conclusion
+- Follow with a compelling hook that grabs attention, the hook should be 1-2 sentences.
+- Follow with a structured format with an introduction, body, and conclusion
 - Use a professional, yet conversational tone suited for Medium and inspired by Mustafa Suleyman
 - Highlight key takeaways and essential insights
 - Avoid AI buzzwords and overused phrases
@@ -69,7 +69,9 @@ Transcript:
 {transcript}
 """
 
-def get_prompt_messages(prompt_type: str, transcript: str) -> list[dict[str, str]]:
+
+def get_prompt_messages(prompt_type: str,
+                        transcript: str) -> list[dict[str, str]]:
     """
     Get the formatted prompt messages for a specific analyzer type.
     
@@ -85,12 +87,15 @@ def get_prompt_messages(prompt_type: str, transcript: str) -> list[dict[str, str
         'summary': (SUMMARY_SYSTEM_PROMPT, SUMMARY_USER_PROMPT),
         'flashcard': (FLASHCARD_SYSTEM_PROMPT, FLASHCARD_USER_PROMPT),
     }
-    
+
     if prompt_type not in prompts:
         raise ValueError(f"Unknown prompt type: {prompt_type}")
-        
+
     system_prompt, user_prompt = prompts[prompt_type]
-    return [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt.format(transcript=transcript)}
-    ]
+    return [{
+        "role": "system",
+        "content": system_prompt
+    }, {
+        "role": "user",
+        "content": user_prompt.format(transcript=transcript)
+    }]

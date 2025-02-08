@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useState, ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CopyButton } from "@/components/ui/copy-button";
+import ReactMarkdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import {
   Select,
   SelectContent,
@@ -221,30 +223,51 @@ const Extractions: FC = () => {
                 <CopyButton value={hooks.join("\n")} />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <div className="space-y-4">
                 {isAnalysisLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-full" />
+                  <div className="space-y-4">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
                   </div>
                 ) : hooks.length > 0 ? (
-                  <ul className="space-y-2">
-                    {hooks.map((hook, index) => (
-                      <li
-                        key={index}
-                        className="p-3 bg-white rounded-lg border border-[#E2E8F0]"
-                      >
-                        {hook}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="grid gap-4">
+                    {hooks.map((hook, index) => {
+                      const hookType = hook.match(/\*\*(.*?)\*\*/)?.[1] || "Hook";
+                      const hookContent = hook.replace(/\*\*.*?\*\*/, "").trim();
+                      
+                      return (
+                        <div
+                          key={index}
+                          className="p-4 bg-white rounded-lg border border-[#E2E8F0] hover:border-purple-400 transition-colors duration-200 shadow-sm"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="min-w-[24px] h-6 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 text-sm font-medium px-2">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-purple-600 mb-1">
+                                {hookType}
+                              </div>
+                              <div className="text-gray-700">
+                                {hookContent}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <p className="text-subtle-gray">
-                    Click this tab to generate attention-grabbing hooks from
-                    your content.
-                  </p>
+                  <div className="text-center py-8">
+                    <p className="text-subtle-gray mb-2">
+                      Click this tab to generate attention-grabbing hooks from your content.
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      We'll analyze your content and create compelling hooks to engage your audience.
+                    </p>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -261,7 +284,7 @@ const Extractions: FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[600px] w-full rounded-md border border-[#E2E8F0] p-4 bg-white">
+              <ScrollArea className="h-[600px] w-full rounded-md border border-[#E2E8F0] p-6 bg-white">
                 {isAnalysisLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-full" />
@@ -269,7 +292,41 @@ const Extractions: FC = () => {
                     <Skeleton className="h-4 w-4/5" />
                   </div>
                 ) : summary ? (
-                  <p className="whitespace-pre-wrap">{summary}</p>
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ node, ...props }) => (
+                          <h1 className="text-2xl font-bold mb-4 text-gray-900" {...props} />
+                        ),
+                        h2: ({ node, ...props }) => (
+                          <h2 className="text-xl font-semibold mb-3 text-gray-800" {...props} />
+                        ),
+                        h3: ({ node, ...props }) => (
+                          <h3 className="text-lg font-medium mb-2 text-gray-800" {...props} />
+                        ),
+                        p: ({ node, ...props }) => (
+                          <p className="mb-4 text-gray-700 leading-relaxed" {...props} />
+                        ),
+                        ul: ({ node, ...props }) => (
+                          <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />
+                        ),
+                        li: ({ node, ...props }) => (
+                          <li className="text-gray-700" {...props} />
+                        ),
+                        blockquote: ({ node, ...props }) => (
+                          <blockquote className="border-l-4 border-purple-500 pl-4 my-4 italic text-gray-700" {...props} />
+                        ),
+                        code: ({ node, ...props }) => (
+                          <code className="bg-gray-100 text-purple-600 px-1.5 py-0.5 rounded-md text-sm" {...props} />
+                        ),
+                        strong: ({ node, ...props }) => (
+                          <strong className="font-semibold text-gray-900" {...props} />
+                        ),
+                      }}
+                    >
+                      {summary}
+                    </ReactMarkdown>
+                  </div>
                 ) : (
                   <p className="text-subtle-gray">
                     Click this tab to generate a comprehensive summary of your
@@ -283,49 +340,67 @@ const Extractions: FC = () => {
 
         {/* Flashcards Tab */}
         <TabsContent value="flashcards">
-          <div className="flex flex-col gap-4">
+          <div className="grid gap-6">
             {isAnalysisLoading ? (
               Array(3)
                 .fill(0)
                 .map((_, i) => (
                   <Card key={i} className="card w-full">
                     <CardHeader>
-                      <CardTitle className="text-lg">Loading...</CardTitle>
+                      <Skeleton className="h-6 w-32" />
                     </CardHeader>
                     <CardContent>
-                      <Skeleton className="h-24 w-full" />
+                      <div className="space-y-4">
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-16 w-full" />
+                      </div>
                     </CardContent>
                   </Card>
                 ))
             ) : flashcards.length > 0 ? (
               flashcards.map((card, index) => (
-                <Card key={index} className="card w-full">
-                  <CardHeader className="border-b border-[#E2E8F0]">
-                    <CardTitle className="text-lg">
-                      Flashcard {index + 1}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="font-semibold">Question:</p>
-                      <p>{card.question}</p>
+                <Card key={index} className="card w-full overflow-hidden hover:shadow-md transition-shadow duration-200">
+                  <CardHeader className="border-b border-[#E2E8F0] bg-purple-50">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg text-purple-900">
+                        Flashcard {index + 1}
+                      </CardTitle>
+                      <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium">
+                        {index + 1}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold">Answer:</p>
-                      <p>{card.answer}</p>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-sm uppercase tracking-wide text-purple-600 mb-2 font-medium">
+                          Question
+                        </h3>
+                        <p className="text-gray-800 font-medium">{card.question}</p>
+                      </div>
+                      <div className="pt-4 border-t border-[#E2E8F0]">
+                        <h3 className="text-sm uppercase tracking-wide text-purple-600 mb-2 font-medium">
+                          Answer
+                        </h3>
+                        <p className="text-gray-700">{card.answer}</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               ))
             ) : (
               <Card className="card w-full">
-                <CardHeader className="border-b border-[#E2E8F0]">
-                  <CardTitle className="text-lg">Flashcards</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-subtle-gray">
-                    Click this tab to generate learning flashcards from your
-                    content.
+                <CardContent className="p-12 text-center">
+                  <div className="mb-4 flex justify-center">
+                    <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+                      <Search className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No Flashcards Yet
+                  </h3>
+                  <p className="text-gray-500 max-w-md mx-auto">
+                    Click this tab to generate learning flashcards from your content. We'll help you create effective study materials.
                   </p>
                 </CardContent>
               </Card>
