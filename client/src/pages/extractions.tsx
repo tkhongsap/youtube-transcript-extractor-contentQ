@@ -283,12 +283,12 @@ const Extractions: FC = () => {
 
         {/* Flashcards Tab */}
         <TabsContent value="flashcards">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-4">
             {isAnalysisLoading ? (
               Array(3)
                 .fill(0)
                 .map((_, i) => (
-                  <Card key={i} className="card">
+                  <Card key={i} className="card w-full">
                     <CardHeader>
                       <CardTitle className="text-lg">Loading...</CardTitle>
                     </CardHeader>
@@ -299,7 +299,7 @@ const Extractions: FC = () => {
                 ))
             ) : flashcards.length > 0 ? (
               flashcards.map((card, index) => (
-                <Card key={index} className="card">
+                <Card key={index} className="card w-full">
                   <CardHeader className="border-b border-[#E2E8F0]">
                     <CardTitle className="text-lg">
                       Flashcard {index + 1}
@@ -318,7 +318,7 @@ const Extractions: FC = () => {
                 </Card>
               ))
             ) : (
-              <Card className="card">
+              <Card className="card w-full">
                 <CardHeader className="border-b border-[#E2E8F0]">
                   <CardTitle className="text-lg">Flashcards</CardTitle>
                 </CardHeader>

@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Dict, List, Any
 from ai_providers import get_ai_provider
+from prompt_templates import get_prompt_messages
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -11,10 +12,7 @@ def analyze_hooks(transcript: str, provider: str = "gpt-4o-mini") -> List[str]:
     ai = get_ai_provider(provider)
     logger.info(f"Generating hooks using {provider} provider")
 
-    prompt = [
-        {"role": "system", "content": "You are an expert at creating engaging video hooks. Generate 5 attention-grabbing hooks based on the transcript provided."},
-        {"role": "user", "content": f"Generate 5 engaging hooks from this transcript. Each hook should be concise and compelling. Format as a numbered list:\n\n{transcript}"}
-    ]
+    prompt = get_prompt_messages('hook', transcript)
 
     try:
         response = ai.generate_completion(prompt)
@@ -30,10 +28,7 @@ def generate_summary(transcript: str, provider: str = "gpt-4o-mini") -> str:
     ai = get_ai_provider(provider)
     logger.info(f"Generating summary using {provider} provider")
 
-    prompt = [
-        {"role": "system", "content": "You are an expert at creating clear and concise video summaries."},
-        {"role": "user", "content": f"Create a clear, well-structured summary of this transcript in about 250 words. Focus on the main points and key takeaways:\n\n{transcript}"}
-    ]
+    prompt = get_prompt_messages('summary', transcript)
 
     try:
         return ai.generate_completion(prompt)
@@ -46,14 +41,7 @@ def create_flashcards(transcript: str, provider: str = "gpt-4o-mini") -> List[Di
     ai = get_ai_provider(provider)
     logger.info(f"Generating flashcards using {provider} provider")
 
-    prompt = [
-        {"role": "system", "content": """You are an expert at creating educational flashcards. 
-        Create 5 question-answer pairs based on the key concepts in the transcript.
-        Format each pair as:
-        Q: [Question]
-        A: [Answer]"""},
-        {"role": "user", "content": f"Create 5 flashcards (question-answer pairs) from this transcript. Focus on the most important concepts:\n\n{transcript}"}
-    ]
+    prompt = get_prompt_messages('flashcard', transcript)
 
     try:
         response = ai.generate_completion(prompt)
