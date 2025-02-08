@@ -226,10 +226,10 @@ const Extractions: FC = () => {
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex items-center justify-between">
                 <CardTitle>Full Transcript</CardTitle>
-                {transcript && <CopyButton value={transcript} />}
+                <CopyButton value={transcript} />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <ScrollArea className="h-[600px] w-full rounded-md border border-[#E2E8F0] p-4 bg-white">
                 {isTranscriptLoading ? (
                   <div className="space-y-2">
@@ -346,7 +346,7 @@ const Extractions: FC = () => {
                 <CopyButton value={summary} />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <ScrollArea className="h-[600px] w-full rounded-md border border-[#E2E8F0] p-6 bg-white">
                 {isAnalysisLoading ? (
                   <div className="space-y-2">
