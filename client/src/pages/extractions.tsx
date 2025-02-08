@@ -18,9 +18,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface VideoMetadata {
+  title: string;
+  channelTitle: string;
+  viewCount: string;
+  publishedAt: string;
+  duration: string;
+}
+
 const Extractions: FC = () => {
   const [url, setUrl] = useState("");
   const [transcript, setTranscript] = useState("");
+  const [metadata, setMetadata] = useState<VideoMetadata | null>(null);
   const [llmProvider, setLLMProvider] = useState("gpt-4o-mini");
   const [isTranscriptLoading, setIsTranscriptLoading] = useState(false);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
@@ -66,6 +75,7 @@ const Extractions: FC = () => {
     setHooks([]);
     setSummary("");
     setFlashcards([]);
+    setMetadata(null);
     setAnalysisPerformed({
       hooks: false,
       summary: false,
@@ -88,8 +98,11 @@ const Extractions: FC = () => {
       }
 
       const parsedData = JSON.parse(data.transcript);
-      if (parsedData.success && parsedData.transcript) {
+      if (parsedData.success) {
         setTranscript(parsedData.transcript);
+        if (parsedData.metadata) {
+          setMetadata(parsedData.metadata);
+        }
         toast({
           title: "Success",
           description:
@@ -238,15 +251,46 @@ const Extractions: FC = () => {
                     <Skeleton className="h-4 w-4/5" />
                   </div>
                 ) : transcript ? (
-                  <div className="space-y-2">
-                    {transcript.split("\n").map((line, index) => (
-                      <p
-                        key={index}
-                        className="text-sm leading-relaxed text-gray-800 px-2 py-1 rounded hover:bg-gray-50"
-                      >
-                        {line}
-                      </p>
-                    ))}
+                  <div className="space-y-6">
+                    {metadata && (
+                      <div className="bg-gray-50 p-4 rounded-lg border border-[#E2E8F0] mb-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="col-span-2">
+                            <h3 className="font-medium text-gray-900">{metadata.title}</h3>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Channel</p>
+                            <p className="text-sm font-medium text-gray-900">{metadata.channelTitle}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Published</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {new Date(metadata.publishedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Views</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {parseInt(metadata.viewCount).toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">Duration</p>
+                            <p className="text-sm font-medium text-gray-900">{metadata.duration}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {transcript.split("\n").map((line, index) => (
+                        <p
+                          key={index}
+                          className="text-sm leading-relaxed text-gray-800 px-2 py-1 rounded hover:bg-gray-50"
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <Card className="card w-full border-0 shadow-none h-[400px] flex items-center justify-center">
