@@ -7,8 +7,8 @@ interface AnalysisResult {
   keyPoints: string[];
 }
 
-async function analyzeWithDeepseek(transcript: string): Promise<AnalysisResult> {
-  // Mock implementation
+async function analyzeWithDeepseek(transcript: string, model: string): Promise<AnalysisResult> {
+  // Mock implementation with model specification
   return {
     title: "Sample Video Title",
     thumbnail: "https://example.com/thumbnail.jpg",
@@ -21,16 +21,27 @@ async function analyzeWithDeepseek(transcript: string): Promise<AnalysisResult> 
   };
 }
 
-async function analyzeWithOpenAI(transcript: string): Promise<AnalysisResult> {
-  // Mock implementation - would use OpenAI API
-  return analyzeWithDeepseek(transcript);
+async function analyzeWithOpenAI(transcript: string, model: string): Promise<AnalysisResult> {
+  // Mock implementation with model specification
+  return analyzeWithDeepseek(transcript, model);
 }
 
 export async function analyzeVideo(
   transcript: string,
-  provider: "deepseek" | "openai" = "deepseek"
+  provider: string = "deepseek-r1"
 ): Promise<AnalysisResult> {
-  return provider === "deepseek" 
-    ? analyzeWithDeepseek(transcript)
-    : analyzeWithOpenAI(transcript);
+  // Map provider to the appropriate analysis function
+  const providerMap: { [key: string]: (transcript: string, model: string) => Promise<AnalysisResult> } = {
+    "deepseek-v3": analyzeWithDeepseek,
+    "deepseek-r1": analyzeWithDeepseek,
+    "gpt-4o-mini": analyzeWithOpenAI,
+    "o3-mini": analyzeWithOpenAI
+  };
+
+  const analyzeFunction = providerMap[provider];
+  if (!analyzeFunction) {
+    throw new Error(`Unsupported provider: ${provider}`);
+  }
+
+  return analyzeFunction(transcript, provider);
 }

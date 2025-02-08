@@ -9,7 +9,7 @@ import { promisify } from "util";
 // Schema for video URL and analysis options
 const analysisOptionsSchema = z.object({
   videoId: z.string(),
-  llmProvider: z.enum(["deepseek", "openai"]).default("deepseek"),
+  llmProvider: z.enum(["deepseek-v3", "deepseek-r1", "gpt-4o-mini", "o3-mini"]).default("deepseek-r1"),
   type: z.enum(["hooks", "summary", "flashcards"])
 });
 
