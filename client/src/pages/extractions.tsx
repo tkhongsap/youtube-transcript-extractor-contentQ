@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const Extractions: FC = () => {
   const [url, setUrl] = useState("");
   const [transcript, setTranscript] = useState("");
-  const [llmProvider, setLLMProvider] = useState("deepseek-r1");
+  const [llmProvider, setLLMProvider] = useState("gpt-4o-mini");
   const [isTranscriptLoading, setIsTranscriptLoading] = useState(false);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [hooks, setHooks] = useState<string[]>([]);
