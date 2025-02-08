@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CopyButton } from "@/components/ui/copy-button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const Extractions: FC = () => {
   const [url, setUrl] = useState("");
@@ -18,7 +24,9 @@ const Extractions: FC = () => {
   const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
   const [hooks, setHooks] = useState<string[]>([]);
   const [summary, setSummary] = useState("");
-  const [flashcards, setFlashcards] = useState<Array<{ question: string; answer: string }>>([]);
+  const [flashcards, setFlashcards] = useState<
+    Array<{ question: string; answer: string }>
+  >([]);
   const { toast } = useToast();
 
   const handleExtract = async () => {
@@ -51,7 +59,8 @@ const Extractions: FC = () => {
         setTranscript(parsedData.transcript);
         toast({
           title: "Success",
-          description: "Transcript extracted successfully. Select a tab to analyze content.",
+          description:
+            "Transcript extracted successfully. Select a tab to analyze content.",
         });
       } else {
         throw new Error(parsedData.error || "Failed to parse transcript");
@@ -113,8 +122,12 @@ const Extractions: FC = () => {
 
   return (
     <div className="p-8 bg-[#F6F8FC] min-h-screen">
-      <h1 className="text-4xl font-bold mb-2 gradient-text">Your Extractions</h1>
-      <p className="text-subtle-gray mb-8">Extract and analyze your video content</p>
+      <h1 className="text-4xl font-bold mb-2 gradient-text">
+        Your Extractions
+      </h1>
+      <p className="text-subtle-gray mb-8">
+        Extract and analyze your video content
+      </p>
 
       <div className="flex flex-col gap-4 mb-6">
         <div className="relative w-full">
@@ -127,22 +140,19 @@ const Extractions: FC = () => {
           />
         </div>
         <div className="flex flex-wrap gap-4 items-center">
-          <Select
-            value={llmProvider}
-            onValueChange={setLLMProvider}
-          >
+          <Select value={llmProvider} onValueChange={setLLMProvider}>
             <SelectTrigger className="w-[180px] bg-white border-[#E2E8F0]">
               <SelectValue placeholder="Select Model" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="deepseek-v3">DeepSeek V3</SelectItem>
-              <SelectItem value="deepseek-r1">DeepSeek R1</SelectItem>
-              <SelectItem value="gpt-4o-mini">GPT-4O Mini</SelectItem>
-              <SelectItem value="o3-mini">O3 Mini</SelectItem>
+              <SelectItem value="gpt-4o-mini">gpt-4o-mini</SelectItem>
+              <SelectItem value="o3-mini">o3-mini</SelectItem>
+              <SelectItem value="deepseek-v3">deepseek-v3</SelectItem>
+              <SelectItem value="deepseek-r1">deepseek-r1</SelectItem>
             </SelectContent>
           </Select>
-          <Button 
-            onClick={handleExtract} 
+          <Button
+            onClick={handleExtract}
             disabled={isTranscriptLoading}
             className="btn-primary"
           >
@@ -151,7 +161,11 @@ const Extractions: FC = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="transcript" className="w-full" onValueChange={handleTabChange}>
+      <Tabs
+        defaultValue="transcript"
+        className="w-full"
+        onValueChange={handleTabChange}
+      >
         <TabsList className="mb-4 bg-white">
           <TabsTrigger value="transcript">Transcript</TabsTrigger>
           <TabsTrigger value="hooks">Hooks</TabsTrigger>
@@ -178,15 +192,19 @@ const Extractions: FC = () => {
                   </div>
                 ) : transcript ? (
                   <div className="space-y-2">
-                    {transcript.split('\n').map((line, index) => (
-                      <p key={index} className="text-sm leading-relaxed text-gray-800 px-2 py-1 rounded hover:bg-gray-50">
+                    {transcript.split("\n").map((line, index) => (
+                      <p
+                        key={index}
+                        className="text-sm leading-relaxed text-gray-800 px-2 py-1 rounded hover:bg-gray-50"
+                      >
                         {line}
                       </p>
                     ))}
                   </div>
                 ) : (
                   <p className="text-subtle-gray">
-                    The full transcript will appear here once a video is processed.
+                    The full transcript will appear here once a video is
+                    processed.
                   </p>
                 )}
               </ScrollArea>
@@ -200,7 +218,7 @@ const Extractions: FC = () => {
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex items-center justify-between">
                 <CardTitle>Video Hooks</CardTitle>
-                <CopyButton value={hooks.join('\n')} />
+                <CopyButton value={hooks.join("\n")} />
               </div>
             </CardHeader>
             <CardContent>
@@ -214,14 +232,18 @@ const Extractions: FC = () => {
                 ) : hooks.length > 0 ? (
                   <ul className="space-y-2">
                     {hooks.map((hook, index) => (
-                      <li key={index} className="p-3 bg-white rounded-lg border border-[#E2E8F0]">
+                      <li
+                        key={index}
+                        className="p-3 bg-white rounded-lg border border-[#E2E8F0]"
+                      >
                         {hook}
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <p className="text-subtle-gray">
-                    Click this tab to generate attention-grabbing hooks from your content.
+                    Click this tab to generate attention-grabbing hooks from
+                    your content.
                   </p>
                 )}
               </div>
@@ -250,7 +272,8 @@ const Extractions: FC = () => {
                   <p className="whitespace-pre-wrap">{summary}</p>
                 ) : (
                   <p className="text-subtle-gray">
-                    Click this tab to generate a comprehensive summary of your content.
+                    Click this tab to generate a comprehensive summary of your
+                    content.
                   </p>
                 )}
               </ScrollArea>
@@ -262,21 +285,25 @@ const Extractions: FC = () => {
         <TabsContent value="flashcards">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {isAnalysisLoading ? (
-              Array(3).fill(0).map((_, i) => (
-                <Card key={i} className="card">
-                  <CardHeader>
-                    <CardTitle className="text-lg">Loading...</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Skeleton className="h-24 w-full" />
-                  </CardContent>
-                </Card>
-              ))
+              Array(3)
+                .fill(0)
+                .map((_, i) => (
+                  <Card key={i} className="card">
+                    <CardHeader>
+                      <CardTitle className="text-lg">Loading...</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-24 w-full" />
+                    </CardContent>
+                  </Card>
+                ))
             ) : flashcards.length > 0 ? (
               flashcards.map((card, index) => (
                 <Card key={index} className="card">
                   <CardHeader className="border-b border-[#E2E8F0]">
-                    <CardTitle className="text-lg">Flashcard {index + 1}</CardTitle>
+                    <CardTitle className="text-lg">
+                      Flashcard {index + 1}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
@@ -297,7 +324,8 @@ const Extractions: FC = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-subtle-gray">
-                    Click this tab to generate learning flashcards from your content.
+                    Click this tab to generate learning flashcards from your
+                    content.
                   </p>
                 </CardContent>
               </Card>
