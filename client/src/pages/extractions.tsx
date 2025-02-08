@@ -12,10 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const Extractions: FC = () => {
   const [url, setUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [llmProvider, setLLMProvider] = useState("deepseek");
-  const [analysisData, setAnalysisData] = useState<any>(null); //Added state to store analysis data
+  const [isTranscriptLoading, setIsTranscriptLoading] = useState(false);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+  const [hooks, setHooks] = useState<string[]>([]);
+  const [summary, setSummary] = useState("");
+  const [flashcards, setFlashcards] = useState<Array<{ question: string; answer: string }>>([]);
   const { toast } = useToast();
 
   const handleExtract = async () => {
@@ -28,11 +31,9 @@ const Extractions: FC = () => {
       return;
     }
 
-    setIsLoading(true);
-    setAnalysisData(null); //Reset analysis data on new extraction
+    setIsTranscriptLoading(true);
     try {
-      // First extract the transcript
-      const transcriptResponse = await fetch("/api/extract-transcript", {
+      const response = await fetch("/api/extract-transcript", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -40,38 +41,17 @@ const Extractions: FC = () => {
         body: JSON.stringify({ url }),
       });
 
-      const transcriptData = await transcriptResponse.json();
-
-      if (!transcriptResponse.ok) {
-        throw new Error(transcriptData.message || "Failed to extract transcript");
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to extract transcript");
       }
 
-      const parsedData = JSON.parse(transcriptData.transcript);
+      const parsedData = JSON.parse(data.transcript);
       if (parsedData.success && parsedData.transcript) {
         setTranscript(parsedData.transcript);
-
-        // Now analyze the content
-        const analysisResponse = await fetch("/api/analysis", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            videoId: url,
-            llmProvider
-          }),
-        });
-
-        if (!analysisResponse.ok) {
-          const errorData = await analysisResponse.json();
-          throw new Error(errorData.message || "Failed to analyze content");
-        }
-
-        const analysisData = await analysisResponse.json();
-        setAnalysisData(analysisData); //Store analysis data
         toast({
           title: "Success",
-          description: "Content analyzed successfully",
+          description: "Transcript extracted successfully. Select a tab to analyze content.",
         });
       } else {
         throw new Error(parsedData.error || "Failed to parse transcript");
@@ -83,7 +63,51 @@ const Extractions: FC = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsTranscriptLoading(false);
+    }
+  };
+
+  const handleTabChange = async (value: string) => {
+    if (!transcript || isAnalysisLoading) return;
+
+    setIsAnalysisLoading(true);
+    try {
+      const response = await fetch(`/api/analyze/${value}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          videoId: url,
+          llmProvider,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || `Failed to analyze ${value}`);
+      }
+
+      const data = await response.json();
+      switch (value) {
+        case "hooks":
+          setHooks(data);
+          break;
+        case "summary":
+          setSummary(data);
+          break;
+        case "flashcards":
+          setFlashcards(data);
+          break;
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalysisLoading(false);
     }
   };
 
@@ -116,21 +140,22 @@ const Extractions: FC = () => {
         </Select>
         <Button 
           onClick={handleExtract} 
-          disabled={isLoading}
+          disabled={isTranscriptLoading}
           className="btn-primary"
         >
-          {isLoading ? "Processing..." : "Extract Now"}
+          {isTranscriptLoading ? "Extracting..." : "Extract Now"}
         </Button>
       </div>
 
-      <Tabs defaultValue="transcript" className="w-full">
+      <Tabs defaultValue="transcript" className="w-full" onValueChange={handleTabChange}>
         <TabsList className="mb-4 bg-white">
           <TabsTrigger value="transcript">Transcript</TabsTrigger>
           <TabsTrigger value="hooks">Hooks</TabsTrigger>
-          <TabsTrigger value="summaries">Summaries</TabsTrigger>
+          <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
         </TabsList>
 
+        {/* Transcript Tab */}
         <TabsContent value="transcript">
           <Card className="card">
             <CardHeader className="border-b border-[#E2E8F0]">
@@ -141,7 +166,7 @@ const Extractions: FC = () => {
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px] w-full rounded-md border border-[#E2E8F0] p-4 bg-white">
-                {isLoading ? (
+                {isTranscriptLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-3/4" />
@@ -165,31 +190,34 @@ const Extractions: FC = () => {
           </Card>
         </TabsContent>
 
+        {/* Hooks Tab */}
         <TabsContent value="hooks">
           <Card className="card">
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex items-center justify-between">
                 <CardTitle>Video Hooks</CardTitle>
-                <CopyButton value={analysisData ? analysisData.hooks?.join('\n') : "AI-generated hooks will appear here."} /> {/*Conditional rendering of hooks*/}
+                <CopyButton value={hooks.join('\n')} />
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {isLoading ? (
+                {isAnalysisLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-12 w-full" />
                     <Skeleton className="h-12 w-full" />
                     <Skeleton className="h-12 w-full" />
                   </div>
-                ) : analysisData && analysisData.hooks ? (
-                  <ul>
-                    {analysisData.hooks.map((hook: string, index) => (
-                      <li key={index}>{hook}</li>
+                ) : hooks.length > 0 ? (
+                  <ul className="space-y-2">
+                    {hooks.map((hook, index) => (
+                      <li key={index} className="p-3 bg-white rounded-lg border border-[#E2E8F0]">
+                        {hook}
+                      </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-subtle-gray mb-4">
-                    AI-generated hooks from the video content will appear here.
+                  <p className="text-subtle-gray">
+                    Click this tab to generate attention-grabbing hooks from your content.
                   </p>
                 )}
               </div>
@@ -197,27 +225,28 @@ const Extractions: FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="summaries">
+        {/* Summary Tab */}
+        <TabsContent value="summary">
           <Card className="card">
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex items-center justify-between">
                 <CardTitle>Content Summary</CardTitle>
-                <CopyButton value={analysisData ? analysisData.summary : "The AI-generated summary will appear here."} /> {/*Conditional rendering of summary*/}
+                <CopyButton value={summary} />
               </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px] w-full rounded-md border border-[#E2E8F0] p-4 bg-white">
-                {isLoading ? (
+                {isAnalysisLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-4 w-4/5" />
                   </div>
-                ) : analysisData && analysisData.summary ? (
-                  <p>{analysisData.summary}</p>
+                ) : summary ? (
+                  <p className="whitespace-pre-wrap">{summary}</p>
                 ) : (
                   <p className="text-subtle-gray">
-                    The AI-generated summary will appear here once processed.
+                    Click this tab to generate a comprehensive summary of your content.
                   </p>
                 )}
               </ScrollArea>
@@ -225,9 +254,10 @@ const Extractions: FC = () => {
           </Card>
         </TabsContent>
 
+        {/* Flashcards Tab */}
         <TabsContent value="flashcards">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {isLoading ? (
+            {isAnalysisLoading ? (
               Array(3).fill(0).map((_, i) => (
                 <Card key={i} className="card">
                   <CardHeader>
@@ -238,29 +268,32 @@ const Extractions: FC = () => {
                   </CardContent>
                 </Card>
               ))
-            ) : analysisData && analysisData.flashcards ? (
-              analysisData.flashcards.map((flashcard: {front: string; back: string}, index) => (
+            ) : flashcards.length > 0 ? (
+              flashcards.map((card, index) => (
                 <Card key={index} className="card">
                   <CardHeader className="border-b border-[#E2E8F0]">
                     <CardTitle className="text-lg">Flashcard {index + 1}</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <p><strong>Front:</strong> {flashcard.front}</p>
-                    <p><strong>Back:</strong> {flashcard.back}</p>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <p className="font-semibold">Question:</p>
+                      <p>{card.question}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold">Answer:</p>
+                      <p>{card.answer}</p>
+                    </div>
                   </CardContent>
                 </Card>
               ))
             ) : (
               <Card className="card">
                 <CardHeader className="border-b border-[#E2E8F0]">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Flashcard Preview</CardTitle>
-                    <CopyButton value="AI-generated flashcards will appear here." />
-                  </div>
+                  <CardTitle className="text-lg">Flashcards</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-subtle-gray">
-                    AI-generated flashcards will appear here.
+                    Click this tab to generate learning flashcards from your content.
                   </p>
                 </CardContent>
               </Card>

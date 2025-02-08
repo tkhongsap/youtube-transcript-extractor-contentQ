@@ -9,7 +9,8 @@ import { promisify } from "util";
 // Schema for video URL and analysis options
 const analysisOptionsSchema = z.object({
   videoId: z.string(),
-  llmProvider: z.enum(["deepseek", "openai"]).default("deepseek")
+  llmProvider: z.enum(["deepseek", "openai"]).default("deepseek"),
+  type: z.enum(["hooks", "summary", "flashcards"])
 });
 
 export function registerRoutes(app: Express) {
@@ -58,17 +59,20 @@ export function registerRoutes(app: Express) {
       res.json({ transcript });
     } catch (error: any) {
       console.error('Error extracting transcript:', error);
-      res.status(error.status || 500).json({ 
-        message: error.message || 'Failed to extract transcript' 
+      res.status(error.status || 500).json({
+        message: error.message || 'Failed to extract transcript'
       });
     }
   });
 
-  app.post("/api/analysis", async (req, res) => {
+  app.post("/api/analyze/:type", async (req, res) => {
     try {
-      const { videoId, llmProvider } = analysisOptionsSchema.parse(req.body);
+      const { videoId, llmProvider, type } = analysisOptionsSchema.parse({
+        ...req.body,
+        type: req.params.type
+      });
 
-      // First, get the transcript
+      // Get the transcript first
       const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', videoId]);
       let transcriptOutput = '';
       let transcriptError = '';
@@ -96,10 +100,11 @@ export function registerRoutes(app: Express) {
         throw new Error(transcriptData.error || "Failed to extract transcript");
       }
 
-      // Now analyze the content
+      // Now analyze the specific content type
       const analyzerProcess = spawn('python3', [
         'scripts/content_analyzer.py',
         transcriptData.transcript,
+        type,
         llmProvider
       ]);
 
@@ -129,23 +134,9 @@ export function registerRoutes(app: Express) {
         throw new Error(analysisData.error || "Failed to analyze content");
       }
 
-      // Save the analysis results
-      const sessionId = Math.random().toString(36).substring(7); // Generate a simple session ID
-      const result = await storage.createAnalysis({
-        videoId,
-        title: transcriptData.title || "Untitled Video",
-        thumbnail: transcriptData.thumbnail || "",
-        hooks: analysisData.data.hooks,
-        summary: analysisData.data.summary,
-        flashcards: analysisData.data.flashcards,
-        keyPoints: analysisData.data.hooks, // Using hooks as key points for now
-        llmProvider,
-        sessionId
-      });
-
-      res.json(result);
+      res.json(analysisData.data);
     } catch (error: any) {
-      console.error('Analysis error:', error);
+      console.error(`Analysis error (${req.params.type}):`, error);
       res.status(500).json({ message: error.message });
     }
   });
