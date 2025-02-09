@@ -6,6 +6,7 @@ import { searchVideos } from "./youtube";
 import { spawn } from "child_process";
 import { promisify } from "util";
 import { insertSavedContentSchema } from "@shared/schema";
+import axios from 'axios';
 
 // Schema for video URL and analysis options
 const analysisOptionsSchema = z.object({
@@ -213,6 +214,47 @@ export function registerRoutes(app: Express) {
       console.error('Error deleting content:', error);
       res.status(500).json({
         message: error.message || "Failed to delete content"
+      });
+    }
+  });
+
+  app.post("/api/serper-search", async (req, res) => {
+    try {
+      console.log('Received search request:', req.body);
+      const { query } = req.body;
+
+      const serperData = {
+        q: query,
+        num: 40,
+        engine: "google"
+      };
+
+      console.log('Sending request to Serper API:', serperData);
+
+      const response = await axios.post('https://google.serper.dev/videos', serperData, {
+        headers: {
+          'X-API-KEY': '72b4c075831b8850b37f430c2908f7e7099aa80c',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Received response from Serper:', response.data);
+
+      const videos = response.data.videos.map((video: any) => ({
+        videoId: video.link.split('v=')[1]?.split('&')[0] || '',
+        title: video.title,
+        thumbnail: video.imageUrl,
+        channelName: video.channel,
+        views: video.views || '0',
+        publishedAt: video.date
+      }));
+
+      res.json({ videos });
+    } catch (error: any) {
+      console.error('Serper API error:', error.response?.data || error.message);
+      res.status(500).json({
+        message: "Failed to perform search",
+        error: error.response?.data || error.message
       });
     }
   });
