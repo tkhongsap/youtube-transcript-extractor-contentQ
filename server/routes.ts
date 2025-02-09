@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { searchVideos } from "./youtube";
 import { spawn } from "child_process";
 import { promisify } from "util";
+import { insertSavedContentSchema } from "@shared/schema";
 
 // Schema for video URL and analysis options
 const analysisOptionsSchema = z.object({
@@ -152,6 +153,36 @@ export function registerRoutes(app: Express) {
       res.json(analysis);
     } catch (error) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Add new routes for saved content
+  app.post("/api/saved-content", async (req, res) => {
+    try {
+      console.log('Saving content request:', req.body);
+      const content = insertSavedContentSchema.parse(req.body);
+      const savedContent = await storage.createSavedContent(content);
+      console.log('Content saved successfully:', savedContent);
+      res.json(savedContent);
+    } catch (error: any) {
+      console.error('Error saving content:', error);
+      res.status(500).json({
+        message: error.message || "Failed to save content"
+      });
+    }
+  });
+
+  app.get("/api/saved-content", async (_req, res) => {
+    try {
+      console.log('Fetching saved content');
+      const savedContent = await storage.getSavedContent();
+      console.log('Found saved content:', savedContent.length, 'items');
+      res.json(savedContent);
+    } catch (error: any) {
+      console.error('Error fetching saved content:', error);
+      res.status(500).json({
+        message: error.message || "Failed to fetch saved content"
+      });
     }
   });
 

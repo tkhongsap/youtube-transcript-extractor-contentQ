@@ -11,22 +11,51 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async createAnalysis(analysis: InsertAnalysis): Promise<Analysis> {
-    const [result] = await db.insert(analyses).values(analysis).returning();
-    return result;
+    try {
+      console.log('Creating analysis:', analysis);
+      const [result] = await db.insert(analyses).values([analysis]).returning();
+      console.log('Analysis created:', result);
+      return result;
+    } catch (error) {
+      console.error('Error creating analysis:', error);
+      throw error;
+    }
   }
 
   async getAnalysisByVideoId(videoId: string): Promise<Analysis | undefined> {
-    const [result] = await db.select().from(analyses).where(eq(analyses.videoId, videoId));
-    return result;
+    try {
+      console.log('Getting analysis for videoId:', videoId);
+      const [result] = await db.select().from(analyses).where(eq(analyses.videoId, videoId));
+      console.log('Found analysis:', result);
+      return result;
+    } catch (error) {
+      console.error('Error getting analysis:', error);
+      throw error;
+    }
   }
 
   async createSavedContent(content: InsertSavedContent): Promise<SavedContent> {
-    const [result] = await db.insert(savedContent).values(content).returning();
-    return result;
+    try {
+      console.log('Creating saved content:', content);
+      const [result] = await db.insert(savedContent).values([content]).returning();
+      console.log('Saved content created:', result);
+      return result;
+    } catch (error) {
+      console.error('Error creating saved content:', error);
+      throw error;
+    }
   }
 
   async getSavedContent(): Promise<SavedContent[]> {
-    return db.select().from(savedContent).orderBy(savedContent.createdAt);
+    try {
+      console.log('Getting all saved content');
+      const results = await db.select().from(savedContent).orderBy(savedContent.createdAt);
+      console.log('Found saved content count:', results.length);
+      return results;
+    } catch (error) {
+      console.error('Error getting saved content:', error);
+      throw error;
+    }
   }
 }
 

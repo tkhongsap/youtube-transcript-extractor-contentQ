@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { Loader2, BookmarkPlus } from "lucide-react";
 
 interface SaveButtonProps {
@@ -17,6 +16,13 @@ export function SaveButton({ videoId, videoTitle, contentType, content, classNam
 
   const { mutate: saveContent, isPending } = useMutation({
     mutationFn: async () => {
+      console.log('Saving content:', {
+        videoId,
+        videoTitle,
+        contentType,
+        content
+      });
+
       const response = await fetch('/api/saved-content', {
         method: 'POST',
         headers: {
@@ -30,11 +36,17 @@ export function SaveButton({ videoId, videoTitle, contentType, content, classNam
         }),
       });
 
+      console.log('Save response status:', response.status);
+
       if (!response.ok) {
-        throw new Error("Failed to save content");
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Save content error:', errorData);
+        throw new Error(errorData.message || "Failed to save content");
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log('Save content success:', data);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/saved-content"] });
@@ -43,10 +55,11 @@ export function SaveButton({ videoId, videoTitle, contentType, content, classNam
         description: "The content has been saved to your collection.",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error('Save content mutation error:', error);
       toast({
         title: "Error",
-        description: "Failed to save content. Please try again.",
+        description: error.message || "Failed to save content. Please try again.",
         variant: "destructive",
       });
     },
