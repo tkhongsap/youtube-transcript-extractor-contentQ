@@ -7,7 +7,8 @@ import {
   BookmarkMinus,
   FileText,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Youtube
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, label: "Home", href: "/" },
   { icon: Search, label: "Search", href: "/search" },
+  { icon: Youtube, label: "Search by Serper", href: "/serper-search" },
   { icon: FileText, label: "Your Extractions", href: "/extractions" },
   { icon: BookmarkMinus, label: "Saved Content", href: "/saved-content" }
 ];
@@ -44,7 +46,7 @@ const Sidebar: FC = () => {
           {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </Button>
       </div>
-      
+
       <nav className="space-y-2 p-2">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
