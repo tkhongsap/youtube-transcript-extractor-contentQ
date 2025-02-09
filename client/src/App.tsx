@@ -9,12 +9,14 @@ import Analysis from "@/pages/analysis";
 import Extractions from "@/pages/extractions";
 import SavedContent from "@/pages/saved-content";
 import Sidebar from "@/components/sidebar";
+import SerperSearch from "@/pages/SerperSearch";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/search" component={Search} />
+      <Route path="/serper-search" component={SerperSearch} />
       <Route path="/analysis/:videoId" component={Analysis} />
       <Route path="/extractions" component={Extractions} />
       <Route path="/saved-content" component={SavedContent} />
