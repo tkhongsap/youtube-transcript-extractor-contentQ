@@ -16,8 +16,13 @@ Generate 5 engaging hooks from the following transcript. Each hook should be:
 Use techniques like:
 - Curiosity gaps: "What if I told you…?"
 - Bold claims: "This will change how you think about..."
-- Emotional appeal: "You won’t believe what happened next..."
+- Emotional appeal: "You won't believe what happened next..."
 
+Format: Provide each hook on a new line WITHOUT any numbers or bullet points.
+Example:
+What if I told you there's a hidden pattern in every success story?
+The one morning habit that's sabotaging your productivity.
+You won't believe the secret behind viral content.
 
 Transcript:
 {transcript}
