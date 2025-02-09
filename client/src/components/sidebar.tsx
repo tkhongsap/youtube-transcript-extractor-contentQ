@@ -20,7 +20,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: Home, label: "Home", href: "/" },
-  { icon: Search, label: "Search", href: "/search" },
   { icon: Youtube, label: "Search by Serper", href: "/serper-search" },
   { icon: FileText, label: "Your Extractions", href: "/extractions" },
   { icon: BookmarkMinus, label: "Saved Content", href: "/saved-content" }
