@@ -16,13 +16,29 @@ export const analyses = pgTable("analyses", {
   createdAt: timestamp("created_at").defaultNow()
 });
 
+export const savedContent = pgTable("saved_content", {
+  id: serial("id").primaryKey(),
+  videoId: text("video_id").notNull(),
+  videoTitle: text("video_title").notNull(),
+  contentType: text("content_type").notNull(), // 'hook', 'summary', 'flashcard'
+  content: json("content").$type<string | { question: string; answer: string }>().notNull(),
+  createdAt: timestamp("created_at").defaultNow()
+});
+
 export const insertAnalysisSchema = createInsertSchema(analyses).omit({ 
+  id: true,
+  createdAt: true
+});
+
+export const insertSavedContentSchema = createInsertSchema(savedContent).omit({
   id: true,
   createdAt: true
 });
 
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 export type Analysis = typeof analyses.$inferSelect;
+export type InsertSavedContent = z.infer<typeof insertSavedContentSchema>;
+export type SavedContent = typeof savedContent.$inferSelect;
 
 // Add Video type for frontend
 export interface Video {

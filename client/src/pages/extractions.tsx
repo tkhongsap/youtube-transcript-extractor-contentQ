@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SaveButton } from "@/components/ui/save-button";
 
 interface VideoMetadata {
   title: string;
@@ -335,7 +336,7 @@ const Extractions: FC = () => {
                   <div className="grid gap-4">
                     {hooks.map((hook, index) => {
                       const hookContent = hook.replace(/\*\*.*?\*\*/, "").trim();
-                      
+
                       return (
                         <div
                           key={index}
@@ -347,6 +348,13 @@ const Extractions: FC = () => {
                                 {hookContent}
                               </div>
                             </div>
+                            <SaveButton
+                              videoId={url}
+                              videoTitle={metadata?.title || 'Untitled Video'}
+                              contentType="hook"
+                              content={hookContent}
+                              className="ml-2"
+                            />
                           </div>
                         </div>
                       );
@@ -393,6 +401,14 @@ const Extractions: FC = () => {
                   </div>
                 ) : summary ? (
                   <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <div className="flex justify-end mb-4">
+                      <SaveButton
+                        videoId={url}
+                        videoTitle={metadata?.title || 'Untitled Video'}
+                        contentType="summary"
+                        content={summary}
+                      />
+                    </div>
                     <ReactMarkdown
                       components={{
                         h1: ({ node, ...props }) => (
@@ -484,8 +500,16 @@ const Extractions: FC = () => {
                           <CardTitle className="text-lg text-purple-900">
                             Flashcard {index + 1}
                           </CardTitle>
-                          <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium">
-                            {index + 1}
+                          <div className="flex items-center gap-2">
+                            <SaveButton
+                              videoId={url}
+                              videoTitle={metadata?.title || 'Untitled Video'}
+                              contentType="flashcard"
+                              content={card}
+                            />
+                            <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-medium">
+                              {index + 1}
+                            </div>
                           </div>
                         </div>
                       </CardHeader>
