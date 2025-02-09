@@ -17,10 +17,10 @@ export function SaveButton({ videoId, videoTitle, contentType, content, classNam
 
   const { mutate: saveContent, isPending } = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("/api/saved-content", {
-        method: "POST",
+      const response = await fetch('/api/saved-content', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           videoId,
