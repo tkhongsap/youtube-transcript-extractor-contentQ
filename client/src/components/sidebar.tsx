@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Home,
   Search,
-  History as HistoryIcon,
   BookmarkMinus,
   FileText,
   ChevronLeft,
@@ -22,7 +21,6 @@ const navItems: NavItem[] = [
   { icon: Home, label: "Home", href: "/" },
   { icon: Search, label: "Search", href: "/search" },
   { icon: FileText, label: "Your Extractions", href: "/extractions" },
-  { icon: HistoryIcon, label: "History", href: "/history" },
   { icon: BookmarkMinus, label: "Saved Content", href: "/saved-content" }
 ];
 
