@@ -1,5 +1,5 @@
 import { FC, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,12 +8,41 @@ import { Button } from "@/components/ui/button";
 import { Trash2, ExternalLink } from "lucide-react";
 import type { SavedContent as SavedContentType } from "@shared/schema";
 import ReactMarkdown from "react-markdown";
+import { useToast } from "@/hooks/use-toast";
 
 const SavedContent: FC = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: savedItems, isLoading } = useQuery<SavedContentType[]>({
     queryKey: ["/api/saved-content"],
+  });
+
+  const { mutate: deleteContent } = useMutation({
+    mutationFn: async (id: number) => {
+      const response = await fetch(`/api/saved-content/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete content");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved-content"] });
+      toast({
+        title: "Content Deleted",
+        description: "The content has been removed from your collection.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete content. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const filteredItems = savedItems?.filter(
@@ -109,6 +138,14 @@ const SavedContent: FC = () => {
                           onClick={() => window.open(`https://youtube.com/watch?v=${item.videoId}`, '_blank')}
                         >
                           <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteContent(item.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>

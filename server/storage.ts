@@ -7,6 +7,7 @@ export interface IStorage {
   getAnalysisByVideoId(videoId: string): Promise<Analysis | undefined>;
   createSavedContent(content: InsertSavedContent): Promise<SavedContent>;
   getSavedContent(): Promise<SavedContent[]>;
+  deleteSavedContent(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -54,6 +55,17 @@ export class DatabaseStorage implements IStorage {
       return results;
     } catch (error) {
       console.error('Error getting saved content:', error);
+      throw error;
+    }
+  }
+
+  async deleteSavedContent(id: number): Promise<void> {
+    try {
+      console.log('Deleting saved content:', id);
+      await db.delete(savedContent).where(eq(savedContent.id, id));
+      console.log('Content deleted successfully');
+    } catch (error) {
+      console.error('Error deleting saved content:', error);
       throw error;
     }
   }

@@ -160,7 +160,19 @@ export function registerRoutes(app: Express) {
   app.post("/api/saved-content", async (req, res) => {
     try {
       console.log('Saving content request:', req.body);
-      const content = insertSavedContentSchema.parse(req.body);
+      // Extract video ID from URL
+      let videoId = req.body.videoId;
+      if (videoId.includes('youtu.be/')) {
+        videoId = videoId.split('youtu.be/')[1].split('?')[0];
+      } else if (videoId.includes('youtube.com/watch?v=')) {
+        videoId = videoId.split('v=')[1].split('&')[0];
+      }
+
+      const content = insertSavedContentSchema.parse({
+        ...req.body,
+        videoId
+      });
+
       const savedContent = await storage.createSavedContent(content);
       console.log('Content saved successfully:', savedContent);
       res.json(savedContent);
@@ -182,6 +194,25 @@ export function registerRoutes(app: Express) {
       console.error('Error fetching saved content:', error);
       res.status(500).json({
         message: error.message || "Failed to fetch saved content"
+      });
+    }
+  });
+
+  app.delete("/api/saved-content/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid ID format" });
+      }
+
+      console.log('Deleting saved content:', id);
+      await storage.deleteSavedContent(id);
+      console.log('Content deleted successfully');
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting content:', error);
+      res.status(500).json({
+        message: error.message || "Failed to delete content"
       });
     }
   });
