@@ -245,7 +245,6 @@ export function registerRoutes(app: Express) {
         title: video.title,
         thumbnail: video.imageUrl,
         channelName: video.channel,
-        views: video.views || '0',
         publishedAt: video.date
       }));
 

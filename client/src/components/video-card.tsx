@@ -7,7 +7,6 @@ interface VideoCardProps {
   thumbnail: string;
   channelName: string;
   videoId: string;
-  views?: string;
   publishedAt?: string;
 }
 
@@ -16,7 +15,6 @@ export const VideoCard: FC<VideoCardProps> = ({
   thumbnail,
   channelName,
   videoId,
-  views,
   publishedAt,
 }) => {
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -53,13 +51,7 @@ export const VideoCard: FC<VideoCardProps> = ({
           <h3 className="font-semibold line-clamp-2 mb-2">{title}</h3>
           <p className="text-sm text-muted-foreground mb-2">{channelName}</p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {views && <span>{views} views</span>}
-            {publishedAt && (
-              <>
-                <span>•</span>
-                <span>{formatDate(publishedAt)}</span>
-              </>
-            )}
+            {publishedAt && <span>{formatDate(publishedAt)}</span>}
           </div>
         </div>
       </a>

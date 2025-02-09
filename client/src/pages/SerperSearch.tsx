@@ -20,7 +20,7 @@ export default function SerperSearch() {
       const response = await fetch("/api/serper-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: "youtube " + query }),
+        body: JSON.stringify({ query: "youtube vdos:  " + query }),
       });
 
       if (!response.ok) {
