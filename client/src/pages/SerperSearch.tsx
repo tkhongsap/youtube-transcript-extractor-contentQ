@@ -20,17 +20,25 @@ export default function SerperSearch() {
       const response = await fetch("/api/serper-search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: query + " youtube" }),
+        body: JSON.stringify({ query: "youtube " + query }),
       });
 
-      if (!response.ok) throw new Error("Search failed");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Search failed");
+      }
 
       const data = await response.json();
-      setResults(data.videos || []);
-    } catch (error) {
+      if (!data.videos || !Array.isArray(data.videos)) {
+        throw new Error("Invalid response format");
+      }
+
+      setResults(data.videos);
+    } catch (error: any) {
+      console.error("Search error:", error);
       toast({
         title: "Error",
-        description: "Failed to perform search. Please try again.",
+        description: error.message || "Failed to perform search. Please try again.",
         variant: "destructive",
       });
     } finally {

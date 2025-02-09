@@ -1,6 +1,6 @@
 import { FC } from "react";
 import { Card } from "@/components/ui/card";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isValid } from "date-fns";
 
 interface VideoCardProps {
   title: string;
@@ -21,6 +21,24 @@ export const VideoCard: FC<VideoCardProps> = ({
 }) => {
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return null;
+
+    // Try to parse relative time strings
+    if (dateStr.includes('ago') || dateStr.includes('week') || dateStr.includes('day') || dateStr.includes('month') || dateStr.includes('year')) {
+      return dateStr;
+    }
+
+    const date = new Date(dateStr);
+    if (!isValid(date)) return dateStr; // Return original string if invalid date
+
+    try {
+      return `${formatDistanceToNow(date)} ago`;
+    } catch (error) {
+      return dateStr; // Fallback to original string if formatting fails
+    }
+  };
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <a href={videoUrl} target="_blank" rel="noopener noreferrer">
@@ -39,7 +57,7 @@ export const VideoCard: FC<VideoCardProps> = ({
             {publishedAt && (
               <>
                 <span>•</span>
-                <span>{formatDistanceToNow(new Date(publishedAt))} ago</span>
+                <span>{formatDate(publishedAt)}</span>
               </>
             )}
           </div>
