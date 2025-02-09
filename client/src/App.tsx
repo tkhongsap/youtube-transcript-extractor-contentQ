@@ -7,7 +7,6 @@ import Home from "@/pages/home";
 import Search from "@/pages/search";
 import Analysis from "@/pages/analysis";
 import Extractions from "@/pages/extractions";
-import History from "@/pages/history";
 import SavedContent from "@/pages/saved-content";
 import Sidebar from "@/components/sidebar";
 
@@ -18,7 +17,6 @@ function Router() {
       <Route path="/search" component={Search} />
       <Route path="/analysis/:videoId" component={Analysis} />
       <Route path="/extractions" component={Extractions} />
-      <Route path="/history" component={History} />
       <Route path="/saved-content" component={SavedContent} />
       <Route component={NotFound} />
     </Switch>
