@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -24,7 +24,7 @@ export default function SerperSearch() {
       });
 
       if (!response.ok) throw new Error("Search failed");
-      
+
       const data = await response.json();
       setResults(data.videos || []);
     } catch (error) {
@@ -41,7 +41,7 @@ export default function SerperSearch() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <h1 className="text-4xl font-bold mb-8 text-center">Search YouTube Videos</h1>
-      
+
       <form onSubmit={handleSearch} className="mb-8">
         <div className="flex gap-2 max-w-2xl mx-auto">
           <Input
