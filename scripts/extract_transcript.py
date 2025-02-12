@@ -19,21 +19,31 @@ def extract_video_id(youtube_url: str) -> str:
             if '/live/' in parsed_url.path:
                 video_id = parsed_url.path.split('/live/')[1].split('?')[0]
                 if video_id:
+                    print(f"Extracted live stream ID: {video_id}", file=sys.stderr)
                     return video_id
                 raise ValueError("Missing video id in live stream URL")
 
             # Handle regular watch URLs
             query_params = parse_qs(parsed_url.query)
-            video_ids = query_params.get('v')
-            if video_ids and len(video_ids) > 0:
-                return video_ids[0]
-            else:
-                raise ValueError("Missing video id in URL query parameters")
+            if 'v' in query_params:
+                video_id = query_params['v'][0]
+                print(f"Extracted video ID from query: {video_id}", file=sys.stderr)
+                return video_id
+
+            # If no query parameter, try to get from path
+            if '/v/' in parsed_url.path:
+                video_id = parsed_url.path.split('/v/')[1].split('/')[0]
+                if video_id:
+                    print(f"Extracted video ID from path: {video_id}", file=sys.stderr)
+                    return video_id
+
+            raise ValueError("Missing video id in URL")
 
         # Handle youtu.be URLs
         elif 'youtu.be' in parsed_url.netloc:
             video_id = parsed_url.path.lstrip('/')
             if video_id:
+                print(f"Extracted video ID from short URL: {video_id}", file=sys.stderr)
                 return video_id.split('/')[0]
             else:
                 raise ValueError("Missing video id in short URL path")
@@ -122,29 +132,37 @@ def fetch_transcript(video_id: str) -> str:
         print(f"Fetching transcript for video ID: {video_id}", file=sys.stderr)
         try:
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            # Try to get the manually created transcripts first
+
+            # Try to get manual transcripts first
             try:
-                transcript = transcript_list.find_manually_created_transcript()
+                transcript = transcript_list.find_manually_created_transcript(['en'])
+                print("Found manually created transcript", file=sys.stderr)
             except:
-                # Fall back to any available transcript
+                # Fall back to any available transcript including auto-generated
                 transcript = transcript_list.find_generated_transcript(['en'])
+                print("Found auto-generated transcript", file=sys.stderr)
 
             if not transcript:
-                raise NoTranscriptFound()
+                print("No transcript object found", file=sys.stderr)
+                raise NoTranscriptFound("No transcript found")
 
             transcript_data = transcript.fetch()
             if not transcript_data:
-                raise NoTranscriptFound()
+                print("Empty transcript data received", file=sys.stderr)
+                raise NoTranscriptFound("Empty transcript data")
 
             transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
             if not transcript_text.strip():
-                raise NoTranscriptFound()
+                print("Empty transcript text after processing", file=sys.stderr)
+                raise NoTranscriptFound("Empty transcript text")
 
+            print("Successfully retrieved transcript", file=sys.stderr)
             return transcript_text
-        except TranscriptsDisabled:
+
+        except TranscriptsDisabled as e:
             print("Transcripts are disabled for this video", file=sys.stderr)
             raise TranscriptsDisabled("This video has disabled transcripts. Please try another video that has captions enabled.")
-        except NoTranscriptFound:
+        except NoTranscriptFound as e:
             print("No transcript found for this video", file=sys.stderr)
             raise NoTranscriptFound("No captions found for this video. Please try a video with captions.")
         except Exception as e:
@@ -172,7 +190,7 @@ def main():
             # Only fetch metadata if transcript is available
             metadata = fetch_video_metadata(video_id)
 
-            # Print the result as JSON to stdout
+            # Return success result
             result = {
                 "success": True,
                 "transcript": transcript,
@@ -181,30 +199,36 @@ def main():
             }
             print(json.dumps(result))
             sys.exit(0)
+
         except TranscriptsDisabled as e:
-            error_result = {
+            print(json.dumps({
                 "success": False,
                 "error": str(e),
                 "errorType": "TranscriptsDisabled"
-            }
-            print(json.dumps(error_result))
+            }))
             sys.exit(1)
         except NoTranscriptFound as e:
-            error_result = {
+            print(json.dumps({
                 "success": False,
                 "error": str(e),
                 "errorType": "NoTranscriptFound"
-            }
-            print(json.dumps(error_result))
+            }))
             sys.exit(1)
+        except Exception as e:
+            print(json.dumps({
+                "success": False,
+                "error": str(e),
+                "errorType": "GeneralError"
+            }))
+            sys.exit(1)
+
     except Exception as err:
         print(f"Error in main: {str(err)}", file=sys.stderr)
-        error_result = {
+        print(json.dumps({
             "success": False,
             "error": str(err),
             "errorType": "GeneralError"
-        }
-        print(json.dumps(error_result))
+        }))
         sys.exit(1)
 
 if __name__ == "__main__":
