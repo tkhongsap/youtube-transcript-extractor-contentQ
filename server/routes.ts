@@ -7,6 +7,8 @@ import { spawn } from "child_process";
 import { promisify } from "util";
 import { insertSavedContentSchema } from "@shared/schema";
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 
 // Schema for video URL and analysis options
 const analysisOptionsSchema = z.object({
@@ -111,10 +113,18 @@ export function registerRoutes(app: Express) {
         throw new Error(transcriptData.error || "Failed to extract transcript");
       }
 
-      // Now analyze the specific content type
+      // Write transcript to a temporary file
+      const tmpDir = path.join(process.cwd(), 'tmp');
+      if (!fs.existsSync(tmpDir)) {
+        fs.mkdirSync(tmpDir);
+      }
+      const tmpFile = path.join(tmpDir, `transcript_${Date.now()}.txt`);
+      fs.writeFileSync(tmpFile, transcriptData.transcript);
+
+      // Now analyze the specific content type using the temp file
       const analyzerProcess = spawn('python3', [
         'scripts/content_analyzer.py',
-        transcriptData.transcript,
+        tmpFile,
         type,
         llmProvider
       ]);
@@ -132,6 +142,13 @@ export function registerRoutes(app: Express) {
 
       await new Promise((resolve, reject) => {
         analyzerProcess.on('close', (code) => {
+          // Clean up the temporary file
+          try {
+            fs.unlinkSync(tmpFile);
+          } catch (err) {
+            console.error('Error cleaning up temp file:', err);
+          }
+
           if (code === 0) {
             resolve(analysisOutput);
           } else {

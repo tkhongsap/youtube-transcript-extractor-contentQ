@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from typing import Dict, List, Any
 from ai_providers import get_ai_provider
 from prompt_templates import get_prompt_messages
@@ -81,15 +82,19 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 4:
-        print(json.dumps({"error": "Please provide transcript, analysis type, and provider name as arguments"}))
+        print(json.dumps({"error": "Please provide transcript file path, analysis type, and provider name as arguments"}))
         sys.exit(1)
 
     try:
-        transcript = sys.argv[1]
+        transcript_file = sys.argv[1]
         analysis_type = sys.argv[2]  # 'hooks', 'summary', or 'flashcards'
         provider = sys.argv[3]
 
         logger.info(f"Processing {analysis_type} with {provider} provider")
+
+        # Read transcript from file
+        with open(transcript_file, 'r') as f:
+            transcript = f.read()
 
         result = None
         if analysis_type == "hooks":
