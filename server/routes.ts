@@ -46,75 +46,72 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/extract-transcript", async (req, res) => {
-    try {
-      const { url } = z.object({ url: z.string().url() }).parse(req.body);
-      console.log('Extracting transcript for URL:', url);
+app.post("/api/extract-transcript", async (req, res) => {
+  try {
+    const { url } = z.object({ url: z.string().url() }).parse(req.body);
+    console.log('Extracting transcript for URL:', url);
 
-      // Create temp directory if it doesn't exist
-      const tmpDir = mkTempDir();
-      const outputFile = path.join(tmpDir, `transcript_${Date.now()}.json`);
+    const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', url]);
+    let stderr = '';
+    let stdout = '';
 
-      const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', url]);
-      let error = '';
+    pythonProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+      console.error('Python script error:', data.toString());
+    });
 
-      pythonProcess.stderr.on('data', (data) => {
-        console.error('Python script error:', data.toString());
-        error += data.toString();
-      });
+    pythonProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+      console.log('Python script output:', data.toString());
+    });
 
-      await new Promise((resolve, reject) => {
-        let transcript = '';
-        pythonProcess.stdout.on('data', (data) => {
-          transcript += data.toString();
-        });
-
-        pythonProcess.on('close', (code) => {
-          console.log('Python script exited with code:', code);
+    // Wait for process to complete
+    await new Promise((resolve, reject) => {
+      pythonProcess.on('close', (code) => {
+        console.log(`Python process exited with code ${code}`);
+        if (stdout.trim()) {
           try {
-            const transcriptData = JSON.parse(transcript);
-            if (code === 0 && transcriptData.success) {
-              // Write successful transcript to file
-              fs.writeFileSync(outputFile, transcript, { encoding: 'utf8' });
-              resolve(transcriptData);
+            const result = JSON.parse(stdout);
+            if (result.success) {
+              resolve(result);
             } else {
-              reject(new Error(transcriptData.error || 'Failed to extract transcript'));
+              reject(new Error(result.error || 'Unknown error occurred'));
             }
           } catch (err) {
-            reject(new Error(`Failed to parse transcript response: ${err.message}`));
+            console.error('Failed to parse Python output:', err);
+            reject(new Error('Invalid response from transcript extractor'));
           }
-        });
+        } else {
+          reject(new Error('No output from transcript extractor'));
+        }
       });
 
-      // Read the transcript file
-      const transcriptContent = fs.readFileSync(outputFile, 'utf8');
-      const transcriptData = JSON.parse(transcriptContent);
+      pythonProcess.on('error', (err) => {
+        console.error('Failed to start Python process:', err);
+        reject(err);
+      });
+    });
 
-      if (!transcriptData.success) {
-        res.status(400).json({
-          message: transcriptData.error,
-          details: error,
-          errorType: transcriptData.errorType
-        });
-        return;
-      }
+    // Parse the output
+    const result = JSON.parse(stdout);
 
-      res.json({ transcript: transcriptContent });
-
-      // Clean up the temp file
-      try {
-        fs.unlinkSync(outputFile);
-      } catch (err) {
-        console.error('Error cleaning up temp file:', err);
-      }
-    } catch (error: any) {
-      console.error('Error extracting transcript:', error);
-      res.status(error.status || 500).json({
-        message: error.message || 'Failed to extract transcript',
-        details: error.stack
+    if (!result.success) {
+      return res.status(400).json({
+        message: result.error,
+        errorType: result.errorType,
+        details: stderr
       });
     }
-  });
+
+    res.json({ transcript: JSON.stringify(result) });
+  } catch (error: any) {
+    console.error('Transcript extraction failed:', error);
+    res.status(error.status || 500).json({
+      message: error.message || 'Failed to extract transcript',
+      details: error.stack
+    });
+  }
+});
 
   app.post("/api/analyze/:type", async (req, res) => {
     try {

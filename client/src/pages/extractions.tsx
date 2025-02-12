@@ -94,18 +94,28 @@ const Extractions: FC = () => {
       });
 
       const data = await response.json();
-      if (!response.ok) {
-        const errorMessage = data.message || "Failed to extract transcript";
-        const errorDetails = data.details || "";
 
-        // Check for specific error types
-        if (errorDetails.includes("TranscriptsDisabled")) {
-          throw new Error("This video has disabled transcripts. Please try another video that has captions enabled.");
-        } else if (errorDetails.includes("NoTranscriptFound")) {
-          throw new Error("No captions found for this video. Please try a video with captions.");
-        } else if (errorDetails.includes("Invalid YouTube URL")) {
-          throw new Error("Please provide a valid YouTube URL.");
+      if (!response.ok) {
+        let errorMessage = data.message || "Failed to extract transcript";
+
+        // Handle specific error types
+        switch (data.errorType) {
+          case "InvalidURL":
+            errorMessage = "Please enter a valid YouTube URL";
+            break;
+          case "TranscriptsDisabled":
+            errorMessage = "This video has disabled transcripts. Please try another video with captions enabled.";
+            break;
+          case "NoTranscriptFound":
+            errorMessage = "No captions found for this video. Please try a video with captions.";
+            break;
+          case "UnknownError":
+            errorMessage = `An error occurred: ${data.message}`;
+            break;
+          default:
+            errorMessage = data.message || "Failed to extract transcript";
         }
+
         throw new Error(errorMessage);
       }
 
@@ -117,16 +127,9 @@ const Extractions: FC = () => {
         }
         toast({
           title: "Success",
-          description:
-            "Transcript extracted successfully. Select a tab to analyze content.",
+          description: "Transcript extracted successfully. Select a tab to analyze content.",
         });
       } else {
-        // Handle specific error types from Python script
-        if (parsedData.errorType === "TranscriptsDisabled") {
-          throw new Error("This video has disabled transcripts. Please try another video that has captions enabled.");
-        } else if (parsedData.errorType === "NoTranscriptFound") {
-          throw new Error("No captions found for this video. Please try a video with captions.");
-        }
         throw new Error(parsedData.error || "Failed to parse transcript");
       }
     } catch (error: any) {
