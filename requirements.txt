@@ -7,3 +7,7 @@ youtube-transcript-api
 isodate
 python-dotenv
 youtube-transcript-api
+isodate
+openai
+python-dotenv
+youtube-transcript-api

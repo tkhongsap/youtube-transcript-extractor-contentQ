@@ -10,6 +10,19 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
+const mkTempDir = () => {
+    const tmpDir = path.join(process.cwd(), 'tmp');
+    if (!fs.existsSync(tmpDir)) {
+      try {
+        fs.mkdirSync(tmpDir, { recursive: true, mode: 0o755 });
+      } catch (err) {
+        console.error('Error creating temp directory:', err);
+        throw new Error('Failed to create temporary directory');
+      }
+    }
+    return tmpDir;
+  };
+
 // Schema for video URL and analysis options
 const analysisOptionsSchema = z.object({
   videoId: z.string(),
@@ -113,13 +126,10 @@ export function registerRoutes(app: Express) {
         throw new Error(transcriptData.error || "Failed to extract transcript");
       }
 
-      // Write transcript to a temporary file
-      const tmpDir = path.join(process.cwd(), 'tmp');
-      if (!fs.existsSync(tmpDir)) {
-        fs.mkdirSync(tmpDir);
-      }
+      // Write transcript to a temporary file with proper permissions
+      const tmpDir = mkTempDir();
       const tmpFile = path.join(tmpDir, `transcript_${Date.now()}.txt`);
-      fs.writeFileSync(tmpFile, transcriptData.transcript);
+      fs.writeFileSync(tmpFile, transcriptData.transcript, { mode: 0o644 });
 
       // Now analyze the specific content type using the temp file
       const analyzerProcess = spawn('python3', [
