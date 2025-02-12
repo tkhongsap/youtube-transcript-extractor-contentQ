@@ -108,21 +108,30 @@ def fetch_transcript(video_id: str) -> str:
     """Fetch the transcript for the given video ID."""
     try:
         print(f"Fetching transcript for video ID: {video_id}", file=sys.stderr)
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-        transcript_text = "\n".join([item.get("text", "") for item in transcript_list])
-        return transcript_text
-    except TranscriptsDisabled:
-        print("Transcripts are disabled for this video", file=sys.stderr)
-        raise Exception("Transcripts are disabled for this video.")
-    except NoTranscriptFound:
-        print("No transcript found for this video", file=sys.stderr)
-        raise Exception("No transcript found for this video.")
-    except CouldNotRetrieveTranscript as e:
-        print(f"Could not retrieve transcript: {str(e)}", file=sys.stderr)
-        raise Exception(f"Could not retrieve transcript: {e}")
+        try:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            # Try to get the manually created transcripts first
+            try:
+                transcript = transcript_list.find_manually_created_transcript()
+            except:
+                # Fall back to any available transcript
+                transcript = transcript_list.find_generated_transcript(['en'])
+
+            transcript_data = transcript.fetch()
+            transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
+            return transcript_text
+        except TranscriptsDisabled:
+            print("Transcripts are disabled for this video", file=sys.stderr)
+            raise Exception("Transcripts are disabled for this video. Please try another video that has captions enabled.")
+        except NoTranscriptFound:
+            print("No transcript found for this video", file=sys.stderr)
+            raise Exception("No captions found for this video. Please try a video with captions.")
+        except Exception as e:
+            print(f"Error fetching transcript: {str(e)}", file=sys.stderr)
+            raise Exception(f"An error occurred while fetching transcript: {str(e)}")
     except Exception as e:
-        print(f"Error fetching transcript: {str(e)}", file=sys.stderr)
-        raise Exception(f"An error occurred while fetching transcript: {e}")
+        print(f"Transcript fetch failed: {str(e)}", file=sys.stderr)
+        raise
 
 def main():
     try:

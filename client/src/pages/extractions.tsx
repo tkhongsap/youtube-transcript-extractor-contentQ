@@ -95,7 +95,14 @@ const Extractions: FC = () => {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || "Failed to extract transcript");
+        const errorMessage = data.message || "Failed to extract transcript";
+        // Handle specific error cases
+        if (errorMessage.includes("Transcripts are disabled")) {
+          throw new Error("This video has disabled transcripts. Please try another video that has captions enabled.");
+        } else if (errorMessage.includes("No transcript found")) {
+          throw new Error("No captions found for this video. Please try a video with captions.");
+        }
+        throw new Error(errorMessage);
       }
 
       const parsedData = JSON.parse(data.transcript);
