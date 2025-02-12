@@ -129,15 +129,24 @@ def fetch_transcript(video_id: str) -> str:
                 # Fall back to any available transcript
                 transcript = transcript_list.find_generated_transcript(['en'])
 
+            if not transcript:
+                raise NoTranscriptFound()
+
             transcript_data = transcript.fetch()
+            if not transcript_data:
+                raise NoTranscriptFound()
+
             transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
+            if not transcript_text.strip():
+                raise NoTranscriptFound()
+
             return transcript_text
         except TranscriptsDisabled:
             print("Transcripts are disabled for this video", file=sys.stderr)
-            raise Exception("Transcripts are disabled for this video. Please try another video that has captions enabled.")
+            raise TranscriptsDisabled("This video has disabled transcripts. Please try another video that has captions enabled.")
         except NoTranscriptFound:
             print("No transcript found for this video", file=sys.stderr)
-            raise Exception("No captions found for this video. Please try a video with captions.")
+            raise NoTranscriptFound("No captions found for this video. Please try a video with captions.")
         except Exception as e:
             print(f"Error fetching transcript: {str(e)}", file=sys.stderr)
             raise Exception(f"An error occurred while fetching transcript: {str(e)}")
@@ -156,24 +165,44 @@ def main():
         video_id = extract_video_id(youtube_url)
         print(f"Extracted video ID: {video_id}", file=sys.stderr)
 
-        # Fetch both metadata and transcript
-        metadata = fetch_video_metadata(video_id)
-        transcript = fetch_transcript(video_id)
+        try:
+            # Fetch transcript first to check if it's available
+            transcript = fetch_transcript(video_id)
 
-        # Print the result as JSON to stdout
-        result = {
-            "success": True,
-            "transcript": transcript,
-            "metadata": metadata,
-            "video_id": video_id
-        }
-        print(json.dumps(result))
-        sys.exit(0)
+            # Only fetch metadata if transcript is available
+            metadata = fetch_video_metadata(video_id)
+
+            # Print the result as JSON to stdout
+            result = {
+                "success": True,
+                "transcript": transcript,
+                "metadata": metadata,
+                "video_id": video_id
+            }
+            print(json.dumps(result))
+            sys.exit(0)
+        except TranscriptsDisabled as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "errorType": "TranscriptsDisabled"
+            }
+            print(json.dumps(error_result))
+            sys.exit(1)
+        except NoTranscriptFound as e:
+            error_result = {
+                "success": False,
+                "error": str(e),
+                "errorType": "NoTranscriptFound"
+            }
+            print(json.dumps(error_result))
+            sys.exit(1)
     except Exception as err:
         print(f"Error in main: {str(err)}", file=sys.stderr)
         error_result = {
             "success": False,
-            "error": str(err)
+            "error": str(err),
+            "errorType": "GeneralError"
         }
         print(json.dumps(error_result))
         sys.exit(1)

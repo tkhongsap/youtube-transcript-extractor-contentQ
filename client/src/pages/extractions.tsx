@@ -96,11 +96,15 @@ const Extractions: FC = () => {
       const data = await response.json();
       if (!response.ok) {
         const errorMessage = data.message || "Failed to extract transcript";
-        // Handle specific error cases
-        if (errorMessage.includes("Transcripts are disabled")) {
+        const errorDetails = data.details || "";
+
+        // Check for specific error types
+        if (errorDetails.includes("TranscriptsDisabled")) {
           throw new Error("This video has disabled transcripts. Please try another video that has captions enabled.");
-        } else if (errorMessage.includes("No transcript found")) {
+        } else if (errorDetails.includes("NoTranscriptFound")) {
           throw new Error("No captions found for this video. Please try a video with captions.");
+        } else if (errorDetails.includes("Invalid YouTube URL")) {
+          throw new Error("Please provide a valid YouTube URL.");
         }
         throw new Error(errorMessage);
       }
@@ -117,6 +121,12 @@ const Extractions: FC = () => {
             "Transcript extracted successfully. Select a tab to analyze content.",
         });
       } else {
+        // Handle specific error types from Python script
+        if (parsedData.errorType === "TranscriptsDisabled") {
+          throw new Error("This video has disabled transcripts. Please try another video that has captions enabled.");
+        } else if (parsedData.errorType === "NoTranscriptFound") {
+          throw new Error("No captions found for this video. Please try a video with captions.");
+        }
         throw new Error(parsedData.error || "Failed to parse transcript");
       }
     } catch (error: any) {
