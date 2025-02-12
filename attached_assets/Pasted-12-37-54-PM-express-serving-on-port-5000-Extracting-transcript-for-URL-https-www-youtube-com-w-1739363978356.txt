@@ -1,0 +1,51 @@
+12:37:54 PM [express] serving on port 5000
+Extracting transcript for URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+Python script error: Processing URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+Extracting video ID from URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+
+Python script error: Extracted video ID: _1f-o0nqpEI
+Fetching metadata for video ID: _1f-o0nqpEI
+
+Python script error: Error fetching metadata: invalid literal for int() with base 10: '5H6'
+Error in main: Failed to fetch video metadata: invalid literal for int() with base 10: '5H6'
+
+Python script output: {"success": false, "error": "Failed to fetch video metadata: invalid literal for int() with base 10: '5H6'"}
+
+Python script exited with code: 1
+Error extracting transcript: Error: Python script failed with error: Processing URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+Extracting video ID from URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+Extracted video ID: _1f-o0nqpEI
+Fetching metadata for video ID: _1f-o0nqpEI
+Error fetching metadata: invalid literal for int() with base 10: '5H6'
+Error in main: Failed to fetch video metadata: invalid literal for int() with base 10: '5H6'
+
+    at ChildProcess.<anonymous> (/home/runner/workspace/server/routes.ts:60:20)
+    at ChildProcess.emit (node:events:518:28)
+    at maybeClose (node:internal/child_process:1104:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+12:38:22 PM [express] POST /api/extract-transcript 500 in 1076ms :: {"message":"Python script failed …
+Extracting transcript for URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+Python script error: Processing URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+Extracting video ID from URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+
+Python script error: Extracted video ID: _1f-o0nqpEI
+Fetching metadata for video ID: _1f-o0nqpEI
+
+Python script error: Error fetching metadata: invalid literal for int() with base 10: '5H6'
+Error in main: Failed to fetch video metadata: invalid literal for int() with base 10: '5H6'
+
+Python script output: {"success": false, "error": "Failed to fetch video metadata: invalid literal for int() with base 10: '5H6'"}
+
+Python script exited with code: 1
+Error extracting transcript: Error: Python script failed with error: Processing URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+Extracting video ID from URL: https://www.youtube.com/watch?v=_1f-o0nqpEI&t=2506s
+Extracted video ID: _1f-o0nqpEI
+Fetching metadata for video ID: _1f-o0nqpEI
+Error fetching metadata: invalid literal for int() with base 10: '5H6'
+Error in main: Failed to fetch video metadata: invalid literal for int() with base 10: '5H6'
+
+    at ChildProcess.<anonymous> (/home/runner/workspace/server/routes.ts:60:20)
+    at ChildProcess.emit (node:events:518:28)
+    at maybeClose (node:internal/child_process:1104:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+12:39:00 PM [express] POST /api/extract-transcript 500 in 565ms :: {"message":"P

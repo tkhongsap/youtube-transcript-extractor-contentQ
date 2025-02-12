@@ -31,6 +31,43 @@ def extract_video_id(youtube_url: str) -> str:
         print(f"Error parsing URL: {str(e)}", file=sys.stderr)
         raise ValueError(f"Error parsing URL: {e}")
 
+def format_duration(duration_str: str) -> str:
+    """Format duration string to human readable format."""
+    try:
+        # Remove PT from start
+        duration = duration_str.replace('PT', '')
+        hours = 0
+        minutes = 0
+        seconds = 0
+
+        # Parse hours if present
+        if 'H' in duration:
+            hours_str = duration.split('H')[0]
+            hours = int(hours_str)
+            duration = duration.split('H')[1]
+
+        # Parse minutes if present
+        if 'M' in duration:
+            minutes_str = duration.split('M')[0]
+            if 'H' in minutes_str:  # If we already handled hours
+                minutes_str = minutes_str.split('H')[1]
+            minutes = int(minutes_str)
+            duration = duration.split('M')[1]
+
+        # Parse seconds if present
+        if 'S' in duration:
+            seconds_str = duration.replace('S', '')
+            seconds = int(seconds_str)
+
+        # Format the duration string
+        if hours > 0:
+            return f"{hours}:{minutes:02d}:{seconds:02d}"
+        else:
+            return f"{minutes}:{seconds:02d}"
+    except Exception as e:
+        print(f"Error parsing duration: {str(e)}", file=sys.stderr)
+        return "00:00"  # Return default duration on error
+
 def fetch_video_metadata(video_id: str) -> dict:
     """Fetch video metadata using YouTube Data API."""
     api_key = os.getenv('YOUTUBE_API_KEY')
@@ -54,22 +91,14 @@ def fetch_video_metadata(video_id: str) -> dict:
             raise ValueError("Video not found")
 
         video = data["items"][0]
-        # Parse duration without isodate
         duration_str = video["contentDetails"]["duration"]
-        # Simple duration parsing for format PT#M#S
-        minutes = 0
-        seconds = 0
-        if 'M' in duration_str:
-            minutes = int(duration_str.split('M')[0].replace('PT', ''))
-        if 'S' in duration_str:
-            seconds = int(duration_str.split('M')[-1].replace('S', ''))
 
         return {
             "title": video["snippet"]["title"],
             "channelTitle": video["snippet"]["channelTitle"],
             "publishedAt": video["snippet"]["publishedAt"],
             "viewCount": video["statistics"]["viewCount"],
-            "duration": f"{minutes}:{seconds:02d}"
+            "duration": format_duration(duration_str)
         }
     except Exception as e:
         print(f"Error fetching metadata: {str(e)}", file=sys.stderr)
