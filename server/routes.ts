@@ -35,21 +35,25 @@ export function registerRoutes(app: Express) {
   app.post("/api/extract-transcript", async (req, res) => {
     try {
       const { url } = z.object({ url: z.string().url() }).parse(req.body);
+      console.log('Extracting transcript for URL:', url);
 
       const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', url]);
       let transcript = '';
       let error = '';
 
       pythonProcess.stdout.on('data', (data) => {
+        console.log('Python script output:', data.toString());
         transcript += data.toString();
       });
 
       pythonProcess.stderr.on('data', (data) => {
+        console.error('Python script error:', data.toString());
         error += data.toString();
       });
 
       await new Promise((resolve, reject) => {
         pythonProcess.on('close', (code) => {
+          console.log('Python script exited with code:', code);
           if (code === 0) {
             resolve(transcript);
           } else {
@@ -58,11 +62,16 @@ export function registerRoutes(app: Express) {
         });
       });
 
+      if (!transcript) {
+        throw new Error('No transcript data received from Python script');
+      }
+
       res.json({ transcript });
     } catch (error: any) {
       console.error('Error extracting transcript:', error);
       res.status(error.status || 500).json({
-        message: error.message || 'Failed to extract transcript'
+        message: error.message || 'Failed to extract transcript',
+        details: error.stack
       });
     }
   });

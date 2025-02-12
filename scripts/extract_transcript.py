@@ -10,6 +10,7 @@ import isodate
 def extract_video_id(youtube_url: str) -> str:
     """Extract the video ID from a given YouTube URL."""
     try:
+        print(f"Extracting video ID from URL: {youtube_url}", file=sys.stderr)
         parsed_url = urlparse(youtube_url)
         if 'youtube.com' in parsed_url.netloc:
             query_params = parse_qs(parsed_url.query)
@@ -27,6 +28,7 @@ def extract_video_id(youtube_url: str) -> str:
         else:
             raise ValueError("Invalid YouTube URL")
     except Exception as e:
+        print(f"Error parsing URL: {str(e)}", file=sys.stderr)
         raise ValueError(f"Error parsing URL: {e}")
 
 def fetch_video_metadata(video_id: str) -> dict:
@@ -35,6 +37,7 @@ def fetch_video_metadata(video_id: str) -> dict:
     if not api_key:
         raise ValueError("YouTube API key not found in environment variables")
 
+    print(f"Fetching metadata for video ID: {video_id}", file=sys.stderr)
     url = f"https://www.googleapis.com/youtube/v3/videos"
     params = {
         "part": "snippet,statistics,contentDetails",
@@ -69,35 +72,44 @@ def fetch_video_metadata(video_id: str) -> dict:
             "duration": f"{minutes}:{seconds:02d}"
         }
     except Exception as e:
+        print(f"Error fetching metadata: {str(e)}", file=sys.stderr)
         raise Exception(f"Failed to fetch video metadata: {str(e)}")
 
 def fetch_transcript(video_id: str) -> str:
     """Fetch the transcript for the given video ID."""
     try:
+        print(f"Fetching transcript for video ID: {video_id}", file=sys.stderr)
         transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
         transcript_text = "\n".join([item.get("text", "") for item in transcript_list])
         return transcript_text
     except TranscriptsDisabled:
+        print("Transcripts are disabled for this video", file=sys.stderr)
         raise Exception("Transcripts are disabled for this video.")
     except NoTranscriptFound:
+        print("No transcript found for this video", file=sys.stderr)
         raise Exception("No transcript found for this video.")
     except CouldNotRetrieveTranscript as e:
+        print(f"Could not retrieve transcript: {str(e)}", file=sys.stderr)
         raise Exception(f"Could not retrieve transcript: {e}")
     except Exception as e:
+        print(f"Error fetching transcript: {str(e)}", file=sys.stderr)
         raise Exception(f"An error occurred while fetching transcript: {e}")
 
 def main():
     try:
         if len(sys.argv) != 2:
             raise ValueError("Please provide a YouTube URL as an argument")
-        
+
         youtube_url = sys.argv[1]
+        print(f"Processing URL: {youtube_url}", file=sys.stderr)
+
         video_id = extract_video_id(youtube_url)
-        
+        print(f"Extracted video ID: {video_id}", file=sys.stderr)
+
         # Fetch both metadata and transcript
         metadata = fetch_video_metadata(video_id)
         transcript = fetch_transcript(video_id)
-        
+
         # Print the result as JSON to stdout
         result = {
             "success": True,
@@ -108,6 +120,7 @@ def main():
         print(json.dumps(result))
         sys.exit(0)
     except Exception as err:
+        print(f"Error in main: {str(err)}", file=sys.stderr)
         error_result = {
             "success": False,
             "error": str(err)
