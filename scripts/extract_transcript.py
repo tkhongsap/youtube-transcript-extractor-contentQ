@@ -12,13 +12,25 @@ def extract_video_id(youtube_url: str) -> str:
     try:
         print(f"Extracting video ID from URL: {youtube_url}", file=sys.stderr)
         parsed_url = urlparse(youtube_url)
+
+        # Handle youtube.com URLs
         if 'youtube.com' in parsed_url.netloc:
+            # Handle live stream URLs
+            if '/live/' in parsed_url.path:
+                video_id = parsed_url.path.split('/live/')[1].split('?')[0]
+                if video_id:
+                    return video_id
+                raise ValueError("Missing video id in live stream URL")
+
+            # Handle regular watch URLs
             query_params = parse_qs(parsed_url.query)
             video_ids = query_params.get('v')
             if video_ids and len(video_ids) > 0:
                 return video_ids[0]
             else:
                 raise ValueError("Missing video id in URL query parameters")
+
+        # Handle youtu.be URLs
         elif 'youtu.be' in parsed_url.netloc:
             video_id = parsed_url.path.lstrip('/')
             if video_id:
