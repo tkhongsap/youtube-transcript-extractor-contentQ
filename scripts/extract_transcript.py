@@ -10,6 +10,7 @@ import isodate
 def extract_video_id(youtube_url: str) -> str:
     """Extract the video ID from a given YouTube URL."""
     try:
+        print(f"Processing URL: {youtube_url}", file=sys.stderr)
         print(f"Extracting video ID from URL: {youtube_url}", file=sys.stderr)
         parsed_url = urlparse(youtube_url)
 
@@ -130,14 +131,20 @@ def fetch_transcript(video_id: str) -> str:
     """Fetch the transcript for the given video ID."""
     try:
         print(f"Fetching transcript for video ID: {video_id}", file=sys.stderr)
+
         try:
+            print("Attempting to list transcripts...", file=sys.stderr)
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            print("Successfully listed transcripts", file=sys.stderr)
 
             # Try to get manual transcripts first
             try:
+                print("Attempting to find manual transcript...", file=sys.stderr)
                 transcript = transcript_list.find_manually_created_transcript(['en'])
                 print("Found manually created transcript", file=sys.stderr)
-            except:
+            except Exception as manual_err:
+                print(f"No manual transcript found, error: {str(manual_err)}", file=sys.stderr)
+                print("Attempting to find auto-generated transcript...", file=sys.stderr)
                 # Fall back to any available transcript including auto-generated
                 transcript = transcript_list.find_generated_transcript(['en'])
                 print("Found auto-generated transcript", file=sys.stderr)
@@ -146,6 +153,7 @@ def fetch_transcript(video_id: str) -> str:
                 print("No transcript object found", file=sys.stderr)
                 raise NoTranscriptFound("No transcript found")
 
+            print("Fetching transcript data...", file=sys.stderr)
             transcript_data = transcript.fetch()
             if not transcript_data:
                 print("Empty transcript data received", file=sys.stderr)
@@ -165,6 +173,9 @@ def fetch_transcript(video_id: str) -> str:
         except NoTranscriptFound as e:
             print("No transcript found for this video", file=sys.stderr)
             raise NoTranscriptFound("No captions found for this video. Please try a video with captions.")
+        except CouldNotRetrieveTranscript as e:
+            print(f"Could not retrieve transcript: {str(e)}", file=sys.stderr)
+            raise NoTranscriptFound("Could not retrieve transcript. Please try another video.")
         except Exception as e:
             print(f"Error fetching transcript: {str(e)}", file=sys.stderr)
             raise Exception(f"An error occurred while fetching transcript: {str(e)}")

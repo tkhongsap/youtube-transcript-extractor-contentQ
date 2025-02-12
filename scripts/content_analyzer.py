@@ -89,6 +89,7 @@ if __name__ == "__main__":
         transcript_file = sys.argv[1]
         analysis_type = sys.argv[2]  # 'hooks', 'summary', or 'flashcards'
         provider = sys.argv[3]
+        output_file = sys.argv[4]  # New parameter for output file
 
         logger.info(f"Processing {analysis_type} with {provider} provider")
 
@@ -106,9 +107,13 @@ if __name__ == "__main__":
         else:
             raise ValueError(f"Unknown analysis type: {analysis_type}")
 
-        print(json.dumps({"success": True, "data": result}))
+        # Write results to output file
+        with open(output_file, 'w') as f:
+            json.dump({"success": True, "data": result}, f)
         sys.exit(0)
     except Exception as e:
         logger.error(f"Analysis failed: {str(e)}")
-        print(json.dumps({"success": False, "error": str(e)}))
+        # Write error to output file
+        with open(output_file, 'w') as f:
+            json.dump({"success": False, "error": str(e)}, f)
         sys.exit(1)
