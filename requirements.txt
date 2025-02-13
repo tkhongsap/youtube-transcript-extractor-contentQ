@@ -11,3 +11,5 @@ isodate
 openai
 python-dotenv
 youtube-transcript-api
+isodate
+youtube-transcript-api

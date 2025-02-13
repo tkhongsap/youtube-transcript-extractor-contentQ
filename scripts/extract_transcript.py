@@ -23,7 +23,7 @@ def extract_video_id(youtube_url: str) -> str:
             elif parsed_url.path.startswith('/v/'):
                 video_id = parsed_url.path.split('/v/')[1]
                 print(f"Extracted video ID from /v/ path: {video_id}", file=sys.stderr)
-                return video_id
+                return video_id.split('?')[0]  # Remove any query parameters
             raise ValueError("Invalid YouTube URL format")
 
         # Handle youtu.be URLs
@@ -43,64 +43,55 @@ def fetch_transcript(video_id: str) -> str:
     """Fetch the transcript for the given video ID with retries and fallbacks."""
     print(f"Fetching transcript for video ID: {video_id}", file=sys.stderr)
 
-    MAX_RETRIES = 3
-    retry_count = 0
-    last_error = None
+    # Try different transcript types in order of preference
+    transcript_types = [
+        ('manual', ['en']),
+        ('manual', ['en-US']),
+        ('generated', ['en']),
+        ('generated', ['en-US']),
+        ('translate', ['en'])  # Fallback to translated version
+    ]
 
-    while retry_count < MAX_RETRIES:
-        try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+    try:
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
 
-            # Try different transcript types in order of preference
-            transcript_types = [
-                ('manual', ['en']),
-                ('manual', ['en-US']),
-                ('generated', ['en']),
-                ('generated', ['en-US']),
-                ('translate', ['en'])  # Fallback to translated version
-            ]
-
-            for trans_type, langs in transcript_types:
-                try:
-                    if trans_type == 'manual':
-                        transcript = transcript_list.find_manually_created_transcript(langs)
-                    elif trans_type == 'generated':
-                        transcript = transcript_list.find_generated_transcript(langs)
+        for trans_type, langs in transcript_types:
+            try:
+                if trans_type == 'manual':
+                    transcript = transcript_list.find_manually_created_transcript(langs)
+                elif trans_type == 'generated':
+                    transcript = transcript_list.find_generated_transcript(langs)
+                else:  # translate
+                    available_transcripts = transcript_list.find_generated_transcript(['en', 'en-US', 'auto'])
+                    if available_transcripts:
+                        transcript = available_transcripts.translate('en')
                     else:
-                        transcript = transcript_list.find_transcript(langs)
-                        if not transcript:
-                            continue
-                        transcript = transcript.translate('en')
+                        continue
 
-                    transcript_data = transcript.fetch()
-                    if transcript_data:
-                        transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
-                        if transcript_text.strip():
-                            return transcript_text
-                except Exception as e:
-                    print(f"Failed to fetch {trans_type} transcript: {str(e)}", file=sys.stderr)
-                    continue
+                transcript_data = transcript.fetch()
+                if transcript_data:
+                    transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
+                    if transcript_text.strip():
+                        return transcript_text
+            except Exception as e:
+                print(f"Failed to fetch {trans_type} transcript: {str(e)}", file=sys.stderr)
+                continue
 
-            raise NoTranscriptFound(f"No suitable transcript found for video {video_id}")
+        raise NoTranscriptFound(f"No suitable transcript found for video {video_id}")
 
-        except TranscriptsDisabled:
-            print("Transcripts are disabled", file=sys.stderr)
-            raise TranscriptsDisabled(
-                "This video has disabled transcripts. Please try another video with captions enabled."
-            )
-        except NoTranscriptFound:
-            print("No transcript available", file=sys.stderr)
-            raise NoTranscriptFound(
-                "No transcript available for this video. Please try a video with captions."
-            )
-        except Exception as e:
-            print(f"Attempt {retry_count + 1} failed: {str(e)}", file=sys.stderr)
-            last_error = e
-            retry_count += 1
-            if retry_count < MAX_RETRIES:
-                print(f"Retrying... (Attempt {retry_count + 1}/{MAX_RETRIES})", file=sys.stderr)
-
-    raise last_error or Exception("Failed to fetch transcript after multiple attempts")
+    except TranscriptsDisabled:
+        print("Transcripts are disabled", file=sys.stderr)
+        raise TranscriptsDisabled(
+            "This video has disabled transcripts. Please try another video with captions enabled."
+        )
+    except NoTranscriptFound:
+        print("No transcript available", file=sys.stderr)
+        raise NoTranscriptFound(
+            "No transcript available for this video. Please try a video with captions."
+        )
+    except Exception as e:
+        print(f"Transcript fetch error: {str(e)}", file=sys.stderr)
+        raise Exception(f"Failed to fetch transcript: {str(e)}")
 
 def fetch_video_metadata(video_id: str) -> dict:
     """Fetch video metadata using YouTube API with error handling."""
@@ -185,19 +176,21 @@ def main():
             }))
             sys.exit(1)
         except TranscriptsDisabled:
+            metadata = fetch_video_metadata(video_id)
             print(json.dumps({
                 "success": False,
                 "error": "This video has disabled transcripts. Please try another video with captions enabled.",
                 "errorType": "TranscriptsDisabled",
-                "metadata": fetch_video_metadata(video_id)  # Still return metadata if available
+                "metadata": metadata
             }))
             sys.exit(1)
         except NoTranscriptFound:
+            metadata = fetch_video_metadata(video_id)
             print(json.dumps({
                 "success": False,
                 "error": "No transcript found for this video. Please try a video with captions.",
                 "errorType": "NoTranscriptFound",
-                "metadata": fetch_video_metadata(video_id)  # Still return metadata if available
+                "metadata": metadata
             }))
             sys.exit(1)
         except Exception as e:
