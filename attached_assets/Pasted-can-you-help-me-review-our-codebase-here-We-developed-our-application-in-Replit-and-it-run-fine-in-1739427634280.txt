@@ -1,0 +1,30 @@
+can you help me review our codebase here? We developed our application in Replit, and it run fine in its development environment, it works as we expected. 
+
+But when we deploy to its production, and try to run or extract youtube url link for content analysis and etc, there is an error in our deployment log (see below).
+
+Can you help me resolve this? Note that DEVELOPMENT ENVIRONMENT WORKS PERFECTLY, I JUST WANT TO MAKE SURE THAT PRODUCTION ENV WORKS THE SAME AS DEVELOPMENT. 
+
+
+#### ERROR: deployment log
+
+2025-02-13 11:54:20.78  9189dfb1  System  starting up user application
+2025-02-13 11:54:20.89  9189dfb1  System  forwarding local port 5000 to external port 80
+2025-02-13 11:54:22.51  9189dfb1  User  > rest-express@1.0.0 start
+2025-02-13 11:54:22.51  9189dfb1  User  > NODE_ENV=production node dist/index.js
+2025-02-13 11:54:23.82  9189dfb1  User  4:54:23 AM [express] serving on port 5000
+2025-02-13 11:54:45.98  9189dfb1  User  Extracting transcript for URL: https://youtu.be/XVJloy-jk0o?si=85vv8b2oBTs7g5v
+2025-02-13 11:54:47.37  9189dfb1  User  Python script error: Starting process for URL: https://youtu.be/XVJloy-jk0o?si=85vv8b2oBTs7g5v
+2025-02-13 11:54:47.37  9189dfb1  User  Processing URL: https://youtu.be/XVJloy-jk0o?si=85vv8b2oBTs7g5v
+2025-02-13 11:54:47.37  9189dfb1  User  Extracted video ID: XVJloy-jk0o
+2025-02-13 11:54:47.37  9189dfb1  User  Successfully extracted video ID: XVJloy-jk0o
+2025-02-13 11:54:47.37  9189dfb1  User  Fetching transcript for video ID: XVJloy-jk0o
+2025-02-13 11:54:48.07  9189dfb1  User  Python script error: Transcripts are disabled
+2025-02-13 11:54:48.07  9189dfb1  User  Fetching metadata for: XVJloy-jk0o
+2025-02-13 11:54:48.17  9189dfb1  User  Python script output: {"success": false, "error": "This video has disabled transcripts. Please try another video with captions enabled."}
+2025-02-13 11:54:48.21  9189dfb1  User  Python process exited with code 1
+2025-02-13 11:54:48.21  9189dfb1  User  Transcript extraction failed: Error: This video has disabled transcripts. Please try another video with captions enabled.
+2025-02-13 11:54:48.21  9189dfb1  User  at ChildProcess. (file:///home/runner/workspace/dist/index.js:268:24)
+2025-02-13 11:54:48.21  9189dfb1  User  at ChildProcess.emit (node:events:518:28)
+2025-02-13 11:54:48.21  9189dfb1  User  at maybeClose (node:internal/child_process:1104:16)
+2025-02-13 11:54:48.21  9189dfb1  User  at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+2025-02-13 11:54:48.22  9189dfb1  User  4:54:48 AM [express] POST /api/extract-transcript 500 in 2237ms :: {"message":"This video has disabl...
