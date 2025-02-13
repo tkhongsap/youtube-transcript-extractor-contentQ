@@ -8,7 +8,7 @@ import requests
 import isodate
 
 # Set up logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def extract_video_id(youtube_url: str) -> str:
@@ -16,6 +16,14 @@ def extract_video_id(youtube_url: str) -> str:
     try:
         logger.info(f"Processing URL: {youtube_url}")
         parsed_url = urlparse(youtube_url)
+
+        # Handle youtu.be URLs first (they're simpler)
+        if 'youtu.be' in parsed_url.netloc:
+            video_id = parsed_url.path.lstrip('/').split('?')[0]
+            if video_id:
+                logger.info(f"Successfully extracted video ID from youtu.be URL: {video_id}")
+                return video_id
+            raise ValueError(f"Could not extract video ID from youtu.be URL: {youtube_url}")
 
         # Handle standard youtube.com URLs
         if 'youtube.com' in parsed_url.netloc:
@@ -30,97 +38,99 @@ def extract_video_id(youtube_url: str) -> str:
                 return video_id
             raise ValueError(f"Could not extract video ID from URL: {youtube_url}")
 
-        # Handle youtu.be URLs
-        elif 'youtu.be' in parsed_url.netloc:
-            video_id = parsed_url.path.lstrip('/')
-            if video_id:
-                video_id = video_id.split('?')[0]
-                logger.info(f"Successfully extracted video ID from youtu.be URL: {video_id}")
-                return video_id
-            raise ValueError(f"Could not extract video ID from youtu.be URL: {youtube_url}")
-
         raise ValueError(f"Unsupported YouTube URL format: {youtube_url}")
 
     except Exception as e:
         logger.error(f"Error in extract_video_id: {str(e)}")
         raise
 
+def try_get_transcript(video_id: str, languages: list[str]) -> dict:
+    """Try multiple methods to get transcript."""
+    for lang in languages:
+        try:
+            logger.info(f"Attempting to get transcript in {lang}")
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
+            logger.info(f"Successfully got transcript in {lang}")
+            return {
+                'success': True,
+                'transcript': transcript,
+                'language': lang,
+                'type': 'direct'
+            }
+        except Exception as e:
+            logger.debug(f"Failed to get transcript in {lang}: {str(e)}")
+            continue
+    return {'success': False}
+
 def extract_transcript(video_id: str) -> dict:
     """Extract transcript with enhanced error handling and fallback mechanisms."""
     try:
-        logger.info(f"Attempting to fetch transcript for video ID: {video_id}")
+        logger.info(f"Starting transcript extraction for video ID: {video_id}")
 
-        # Define supported languages in order of preference
+        # Try direct transcript fetch first with multiple languages
         languages = ['en', 'en-US', 'en-GB', 'a.en']
-        transcript_list = None
+        result = try_get_transcript(video_id, languages)
 
+        if result['success']:
+            return result
+
+        # If direct fetch fails, try list_transcripts approach
         try:
+            logger.info("Attempting to list available transcripts")
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            logger.info("Successfully retrieved transcript list")
-        except Exception as e:
-            logger.error(f"Error retrieving transcript list: {str(e)}")
-            return {
-                'success': False,
-                'error': 'Failed to retrieve transcript list',
-                'errorType': 'TranscriptListError'
-            }
 
-        # Try manual transcripts first
-        for lang in languages:
+            # Try to get manual transcript first
+            for lang in languages:
+                try:
+                    transcript = transcript_list.find_manually_created_transcript([lang])
+                    transcript_data = transcript.fetch()
+                    logger.info(f"Found manual transcript in {lang}")
+                    return {
+                        'success': True,
+                        'transcript': transcript_data,
+                        'language': lang,
+                        'type': 'manual'
+                    }
+                except Exception:
+                    continue
+
+            # Try auto-generated transcript
+            for lang in languages:
+                try:
+                    transcript = transcript_list.find_generated_transcript([lang])
+                    transcript_data = transcript.fetch()
+                    logger.info(f"Found auto-generated transcript in {lang}")
+                    return {
+                        'success': True,
+                        'transcript': transcript_data,
+                        'language': lang,
+                        'type': 'auto'
+                    }
+                except Exception:
+                    continue
+
+            # Last resort: try to translate from any available transcript
             try:
-                logger.info(f"Attempting to find manual transcript in {lang}")
-                transcript = transcript_list.find_manually_created_transcript([lang])
-                transcript_data = transcript.fetch()
-                logger.info(f"Found manual transcript in {lang}")
-                return {
-                    'success': True,
-                    'transcript': transcript_data,
-                    'language': lang,
-                    'type': 'manual'
-                }
+                logger.info("Attempting translation from any available transcript")
+                available_transcripts = transcript_list.manual_transcripts or transcript_list.generated_transcripts
+                if available_transcripts:
+                    first_transcript = next(iter(available_transcripts.values()))
+                    translated = first_transcript.translate('en')
+                    transcript_data = translated.fetch()
+                    logger.info("Successfully translated transcript to English")
+                    return {
+                        'success': True,
+                        'transcript': transcript_data,
+                        'language': 'en-translated',
+                        'type': 'translated'
+                    }
             except Exception as e:
-                logger.debug(f"No manual transcript in {lang}: {str(e)}")
-                continue
+                logger.error(f"Translation attempt failed: {str(e)}")
 
-        # Try auto-generated transcripts
-        for lang in languages:
-            try:
-                logger.info(f"Attempting to find auto-generated transcript in {lang}")
-                transcript = transcript_list.find_generated_transcript([lang])
-                transcript_data = transcript.fetch()
-                logger.info(f"Found auto-generated transcript in {lang}")
-                return {
-                    'success': True,
-                    'transcript': transcript_data,
-                    'language': lang,
-                    'type': 'auto'
-                }
-            except Exception as e:
-                logger.debug(f"No auto-generated transcript in {lang}: {str(e)}")
-                continue
-
-        # Try translation as last resort
-        try:
-            logger.info("Attempting to translate transcript from any available language")
-            # Get first available transcript
-            available_transcripts = transcript_list.manual_transcripts
-            if not available_transcripts:
-                available_transcripts = transcript_list.generated_transcripts
-
-            if available_transcripts:
-                first_transcript = next(iter(available_transcripts.values()))
-                translated = first_transcript.translate('en')
-                transcript_data = translated.fetch()
-                logger.info("Successfully translated transcript to English")
-                return {
-                    'success': True,
-                    'transcript': transcript_data,
-                    'language': 'en-translated',
-                    'type': 'translated'
-                }
         except Exception as e:
-            logger.error(f"Translation attempt failed: {str(e)}")
+            logger.error(f"List transcripts approach failed: {str(e)}")
 
+        # If we get here, no transcript was found
         logger.error("No transcript available in any supported language")
         return {
             'success': False,
@@ -137,14 +147,14 @@ def extract_transcript(video_id: str) -> dict:
         }
 
 def fetch_video_metadata(video_id: str) -> dict:
-    """Fetch video metadata with enhanced error handling."""
+    """Fetch video metadata."""
     try:
         api_key = os.getenv('YOUTUBE_API_KEY')
         if not api_key:
             logger.warning("YouTube API key not found in environment")
             return {}
 
-        logger.info(f"Fetching metadata for video ID: {video_id}")
+        logger.info(f"Fetching metadata for: {video_id}")
         response = requests.get(
             "https://www.googleapis.com/youtube/v3/videos",
             params={
@@ -183,10 +193,10 @@ def fetch_video_metadata(video_id: str) -> dict:
         return {}
 
 def main():
-    """Main function with enhanced error handling and logging."""
+    """Main function with enhanced error handling."""
     try:
         if len(sys.argv) != 2:
-            logger.error("Error: Missing YouTube URL argument")
+            logger.error("Missing YouTube URL argument")
             print(json.dumps({
                 "success": False,
                 "error": "Missing YouTube URL",
@@ -195,7 +205,7 @@ def main():
             sys.exit(1)
 
         youtube_url = sys.argv[1]
-        logger.info(f"Starting transcript extraction for URL: {youtube_url}")
+        logger.info(f"Starting process for URL: {youtube_url}")
 
         try:
             video_id = extract_video_id(youtube_url)
@@ -203,7 +213,6 @@ def main():
             metadata = fetch_video_metadata(video_id)
 
             if result['success']:
-                logger.info("Process completed successfully")
                 print(json.dumps({
                     "success": True,
                     "transcript": result['transcript'],
