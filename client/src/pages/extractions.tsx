@@ -125,7 +125,6 @@ const Extractions: FC = () => {
             errorMessage = data.message || "Failed to extract transcript";
         }
 
-        // Show error toast with retry tip if applicable
         toast({
           title: errorTitle,
           description: (
@@ -141,7 +140,6 @@ const Extractions: FC = () => {
           variant: "destructive",
         });
 
-        // If we have metadata despite transcript failure, still show it
         if (data.metadata) {
           setMetadata(data.metadata);
         }
@@ -298,7 +296,7 @@ const Extractions: FC = () => {
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-4 w-4/5" />
                   </div>
-                ) : transcript ? (
+                ) : (
                   <div className="space-y-6">
                     {metadata && (
                       <div className="bg-gray-50 p-4 rounded-lg border border-[#E2E8F0] mb-6">
@@ -330,32 +328,29 @@ const Extractions: FC = () => {
                       </div>
                     )}
                     <div className="space-y-2">
-                      {transcript.split("\n").map((line, index) => (
-                        <p
-                          key={index}
-                          className="text-sm leading-relaxed text-gray-800 px-2 py-1 rounded hover:bg-gray-50"
-                        >
-                          {line}
-                        </p>
-                      ))}
+                      {Array.isArray(transcript) ? (
+                        transcript.map((segment, index) => (
+                          <p
+                            key={index}
+                            className="text-sm leading-relaxed text-gray-800 px-2 py-1 rounded hover:bg-gray-50"
+                          >
+                            {segment.text}
+                          </p>
+                        ))
+                      ) : typeof transcript === 'string' ? (
+                        transcript.split("\n").map((line, index) => (
+                          <p
+                            key={index}
+                            className="text-sm leading-relaxed text-gray-800 px-2 py-1 rounded hover:bg-gray-50"
+                          >
+                            {line}
+                          </p>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500">No transcript content available</p>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <Card className="card w-full border-0 shadow-none h-[400px] flex items-center justify-center">
-                    <CardContent className="p-12 text-center">
-                      <div className="mb-4 flex justify-center">
-                        <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                          <Search className="h-6 w-6 text-purple-600" />
-                        </div>
-                      </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
-                        No Transcript Yet
-                      </h3>
-                      <p className="text-gray-500 max-w-md mx-auto">
-                        Enter a YouTube URL above and click "Extract Now" to get started. We'll fetch the video transcript for you.
-                      </p>
-                    </CardContent>
-                  </Card>
                 )}
               </ScrollArea>
             </CardContent>
