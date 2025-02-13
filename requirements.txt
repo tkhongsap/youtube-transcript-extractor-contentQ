@@ -4,3 +4,8 @@ requests==2.31.0
 python-dotenv==1.0.1
 isodate==0.6.1
 openai==1.61.1
+isodate
+openai
+python-dotenv
+requests
+youtube-transcript-api

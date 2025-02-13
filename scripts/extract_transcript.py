@@ -2,7 +2,7 @@ import os
 import sys
 import json
 from urllib.parse import urlparse, parse_qs
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 import requests
 import isodate
 
@@ -12,114 +12,94 @@ def extract_video_id(youtube_url: str) -> str:
         print(f"Processing URL: {youtube_url}", file=sys.stderr)
         parsed_url = urlparse(youtube_url)
 
-        # Handle youtube.com URLs
+        # Handle standard youtube.com URLs
         if 'youtube.com' in parsed_url.netloc:
             query_params = parse_qs(parsed_url.query)
             if 'v' in query_params:
                 video_id = query_params['v'][0]
-                print(f"Extracted video ID: {video_id}", file=sys.stderr)
+                print(f"Successfully extracted video ID from standard URL: {video_id}", file=sys.stderr)
                 return video_id
-            # Handle youtube.com/v/VIDEO_ID format
-            elif parsed_url.path.startswith('/v/'):
-                video_id = parsed_url.path.split('/v/')[1]
-                print(f"Extracted video ID from /v/ path: {video_id}", file=sys.stderr)
-                return video_id.split('?')[0]  # Remove any query parameters
-            raise ValueError("Invalid YouTube URL format")
+            elif '/v/' in parsed_url.path:
+                video_id = parsed_url.path.split('/v/')[1].split('?')[0]
+                print(f"Successfully extracted video ID from /v/ path: {video_id}", file=sys.stderr)
+                return video_id
+            raise ValueError(f"Could not extract video ID from URL: {youtube_url}")
 
         # Handle youtu.be URLs
         elif 'youtu.be' in parsed_url.netloc:
             video_id = parsed_url.path.lstrip('/')
             if video_id:
-                print(f"Extracted video ID: {video_id}", file=sys.stderr)
-                return video_id.split('?')[0]  # Remove any query parameters
-            raise ValueError("Invalid YouTube URL format")
-        else:
-            raise ValueError("Invalid YouTube URL")
+                video_id = video_id.split('?')[0]
+                print(f"Successfully extracted video ID from youtu.be URL: {video_id}", file=sys.stderr)
+                return video_id
+            raise ValueError(f"Could not extract video ID from youtu.be URL: {youtube_url}")
+
+        raise ValueError(f"Unsupported YouTube URL format: {youtube_url}")
+
     except Exception as e:
-        print(f"Error extracting video ID: {str(e)}", file=sys.stderr)
-        raise ValueError("Invalid YouTube URL format")
+        print(f"Error in extract_video_id: {str(e)}", file=sys.stderr)
+        raise
 
 def fetch_transcript(video_id: str) -> str:
-    """Fetch the transcript for the given video ID with retries and fallbacks."""
-    print(f"Fetching transcript for video ID: {video_id}", file=sys.stderr)
+    """Fetch the transcript with enhanced error handling and logging."""
+    print(f"Starting transcript fetch for video ID: {video_id}", file=sys.stderr)
 
     try:
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        print("Successfully retrieved transcript list", file=sys.stderr)
 
-        # First try manual transcripts
-        try:
-            # Try both en-US and en for manual transcripts
-            for lang in ['en-US', 'en']:
-                try:
-                    transcript = transcript_list.find_manually_created_transcript([lang])
-                    transcript_data = transcript.fetch()
-                    if transcript_data:
-                        transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
-                        if transcript_text.strip():
-                            print(f"Found manual transcript in {lang}", file=sys.stderr)
-                            return transcript_text
-                except Exception as e:
-                    print(f"No manual transcript in {lang}: {str(e)}", file=sys.stderr)
-                    continue
-        except Exception as e:
-            print("No manual transcripts found, trying auto-generated", file=sys.stderr)
-
-        # Then try auto-generated transcripts
-        try:
-            # Get auto-generated transcript in English
-            transcript = transcript_list.find_generated_transcript(['en'])
-            transcript_data = transcript.fetch()
-            if transcript_data:
-                transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
-                if transcript_text.strip():
-                    print("Found auto-generated transcript", file=sys.stderr)
-                    return transcript_text
-        except Exception as e:
-            print(f"No auto-generated transcript found: {str(e)}", file=sys.stderr)
-
-        # If both failed, try translation as last resort
+        # Try to get English transcript (manual or auto-generated)
         try:
             transcript = transcript_list.find_transcript(['en'])
-            if not transcript:
-                # Get any transcript and translate it to English
-                available_transcript = next(iter(transcript_list._manually_created_transcripts.values() or 
-                                              transcript_list._generated_transcripts.values()))
-                transcript = available_transcript.translate('en')
+            print("Found English transcript", file=sys.stderr)
+        except:
+            try:
+                transcript = transcript_list.find_transcript(['en-US'])
+                print("Found en-US transcript", file=sys.stderr)
+            except:
+                # Get any available transcript and translate to English
+                available_transcripts = transcript_list.find_manually_created_transcript()
+                if not available_transcripts:
+                    available_transcripts = transcript_list.find_generated_transcript()
+                transcript = available_transcripts.translate('en')
+                print("Using translated transcript", file=sys.stderr)
 
-            transcript_data = transcript.fetch()
-            if transcript_data:
-                transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
-                if transcript_text.strip():
-                    print("Found translated transcript", file=sys.stderr)
-                    return transcript_text
-        except Exception as e:
-            print(f"Translation attempt failed: {str(e)}", file=sys.stderr)
+        transcript_data = transcript.fetch()
+        print("Successfully fetched transcript data", file=sys.stderr)
 
-        raise NoTranscriptFound(f"No suitable transcript found for video {video_id}")
+        if not transcript_data:
+            raise NoTranscriptFound("Empty transcript data received")
+
+        transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
+        if not transcript_text.strip():
+            raise NoTranscriptFound("Empty transcript text after processing")
+
+        print("Successfully processed transcript text", file=sys.stderr)
+        return transcript_text
 
     except TranscriptsDisabled:
-        print("Transcripts are disabled", file=sys.stderr)
+        print("TranscriptsDisabled error occurred", file=sys.stderr)
         raise TranscriptsDisabled(
             "This video has disabled transcripts. Please try another video with captions enabled."
         )
     except NoTranscriptFound:
-        print("No transcript available", file=sys.stderr)
+        print("NoTranscriptFound error occurred", file=sys.stderr)
         raise NoTranscriptFound(
             "No transcript available for this video. Please try a video with captions."
         )
     except Exception as e:
-        print(f"Transcript fetch error: {str(e)}", file=sys.stderr)
+        print(f"Unexpected error in fetch_transcript: {str(e)}", file=sys.stderr)
         raise Exception(f"Failed to fetch transcript: {str(e)}")
 
 def fetch_video_metadata(video_id: str) -> dict:
-    """Fetch video metadata using YouTube API with error handling."""
+    """Fetch video metadata with enhanced error handling."""
     try:
         api_key = os.getenv('YOUTUBE_API_KEY')
         if not api_key:
-            print("Missing YouTube API key", file=sys.stderr)
+            print("Warning: YouTube API key not found in environment", file=sys.stderr)
             return {}
 
-        print(f"Fetching metadata for: {video_id}", file=sys.stderr)
+        print(f"Fetching metadata for video ID: {video_id}", file=sys.stderr)
         response = requests.get(
             "https://www.googleapis.com/youtube/v3/videos",
             params={
@@ -127,38 +107,41 @@ def fetch_video_metadata(video_id: str) -> dict:
                 "id": video_id,
                 "key": api_key
             },
-            timeout=10  # Add timeout
+            timeout=10
         )
 
         if not response.ok:
-            print(f"Metadata fetch failed: {response.status_code}", file=sys.stderr)
+            print(f"Metadata API request failed: {response.status_code}", file=sys.stderr)
             return {}
 
         data = response.json()
         if not data.get("items"):
-            print("No metadata found", file=sys.stderr)
+            print("No metadata items found in response", file=sys.stderr)
             return {}
 
         video = data["items"][0]
         duration = isodate.parse_duration(video["contentDetails"]["duration"])
-        duration_str = str(duration).split('.')[0]  # Remove microseconds
 
-        return {
+        metadata = {
             "title": video["snippet"]["title"],
             "channelTitle": video["snippet"]["channelTitle"],
             "publishedAt": video["snippet"]["publishedAt"],
             "viewCount": video["statistics"]["viewCount"],
-            "duration": duration_str
+            "duration": str(duration).split('.')[0]
         }
+
+        print("Successfully retrieved metadata", file=sys.stderr)
+        return metadata
+
     except Exception as e:
-        print(f"Metadata error: {str(e)}", file=sys.stderr)
+        print(f"Error in fetch_video_metadata: {str(e)}", file=sys.stderr)
         return {}
 
 def main():
-    """Main function to handle transcript extraction with improved error handling."""
+    """Main function with enhanced error handling and logging."""
     try:
         if len(sys.argv) != 2:
-            print("Missing URL argument", file=sys.stderr)
+            print("Error: Missing YouTube URL argument", file=sys.stderr)
             print(json.dumps({
                 "success": False,
                 "error": "Missing YouTube URL",
@@ -167,18 +150,14 @@ def main():
             sys.exit(1)
 
         youtube_url = sys.argv[1]
-        print(f"Starting process for URL: {youtube_url}", file=sys.stderr)
+        print(f"Starting transcript extraction for URL: {youtube_url}", file=sys.stderr)
 
         try:
             video_id = extract_video_id(youtube_url)
-            print(f"Successfully extracted video ID: {video_id}", file=sys.stderr)
-
             transcript = fetch_transcript(video_id)
-            print("Successfully fetched transcript", file=sys.stderr)
-
             metadata = fetch_video_metadata(video_id)
-            print("Process completed successfully", file=sys.stderr)
 
+            print("Process completed successfully", file=sys.stderr)
             print(json.dumps({
                 "success": True,
                 "transcript": transcript,
@@ -220,7 +199,7 @@ def main():
             sys.exit(1)
 
     except Exception as e:
-        print(f"Fatal error: {str(e)}", file=sys.stderr)
+        print(f"Fatal error in main: {str(e)}", file=sys.stderr)
         print(json.dumps({
             "success": False,
             "error": "An unexpected error occurred",
