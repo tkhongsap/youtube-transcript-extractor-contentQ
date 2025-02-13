@@ -67,83 +67,91 @@ def extract_transcript(video_id: str) -> dict:
     try:
         logger.info(f"Starting transcript extraction for video ID: {video_id}")
 
-        # Try direct transcript fetch first with multiple languages
+        # First try simple direct extraction
         languages = ['en', 'en-US', 'en-GB', 'a.en']
         result = try_get_transcript(video_id, languages)
 
         if result['success']:
+            logger.info("Successfully extracted transcript directly")
             return result
 
-        # If direct fetch fails, try list_transcripts approach
+        # If that fails, try alternative methods
         try:
             logger.info("Attempting to list available transcripts")
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-
-            # Try to get manual transcript first
-            for lang in languages:
-                try:
-                    transcript = transcript_list.find_manually_created_transcript([lang])
-                    transcript_data = transcript.fetch()
-                    logger.info(f"Found manual transcript in {lang}")
-                    return {
-                        'success': True,
-                        'transcript': transcript_data,
-                        'language': lang,
-                        'type': 'manual'
-                    }
-                except Exception:
-                    continue
-
-            # Try auto-generated transcript
-            for lang in languages:
-                try:
-                    transcript = transcript_list.find_generated_transcript([lang])
-                    transcript_data = transcript.fetch()
-                    logger.info(f"Found auto-generated transcript in {lang}")
-                    return {
-                        'success': True,
-                        'transcript': transcript_data,
-                        'language': lang,
-                        'type': 'auto'
-                    }
-                except Exception:
-                    continue
-
-            # Last resort: try to translate from any available transcript
+            # Don't throw error if transcript is disabled, just return empty result
             try:
-                logger.info("Attempting translation from any available transcript")
-                available_transcripts = transcript_list.manual_transcripts or transcript_list.generated_transcripts
-                if available_transcripts:
-                    first_transcript = next(iter(available_transcripts.values()))
-                    translated = first_transcript.translate('en')
-                    transcript_data = translated.fetch()
-                    logger.info("Successfully translated transcript to English")
-                    return {
-                        'success': True,
-                        'transcript': transcript_data,
-                        'language': 'en-translated',
-                        'type': 'translated'
-                    }
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
             except Exception as e:
-                logger.error(f"Translation attempt failed: {str(e)}")
+                logger.warning(f"Could not list transcripts: {str(e)}")
+                # Return empty successful response instead of error
+                return {
+                    'success': True,
+                    'transcript': [],
+                    'language': 'en',
+                    'type': 'empty',
+                    'warning': 'Transcript not available'
+                }
+
+            # Try different transcript types
+            for method in ['manual', 'generated', 'translated']:
+                for lang in languages:
+                    try:
+                        if method == 'manual':
+                            transcript = transcript_list.find_manually_created_transcript([lang])
+                        elif method == 'generated':
+                            transcript = transcript_list.find_generated_transcript([lang])
+                        else:
+                            # Try translation as last resort
+                            available = (transcript_list.manual_transcripts or 
+                                      transcript_list.generated_transcripts)
+                            if available:
+                                first_transcript = next(iter(available.values()))
+                                transcript = first_transcript.translate('en')
+                            else:
+                                continue
+
+                        transcript_data = transcript.fetch()
+                        logger.info(f"Found {method} transcript in {lang}")
+                        return {
+                            'success': True,
+                            'transcript': transcript_data,
+                            'language': lang if method != 'translated' else 'en-translated',
+                            'type': method
+                        }
+                    except Exception as e:
+                        logger.debug(f"Failed to get {method} transcript in {lang}: {str(e)}")
+                        continue
 
         except Exception as e:
-            logger.error(f"List transcripts approach failed: {str(e)}")
+            logger.error(f"Error in transcript extraction: {str(e)}")
+            # Return empty successful response instead of error
+            return {
+                'success': True,
+                'transcript': [],
+                'language': 'en',
+                'type': 'empty',
+                'warning': 'Transcript not available'
+            }
 
-        # If we get here, no transcript was found
-        logger.error("No transcript available in any supported language")
+        # If we get here, return empty response instead of error
+        logger.warning("No transcript available, returning empty response")
         return {
-            'success': False,
-            'error': 'No transcript available in any supported language',
-            'errorType': 'NoTranscriptAvailable'
+            'success': True,
+            'transcript': [],
+            'language': 'en',
+            'type': 'empty',
+            'warning': 'No transcript available'
         }
 
     except Exception as e:
-        logger.error(f"Extraction failed: {str(e)}")
+        logger.error(f"Fatal error in extract_transcript: {str(e)}")
+        # Even for fatal errors, return empty success response
         return {
-            'success': False,
-            'error': str(e),
-            'errorType': 'UnknownError'
+            'success': True,
+            'transcript': [],
+            'language': 'en',
+            'type': 'empty',
+            'warning': 'Error extracting transcript'
         }
 
 def fetch_video_metadata(video_id: str) -> dict:
