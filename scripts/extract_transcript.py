@@ -43,39 +43,57 @@ def fetch_transcript(video_id: str) -> str:
     """Fetch the transcript for the given video ID with retries and fallbacks."""
     print(f"Fetching transcript for video ID: {video_id}", file=sys.stderr)
 
-    # Try different transcript types in order of preference
-    transcript_types = [
-        ('manual', ['en']),
-        ('manual', ['en-US']),
-        ('generated', ['en']),
-        ('generated', ['en-US']),
-        ('translate', ['en'])  # Fallback to translated version
-    ]
-
     try:
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
 
-        for trans_type, langs in transcript_types:
-            try:
-                if trans_type == 'manual':
-                    transcript = transcript_list.find_manually_created_transcript(langs)
-                elif trans_type == 'generated':
-                    transcript = transcript_list.find_generated_transcript(langs)
-                else:  # translate
-                    available_transcripts = transcript_list.find_generated_transcript(['en', 'en-US', 'auto'])
-                    if available_transcripts:
-                        transcript = available_transcripts.translate('en')
-                    else:
-                        continue
+        # First try manual transcripts
+        try:
+            # Try both en-US and en for manual transcripts
+            for lang in ['en-US', 'en']:
+                try:
+                    transcript = transcript_list.find_manually_created_transcript([lang])
+                    transcript_data = transcript.fetch()
+                    if transcript_data:
+                        transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
+                        if transcript_text.strip():
+                            print(f"Found manual transcript in {lang}", file=sys.stderr)
+                            return transcript_text
+                except Exception as e:
+                    print(f"No manual transcript in {lang}: {str(e)}", file=sys.stderr)
+                    continue
+        except Exception as e:
+            print("No manual transcripts found, trying auto-generated", file=sys.stderr)
 
-                transcript_data = transcript.fetch()
-                if transcript_data:
-                    transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
-                    if transcript_text.strip():
-                        return transcript_text
-            except Exception as e:
-                print(f"Failed to fetch {trans_type} transcript: {str(e)}", file=sys.stderr)
-                continue
+        # Then try auto-generated transcripts
+        try:
+            # Get auto-generated transcript in English
+            transcript = transcript_list.find_generated_transcript(['en'])
+            transcript_data = transcript.fetch()
+            if transcript_data:
+                transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
+                if transcript_text.strip():
+                    print("Found auto-generated transcript", file=sys.stderr)
+                    return transcript_text
+        except Exception as e:
+            print(f"No auto-generated transcript found: {str(e)}", file=sys.stderr)
+
+        # If both failed, try translation as last resort
+        try:
+            transcript = transcript_list.find_transcript(['en'])
+            if not transcript:
+                # Get any transcript and translate it to English
+                available_transcript = next(iter(transcript_list._manually_created_transcripts.values() or 
+                                              transcript_list._generated_transcripts.values()))
+                transcript = available_transcript.translate('en')
+
+            transcript_data = transcript.fetch()
+            if transcript_data:
+                transcript_text = "\n".join([item.get("text", "") for item in transcript_data])
+                if transcript_text.strip():
+                    print("Found translated transcript", file=sys.stderr)
+                    return transcript_text
+        except Exception as e:
+            print(f"Translation attempt failed: {str(e)}", file=sys.stderr)
 
         raise NoTranscriptFound(f"No suitable transcript found for video {video_id}")
 
