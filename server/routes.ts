@@ -145,7 +145,16 @@ app.post("/api/extract-transcript", async (req, res) => {
             try {
               const transcriptData = JSON.parse(transcript);
               if (transcriptData.success) {
-                fs.writeFileSync(transcriptFile, transcriptData.transcript, { encoding: 'utf8' });
+                // Convert transcript array to text format for analysis
+                let transcriptText;
+                if (Array.isArray(transcriptData.transcript)) {
+                  transcriptText = transcriptData.transcript
+                    .map(entry => entry.text)
+                    .join('\n');
+                } else {
+                  transcriptText = transcriptData.transcript;
+                }
+                fs.writeFileSync(transcriptFile, transcriptText, { encoding: 'utf8' });
                 resolve(transcriptData);
               } else {
                 reject(new Error(transcriptData.error || 'Failed to extract transcript'));
@@ -165,7 +174,7 @@ app.post("/api/extract-transcript", async (req, res) => {
         transcriptFile,
         type,
         llmProvider,
-        outputFile // Pass output file path to avoid E2BIG error
+        outputFile
       ]);
 
       let analysisError = '';
