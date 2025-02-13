@@ -1,10 +1,13 @@
 [project]
 name = "repl-nix-workspace"
 version = "0.1.0"
-description = "Add your description here"
+description = "YouTube content discovery and analysis platform"
 requires-python = ">=3.11"
 dependencies = [
-    "openai>=1.61.1",
-    "python-dotenv>=1.0.1",
-    "youtube-transcript-api>=0.6.3",
+    "openai==1.61.1",
+    "python-dotenv==1.0.1",
+    "youtube-transcript-api==0.6.3",
+    "requests==2.31.0",
+    "isodate==0.6.1",
+    "defusedxml==0.7.1"
 ]
