@@ -94,9 +94,12 @@ const Extractions: FC = () => {
       });
 
       const data = await response.json();
+      console.log('Transcript API response:', data);
 
       if (!response.ok) {
         let errorMessage = data.message || "Failed to extract transcript";
+        let errorTitle = "Error";
+        let showRetryTip = false;
 
         // Handle specific error types
         switch (data.errorType) {
@@ -104,16 +107,43 @@ const Extractions: FC = () => {
             errorMessage = "Please enter a valid YouTube URL";
             break;
           case "TranscriptsDisabled":
+            errorTitle = "Transcripts Disabled";
             errorMessage = "This video has disabled transcripts. Please try another video with captions enabled.";
+            showRetryTip = true;
             break;
           case "NoTranscriptFound":
+            errorTitle = "No Captions Available";
             errorMessage = "No captions found for this video. Please try a video with captions.";
+            showRetryTip = true;
             break;
           case "UnknownError":
+            errorTitle = "Extraction Failed";
             errorMessage = `An error occurred: ${data.message}`;
+            showRetryTip = true;
             break;
           default:
             errorMessage = data.message || "Failed to extract transcript";
+        }
+
+        // Show error toast with retry tip if applicable
+        toast({
+          title: errorTitle,
+          description: (
+            <div className="space-y-2">
+              <p>{errorMessage}</p>
+              {showRetryTip && (
+                <p className="text-sm text-gray-500">
+                  Tip: Try videos with "CC" in the YouTube player controls
+                </p>
+              )}
+            </div>
+          ),
+          variant: "destructive",
+        });
+
+        // If we have metadata despite transcript failure, still show it
+        if (data.metadata) {
+          setMetadata(data.metadata);
         }
 
         throw new Error(errorMessage);
@@ -133,11 +163,8 @@ const Extractions: FC = () => {
         throw new Error(parsedData.error || "Failed to parse transcript");
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error('Transcript extraction error:', error);
+      // Error toast already shown above
     } finally {
       setIsTranscriptLoading(false);
     }
