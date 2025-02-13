@@ -1,0 +1,8 @@
+Host *.replit.dev
+Port 22
+IdentityFile %HOMEPATH%.sshreplit
+StrictHostKeyChecking accept-new
+Host *.replit.dev
+Port 22
+IdentityFile %HOMEPATH%.sshreplit
+StrictHostKeyChecking accept-new
