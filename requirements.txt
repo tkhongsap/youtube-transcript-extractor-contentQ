@@ -13,3 +13,6 @@ python-dotenv
 youtube-transcript-api
 isodate
 youtube-transcript-api
+isodate
+requests
+youtube-transcript-api
