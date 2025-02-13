@@ -5,6 +5,11 @@ from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 import requests
 import isodate
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def extract_video_id(youtube_url: str) -> str:
     """Extract the video ID from a given YouTube URL."""
@@ -137,6 +142,40 @@ def fetch_video_metadata(video_id: str) -> dict:
         print(f"Error in fetch_video_metadata: {str(e)}", file=sys.stderr)
         return {}
 
+def extract_transcript(video_id):
+    try:
+        logger.debug(f"Attempting to fetch transcript for video ID: {video_id}")
+        
+        # Try multiple language codes
+        languages = ['en', 'en-US', 'en-GB', 'a.en']  # Add more if needed
+        
+        for lang in languages:
+            try:
+                transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
+                return {
+                    'success': True,
+                    'transcript': transcript,
+                    'language': lang
+                }
+            except TranscriptsDisabled:
+                continue
+            except Exception as e:
+                logger.error(f"Error with language {lang}: {str(e)}")
+                continue
+                
+        # If we get here, no transcript was found
+        return {
+            'success': False,
+            'error': 'No transcript available in any supported language'
+        }
+        
+    except Exception as e:
+        logger.error(f"Extraction failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
 def main():
     """Main function with enhanced error handling and logging."""
     try:
@@ -154,16 +193,21 @@ def main():
 
         try:
             video_id = extract_video_id(youtube_url)
-            transcript = fetch_transcript(video_id)
-            metadata = fetch_video_metadata(video_id)
+            result = extract_transcript(video_id)
 
-            print("Process completed successfully", file=sys.stderr)
-            print(json.dumps({
-                "success": True,
-                "transcript": transcript,
-                "metadata": metadata
-            }))
-            sys.exit(0)
+            if result['success']:
+                metadata = fetch_video_metadata(video_id)
+                print("Process completed successfully", file=sys.stderr)
+                print(json.dumps({
+                    "success": True,
+                    "transcript": result['transcript'],
+                    "language": result['language'],
+                    "metadata": metadata
+                }))
+                sys.exit(0)
+            else:
+                print(json.dumps(result))
+                sys.exit(1)
 
         except ValueError as e:
             print(json.dumps({
