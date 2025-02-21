@@ -285,7 +285,14 @@ const Extractions: FC = () => {
             <CardHeader className="border-b border-[#E2E8F0]">
               <div className="flex items-center justify-between">
                 <CardTitle>Full Transcript</CardTitle>
-                <CopyButton value={transcript} />
+                <CopyButton 
+                  value={Array.isArray(transcript) 
+                    ? transcript.map(segment => segment.text).join('\n')
+                    : typeof transcript === 'string' 
+                      ? transcript
+                      : ''
+                  } 
+                />
               </div>
             </CardHeader>
             <CardContent className="p-6">
