@@ -1,4 +1,3 @@
-youtube-transcript-api==0.6.1
 pytube==15.0.0
 requests==2.31.0
 python-dotenv==1.0.1
@@ -8,3 +7,7 @@ isodate
 openai
 python-dotenv
 requests
+isodate==0.6.1
+python-dotenv==1.0.1
+requests==2.31.0
+youtube-transcript-api==0.6.3

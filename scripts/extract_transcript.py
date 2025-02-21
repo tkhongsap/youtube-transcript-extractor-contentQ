@@ -7,8 +7,11 @@ from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, No
 import requests
 import isodate
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+# Set up logging with more detailed format
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 def extract_video_id(youtube_url: str) -> str:
@@ -58,7 +61,7 @@ def try_get_transcript(video_id: str, languages: list[str]) -> dict:
                 'type': 'direct'
             }
         except Exception as e:
-            logger.debug(f"Failed to get transcript in {lang}: {str(e)}")
+            logger.error(f"Failed to get transcript in {lang}: {str(e)}")
             continue
     return {'success': False}
 
@@ -66,6 +69,11 @@ def extract_transcript(video_id: str) -> dict:
     """Extract transcript with enhanced error handling and fallback mechanisms."""
     try:
         logger.info(f"Starting transcript extraction for video ID: {video_id}")
+
+        # Log environment information
+        logger.info(f"Python version: {sys.version}")
+        logger.info(f"Working directory: {os.getcwd()}")
+        logger.info(f"Environment variables: NODE_ENV={os.getenv('NODE_ENV')}")
 
         # First try simple direct extraction
         languages = ['en', 'en-US', 'en-GB', 'a.en']
@@ -78,12 +86,11 @@ def extract_transcript(video_id: str) -> dict:
         # If that fails, try alternative methods
         try:
             logger.info("Attempting to list available transcripts")
-            # Don't throw error if transcript is disabled, just return empty result
             try:
                 transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                logger.info("Successfully listed transcripts")
             except Exception as e:
                 logger.warning(f"Could not list transcripts: {str(e)}")
-                # Return empty successful response instead of error
                 return {
                     'success': True,
                     'transcript': [],
@@ -101,7 +108,6 @@ def extract_transcript(video_id: str) -> dict:
                         elif method == 'generated':
                             transcript = transcript_list.find_generated_transcript([lang])
                         else:
-                            # Try translation as last resort
                             available = (transcript_list.manual_transcripts or 
                                       transcript_list.generated_transcripts)
                             if available:
@@ -119,12 +125,11 @@ def extract_transcript(video_id: str) -> dict:
                             'type': method
                         }
                     except Exception as e:
-                        logger.debug(f"Failed to get {method} transcript in {lang}: {str(e)}")
+                        logger.error(f"Failed to get {method} transcript in {lang}: {str(e)}")
                         continue
 
         except Exception as e:
             logger.error(f"Error in transcript extraction: {str(e)}")
-            # Return empty successful response instead of error
             return {
                 'success': True,
                 'transcript': [],
@@ -133,7 +138,6 @@ def extract_transcript(video_id: str) -> dict:
                 'warning': 'Transcript not available'
             }
 
-        # If we get here, return empty response instead of error
         logger.warning("No transcript available, returning empty response")
         return {
             'success': True,
@@ -145,7 +149,6 @@ def extract_transcript(video_id: str) -> dict:
 
     except Exception as e:
         logger.error(f"Fatal error in extract_transcript: {str(e)}")
-        # Even for fatal errors, return empty success response
         return {
             'success': True,
             'transcript': [],
@@ -232,7 +235,7 @@ def main():
             else:
                 print(json.dumps({
                     "success": False,
-                    "error": result['error'],
+                    "error": result.get('error', 'Unknown error occurred'),
                     "errorType": result.get('errorType', 'UnknownError'),
                     "metadata": metadata
                 }))

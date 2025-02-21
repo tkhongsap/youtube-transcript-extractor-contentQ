@@ -1,11 +1,26 @@
 #!/bin/bash
 
-# Update dependencies
-npm install
+# Ensure we exit on any error
+set -e
+
+echo "Starting deployment setup..."
+
+# Install Python dependencies
+echo "Installing Python dependencies..."
 pip install -r requirements.txt
 
-# Verify environment
-python scripts/check_setup.py
+# Install Node.js dependencies
+echo "Installing Node.js dependencies..."
+npm install
 
-# If using PM2 or similar process manager
-pm2 restart your_app_name 
+# Verify Python environment
+echo "Verifying Python environment..."
+python3 scripts/check_setup.py
+
+# Build the application
+echo "Building the application..."
+npm run build
+
+# Start the application
+echo "Starting the application..."
+npm run start
