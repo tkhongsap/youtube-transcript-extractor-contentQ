@@ -51,13 +51,26 @@ app.post("/api/extract-transcript", async (req, res) => {
     const { url } = z.object({ url: z.string().url() }).parse(req.body);
     console.log('Extracting transcript for URL:', url);
 
+    // Create a temporary directory if it doesn't exist
+    const tmpDir = path.join(process.cwd(), 'tmp');
+    if (!fs.existsSync(tmpDir)) {
+      try {
+        fs.mkdirSync(tmpDir, { recursive: true, mode: 0o755 });
+        console.log('Created temporary directory:', tmpDir);
+      } catch (err) {
+        console.error('Error creating temp directory:', err);
+        throw new Error('Failed to create temporary directory');
+      }
+    }
+
     const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', url]);
     let stderr = '';
     let stdout = '';
 
     pythonProcess.stderr.on('data', (data) => {
       stderr += data.toString();
-      console.error('Python script error:', data.toString());
+      // Log all Python script output for debugging
+      console.error('Python script error/log:', data.toString());
     });
 
     pythonProcess.stdout.on('data', (data) => {
@@ -65,23 +78,31 @@ app.post("/api/extract-transcript", async (req, res) => {
       console.log('Python script output:', data.toString());
     });
 
-    // Wait for process to complete
+    // Wait for process to complete with enhanced error handling
     await new Promise((resolve, reject) => {
       pythonProcess.on('close', (code) => {
         console.log(`Python process exited with code ${code}`);
+
         if (stdout.trim()) {
           try {
             const result = JSON.parse(stdout);
             if (result.success) {
               resolve(result);
             } else {
-              reject(new Error(result.error || 'Unknown error occurred'));
+              // Enhanced error handling with specific error types
+              const error = new Error(result.error || 'Unknown error occurred');
+              error.code = result.errorType;
+              error.details = result.details;
+              reject(error);
             }
           } catch (err) {
             console.error('Failed to parse Python output:', err);
+            console.error('Raw output:', stdout);
             reject(new Error('Invalid response from transcript extractor'));
           }
         } else {
+          console.error('No output from Python script');
+          console.error('stderr:', stderr);
           reject(new Error('No output from transcript extractor'));
         }
       });
@@ -92,22 +113,46 @@ app.post("/api/extract-transcript", async (req, res) => {
       });
     });
 
-    // Parse the output
+    // Parse and validate the output
     const result = JSON.parse(stdout);
 
+    // Handle different error types with appropriate status codes
     if (!result.success) {
-      return res.status(400).json({
+      const errorResponse = {
         message: result.error,
         errorType: result.errorType,
-        details: stderr
-      });
+        details: result.details || stderr,
+        metadata: result.metadata
+      };
+
+      // Map error types to appropriate HTTP status codes
+      const statusCodes = {
+        'InvalidURL': 400,
+        'TranscriptsDisabled': 422,
+        'NoTranscriptFound': 404,
+        'InvalidInput': 400,
+        'UnknownError': 500
+      };
+
+      return res.status(statusCodes[result.errorType as keyof typeof statusCodes] || 500)
+        .json(errorResponse);
     }
 
-    res.json({ transcript: JSON.stringify(result) });
+    // Success response with metadata
+    res.json({ 
+      transcript: JSON.stringify(result),
+      metadata: result.metadata
+    });
+
   } catch (error: any) {
     console.error('Transcript extraction failed:', error);
-    res.status(error.status || 500).json({
+
+    // Determine appropriate status code based on error type
+    const statusCode = error.code === 'InvalidURL' ? 400 : 500;
+
+    res.status(statusCode).json({
       message: error.message || 'Failed to extract transcript',
+      errorType: error.code || 'UnknownError',
       details: error.stack
     });
   }

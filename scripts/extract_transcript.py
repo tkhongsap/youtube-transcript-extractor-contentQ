@@ -2,17 +2,45 @@ import os
 import sys
 import json
 import logging
+import tempfile
+from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 import requests
 import isodate
 
-# Set up logging with more detailed format
+# Enhanced logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+def check_environment():
+    """Check environment setup and permissions."""
+    env_info = {
+        'python_version': sys.version,
+        'working_dir': os.getcwd(),
+        'temp_dir': tempfile.gettempdir(),
+        'user': os.getenv('USER'),
+        'node_env': os.getenv('NODE_ENV'),
+        'path': os.getenv('PATH'),
+    }
+
+    logger.info("Environment Check:")
+    for key, value in env_info.items():
+        logger.info(f"  {key}: {value}")
+
+    # Check temp directory permissions
+    temp_dir = tempfile.gettempdir()
+    try:
+        test_file = Path(temp_dir) / f"test_{os.getpid()}.txt"
+        test_file.write_text("test")
+        test_file.unlink()
+        logger.info(f"Temporary directory {temp_dir} is writable")
+    except Exception as e:
+        logger.error(f"Temporary directory permission error: {str(e)}")
+        raise RuntimeError(f"Cannot write to temporary directory: {str(e)}")
 
 def extract_video_id(youtube_url: str) -> str:
     """Extract the video ID from a given YouTube URL."""
@@ -20,7 +48,7 @@ def extract_video_id(youtube_url: str) -> str:
         logger.info(f"Processing URL: {youtube_url}")
         parsed_url = urlparse(youtube_url)
 
-        # Handle youtu.be URLs first (they're simpler)
+        # Handle youtu.be URLs first
         if 'youtu.be' in parsed_url.netloc:
             video_id = parsed_url.path.lstrip('/').split('?')[0]
             if video_id:
@@ -44,11 +72,13 @@ def extract_video_id(youtube_url: str) -> str:
         raise ValueError(f"Unsupported YouTube URL format: {youtube_url}")
 
     except Exception as e:
-        logger.error(f"Error in extract_video_id: {str(e)}")
+        logger.error(f"Error extracting video ID: {str(e)}")
         raise
 
 def try_get_transcript(video_id: str, languages: list[str]) -> dict:
-    """Try multiple methods to get transcript."""
+    """Try multiple methods to get transcript with enhanced error handling."""
+    errors = []
+
     for lang in languages:
         try:
             logger.info(f"Attempting to get transcript in {lang}")
@@ -60,20 +90,28 @@ def try_get_transcript(video_id: str, languages: list[str]) -> dict:
                 'language': lang,
                 'type': 'direct'
             }
+        except TranscriptsDisabled as e:
+            error = f"Transcripts are disabled for this video: {str(e)}"
+            logger.error(error)
+            errors.append({"language": lang, "error": error, "type": "TranscriptsDisabled"})
+        except NoTranscriptFound as e:
+            error = f"No transcript found for language {lang}: {str(e)}"
+            logger.error(error)
+            errors.append({"language": lang, "error": error, "type": "NoTranscriptFound"})
         except Exception as e:
-            logger.error(f"Failed to get transcript in {lang}: {str(e)}")
-            continue
-    return {'success': False}
+            error = f"Unexpected error getting transcript in {lang}: {str(e)}"
+            logger.error(error)
+            errors.append({"language": lang, "error": error, "type": "UnexpectedError"})
+
+    return {
+        'success': False,
+        'errors': errors
+    }
 
 def extract_transcript(video_id: str) -> dict:
     """Extract transcript with enhanced error handling and fallback mechanisms."""
     try:
         logger.info(f"Starting transcript extraction for video ID: {video_id}")
-
-        # Log environment information
-        logger.info(f"Python version: {sys.version}")
-        logger.info(f"Working directory: {os.getcwd()}")
-        logger.info(f"Environment variables: NODE_ENV={os.getenv('NODE_ENV')}")
 
         # First try simple direct extraction
         languages = ['en', 'en-US', 'en-GB', 'a.en']
@@ -83,21 +121,11 @@ def extract_transcript(video_id: str) -> dict:
             logger.info("Successfully extracted transcript directly")
             return result
 
-        # If that fails, try alternative methods
+        # If direct extraction fails, try listing available transcripts
         try:
             logger.info("Attempting to list available transcripts")
-            try:
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                logger.info("Successfully listed transcripts")
-            except Exception as e:
-                logger.warning(f"Could not list transcripts: {str(e)}")
-                return {
-                    'success': True,
-                    'transcript': [],
-                    'language': 'en',
-                    'type': 'empty',
-                    'warning': 'Transcript not available'
-                }
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            logger.info(f"Available transcripts: {transcript_list.manual_transcripts.keys()}")
 
             # Try different transcript types
             for method in ['manual', 'generated', 'translated']:
@@ -129,43 +157,44 @@ def extract_transcript(video_id: str) -> dict:
                         continue
 
         except Exception as e:
-            logger.error(f"Error in transcript extraction: {str(e)}")
-            return {
-                'success': True,
-                'transcript': [],
-                'language': 'en',
-                'type': 'empty',
-                'warning': 'Transcript not available'
-            }
+            logger.error(f"Error listing transcripts: {str(e)}")
+            if isinstance(e, TranscriptsDisabled):
+                return {
+                    'success': False,
+                    'error': "Transcripts are disabled for this video",
+                    'errorType': "TranscriptsDisabled"
+                }
+            elif isinstance(e, NoTranscriptFound):
+                return {
+                    'success': False,
+                    'error': "No transcripts found for this video",
+                    'errorType': "NoTranscriptFound"
+                }
 
-        logger.warning("No transcript available, returning empty response")
         return {
-            'success': True,
-            'transcript': [],
-            'language': 'en',
-            'type': 'empty',
-            'warning': 'No transcript available'
+            'success': False,
+            'error': "Could not find any available transcripts",
+            'errorType': "NoTranscriptFound",
+            'details': result.get('errors', [])
         }
 
     except Exception as e:
         logger.error(f"Fatal error in extract_transcript: {str(e)}")
         return {
-            'success': True,
-            'transcript': [],
-            'language': 'en',
-            'type': 'empty',
-            'warning': 'Error extracting transcript'
+            'success': False,
+            'error': str(e),
+            'errorType': "UnknownError"
         }
 
 def fetch_video_metadata(video_id: str) -> dict:
-    """Fetch video metadata."""
+    """Fetch video metadata with enhanced error handling."""
     try:
         api_key = os.getenv('YOUTUBE_API_KEY')
         if not api_key:
             logger.warning("YouTube API key not found in environment")
             return {}
 
-        logger.info(f"Fetching metadata for: {video_id}")
+        logger.info(f"Fetching metadata for video: {video_id}")
         response = requests.get(
             "https://www.googleapis.com/youtube/v3/videos",
             params={
@@ -176,11 +205,9 @@ def fetch_video_metadata(video_id: str) -> dict:
             timeout=10
         )
 
-        if not response.ok:
-            logger.error(f"Metadata API request failed: {response.status_code}")
-            return {}
-
+        response.raise_for_status()
         data = response.json()
+
         if not data.get("items"):
             logger.error("No metadata items found in response")
             return {}
@@ -199,6 +226,9 @@ def fetch_video_metadata(video_id: str) -> dict:
         logger.info("Successfully retrieved metadata")
         return metadata
 
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error in fetch_video_metadata: {str(e)}")
+        return {}
     except Exception as e:
         logger.error(f"Error in fetch_video_metadata: {str(e)}")
         return {}
@@ -206,6 +236,9 @@ def fetch_video_metadata(video_id: str) -> dict:
 def main():
     """Main function with enhanced error handling."""
     try:
+        # Check environment setup first
+        check_environment()
+
         if len(sys.argv) != 2:
             logger.error("Missing YouTube URL argument")
             print(json.dumps({
@@ -237,7 +270,8 @@ def main():
                     "success": False,
                     "error": result.get('error', 'Unknown error occurred'),
                     "errorType": result.get('errorType', 'UnknownError'),
-                    "metadata": metadata
+                    "metadata": metadata,
+                    "details": result.get('details', [])
                 }))
                 sys.exit(1)
 
@@ -254,8 +288,12 @@ def main():
         logger.error(f"Fatal error in main: {str(e)}")
         print(json.dumps({
             "success": False,
-            "error": "An unexpected error occurred",
-            "errorType": "FatalError"
+            "error": str(e),
+            "errorType": "FatalError",
+            "details": {
+                "type": type(e).__name__,
+                "message": str(e)
+            }
         }))
         sys.exit(1)
 
