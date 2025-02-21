@@ -1,0 +1,966 @@
+this year has been called the year of AI
+agents now there&amp;#39;s a ton of Buzz about
+agents on YouTube on X and actually a
+lot of it is wrong a lot of these agents
+are not very good yet we want to give
+you the actual real download of what is
+happening with agents and we&amp;#39;re doing
+that with one of the best brins in the
+business Joe MOA the CEO and founder of
+crew AI we&amp;#39;re actually going to break
+down what is an agent where you can get
+started to build agents for your role
+today your job in the future is going to
+depend on the quality of the agents you
+have built to help you do your role all
+that and more on this episode of
+markting against the graen let&amp;#39;s get
+into Today&amp;#39;s
+[Music]
+Show okay we&amp;#39;re here with Joe Mora the
+CEO founder of crew aai this is like the
+year of Agents right this is all we&amp;#39;ve
+heard the number one thing on everyone&amp;#39;s
+lips is like agents agents agents agents
+agents right that&amp;#39;s most of what we are
+all talking about and so I thought we
+could just tea up for for our audience
+maybe we&amp;#39;ll actually start with what is
+an agent maybe you can explain to our
+audience like what do we mean by by
+agent and then we can actually get into
+your take like you&amp;#39;re one of the best
+Minds here to explain agents and really
+your take on is it really the year of
+agents and what do we even mean by that
+like where do you really see agents uh
+being impactful this year so maybe start
+with like what is an agent uh that&amp;#39;s a
+great way to start right what what what
+is an agent what is not an agent like
+now you have operator you can chat with
+all those things like how you draw the
+line so the way that we think about it
+is everyone knows about kind of like uh
+all these llm so jgpt and Tropic and
+everything and they&amp;#39;re very good at
+basically predicting the next token and
+creating content so they&amp;#39;re very good at
+kind of like predicting content right so
+if you really say like hey write me an
+email it would do it for you and if you
+say well make it funnier it would do
+that for you now the interesting thing
+is it almost has some sort of cognition
+right if you give them two options of
+emails it&amp;#39;s going to like choose between
+the two and give you a reason for that
+so the beauty of Agents is you can
+exploit that feature to how these llms
+kind of navigate a problem on their own
+so it&amp;#39;s not a chat anymore you give it a
+task and you can leave the room and then
+this agent is going to try to
+autonomously kind of like through this
+idea of reasoning
+figure out how to get there so I would
+say that the definition of an agent is
+it got to have agency and it&amp;#39;s got to
+have like some components right like it
+has tools it has memory like maybe just
+talk about some of the common
+characteristics of what an agent an
+agent will have yeah because if you
+think about the llm on The Silo it like
+it just sped test out right but in order
+for you to make this more agentic you
+need to have way to hold that
+information so you&amp;#39;re going to need like
+like some sort of memory and then
+there&amp;#39;re going to people that are going
+to ask about shortterm memory and
+long-term memory and you can really dive
+into that and things got very technical
+um but there&amp;#39;s memories and there&amp;#39;s also
+tools I would say those are the two big
+components right so as these agents are
+trying to do something they&amp;#39;re going to
+use those toos to interact with other
+systems your Erp your CRM whatever that
+might be really when you think about an
+agent most of them will have memory uh
+because you need that to have as you
+said agent behavior and most of them
+will have access to tools because they
+can actually do things on your behalf
+they&amp;#39;re autonomous and so as we sit here
+today one of the things that Kip and I
+were jaming on earlier on and and when I
+say jaming on I mean k showing me
+because I&amp;#39;m a European and I live in the
+Dark Ages and we are not allowed to have
+access to anything without the
+bureaucrats signing it off for us and so
+I do not have access to chat gbt
+operator today other than probably
+through a VPN at the weekend but it&amp;#39;s a
+good it&amp;#39;s it&amp;#39;s a good segue into like
+the year of the agents and how you think
+about that why don&amp;#39;t you give us your
+take words in your mouth and then I
+would love to get Joe your take on their
+launch and just agents where we are in
+agents in general in terms of
+capabilities yeah so if if folks aren&amp;#39;t
+familiar opening I launched operator as
+part of their chat GPT Pro Edition which
+is the $200 month Edition so I
+immediately had to upgrade from $20 a
+month to $200 a month they took your
+money they took my money like quick well
+I want an one pro and everything too so
+I had you got to do that upgrade so
+there&amp;#39;s already a cost barrier and what
+it does is it has a basically a browser
+control agent where open AI built their
+own browser and the AI can go and
+navigate based on a requests so you can
+make hotel reservations flight
+reservations dinner reservations do
+research and it&amp;#39;s kind of slow it&amp;#39;s kind
+of clunky if it&amp;#39;s like if it&amp;#39;s a good
+background task and it doesn&amp;#39;t require
+me to like log in or do a bunch of
+interaction it&amp;#39;s just like hey can you
+look up a hotel with a pool in the city
+like that&amp;#39;s great it can do that real
+quick and give me all the information
+and then real slow it doesn&amp;#39;t do it real
+quick it does it much slower than like
+you would it&amp;#39;s like 10 times slower than
+a human doing it right yeah so you could
+have you could have went to upwork hired
+a freelancer to be your your personal
+Searcher and had them search for it in
+the time that open AI operator complet
+look it it it is it is very slow right
+now and it is I think it&amp;#39;s a peek at
+what&amp;#39;s to come I&amp;#39;m interested Joe in
+your take but it&amp;#39;s like I think it&amp;#39;s a
+look at the future but it shows that the
+future is still a little ways away uh
+well I&amp;#39;m going to say uh I agree with
+you but I have uh I think would be a hot
+take maybe not a hot take I don&amp;#39;t know
+uh and that&amp;#39;s how I started to build
+crew right my first experience with crew
+was uh building agents that would help
+me with like uh posting things on
+socials I was never really good at that
+I had all these ideas but but from
+getting that idea and making that into a
+well draft thing that you feel
+comfortable putting out there in the
+world like there&amp;#39;s a huge gap in there
+right and I could do it for sure it&amp;#39;s
+just a matter that you&amp;#39;re going to have
+to sit down you&amp;#39;re going to have to
+spend one hour kind of like doing this
+and if you want to do it consistently
+you&amp;#39;re going to have to do it every day
+and I was never able to the minute that
+I got agents to help with that I start
+doing it every day because you&amp;#39;re right
+they would take way longer but now I
+could speed out my crazy idea and I
+would make a coffee I would get to work
+something I would forget that the thing
+was running and then I would go back and
+it was ready I was like all right this
+is good so I I hear you I think they&amp;#39;re
+not optimal or faster than humans by
+large um there are ways that you can get
+there specifically if you fine tune
+certain models for certain things but I
+still see a lot of value especially kind
+of like this idea of you&amp;#39;re firing a
+bunch of them in the background and you
+got to do something else and just not
+think about it what Kip said as well is
+like the latency doesn&amp;#39;t matter if it&amp;#39;s
+a task that is this task that you just
+want to put on in the background you
+have this Army of Agents doing things on
+so here here&amp;#39;s a good example of
+something I think operator would be
+really good at let&amp;#39;s say you&amp;#39;re moving
+into a new apartment and you&amp;#39;re like you
+have a room and like maybe you&amp;#39;ve picked
+out a bed or something you can upload
+the picture of the room you can upload a
+picture of the bed and you can have it
+Go research stuff that would go with it
+and like put together a room for you and
+then you&amp;#39;d basically have a bunch of
+links you could can go through and
+decide if those things actually go
+together and it just happens in the
+background and that&amp;#39;s stuff that you
+would have taken you a bunch of time
+anyway that you now kind of have crossed
+off the list it is the you know the the
+long-term goal to have a personal
+assistant which is what they&amp;#39;re all
+building towards hey everyone remember
+that episode we had with daresh well
+daresh has exclusively gifted us access
+to agent. A&amp;#39;s company research agent
+just for all of you so if you&amp;#39;re looking
+to spy on your competitors so you can
+get a deeper deeper dive into their
+strategy this is the agent for you
+you&amp;#39;ll get access to their key
+demographics their web traffic Trends
+and you&amp;#39;ll stay ahead of them with all
+of the competitor analysis tools so if
+you want it you can grab it at the link
+in the description below now let&amp;#39;s get
+back to Today&amp;#39;s show there&amp;#39;s one other
+thing I want to just touch on here
+because it&amp;#39;s important of agents in
+general Joe before we kind of get into
+just your take on what you think about
+the uh impact agents will make this year
+and it actually is the ux pattern that
+open a had an operator because one of
+the you know big question marks around
+autonomous agents is what&amp;#39;s the what&amp;#39;s
+the right ux pattern so people feel
+comfortable with them and what I mean by
+that is you know these agents are
+autonomous so when Kip asked it to book
+a table on Open Table should it just
+come back and say it&amp;#39;s booked or should
+you actually be able to like see the
+agent complete the task so you feel
+comfortable with the agent doing
+something on your behalf and they went
+down the path to have a ux pattern where
+you can see the agent doing its work and
+at any point in time you can take take
+control away from the agent but what&amp;#39;s
+your general take on autonomous agents
+in terms of how comfortable humans are
+going to be to integrate them into the
+workflow like the right kind of ux
+pattern that&amp;#39;s a great question I
+actually spent some time talking with
+Sam Alman about this and it was pretty
+good because if you think about it it&amp;#39;s
+like AI one AI is moving very fast right
+so it&amp;#39;s not waiting for its native
+protocols because if you think about it
+it should not even use a browser right a
+browser doesn&amp;#39;t make sense the concept
+of kind like the botoms and everything
+that doesn&amp;#39;t make any sense or even
+keyboard in in mouse that just increases
+latency and reduce true put for these
+models like in matter of fact they
+should not even use language to
+communicate with themselves or have
+their own language but there&amp;#39;s something
+beautiful about being able to inspect
+what is happening there uh there&amp;#39;s a
+security aspect of it because you can
+always see what is happening right and I
+just think it&amp;#39;s getting better and
+better you want to make sure that you&amp;#39;re
+able to do that but there&amp;#39;s also that
+ability for you to feel reassured about
+it so I think it&amp;#39;s going to come to a
+time where you&amp;#39;re going to feel good
+about just fing requests into the void
+and things are going to get done for you
+but I think uh right now people just
+wanted to feel they&amp;#39;re more in control
+of these things right and and this is
+true not only on the personal level but
+also in companies like if companies are
+thinking about and this we&amp;#39;re seeing
+firsthand on our Enterprise deals like
+if a company wants to automate a
+critical part of their process like they
+want to make sure that they can
+visualize and control this and they
+understand what is happening and they
+can AIT it later on yeah I was talking
+to someone who had been using uh very
+early on when agents first come out they
+are playing with old of the technology
+and they were play they they set up an
+autonomous agent to do some stuff on
+email and the agent was meant to craft
+emails put them in the draft and then
+they would go in and look at them and
+then send them or not send them and they
+had realized that the agent started
+sending them they were sending some like
+pretty bizarre emails they&amp;#39;re like yeah
+like I feel the right ux pattern is I
+need to be able to see what the the
+agent&amp;#39;s doing and so maybe that&amp;#39;s a good
+segue so like okay we you know we have a
+lot of hyper Bowl in AI uh you know
+there&amp;#39;s a lot of hey this is
+transformational this year agents are
+going to join be part of the workforce
+that was the common talk thread over the
+past couple of weeks from every Tech Le
+there there is what do they mean by that
+like when you when you when you look at
+what&amp;#39;s happening with agents what do you
+think they mean by that and what are you
+bullish on or what are you not bullish
+on when it comes to agents agents agents
+are happening right so in here what
+you&amp;#39;re seeing is the number of Crews
+executions per month each crew has many
+agents within it some have up to 21
+that&amp;#39;s the highest number that I have
+seen but you can go higher than that so
+what we&amp;#39;re talking here is tens of
+millions of Agents being executed every
+month and the reason why I want to
+double click on that is is just that it
+is happening in my mind it is happening
+the genie is not get back into the
+Bottom now it&amp;#39;s a matter of how fast it
+will happen and how good you get in what
+period of time but I think what is uh
+what a lot of what we&amp;#39;re seeing on
+companies being bullish about it is
+because a lot of people are comparing
+kind of like agents with kind like the
+internet early days and I think that&amp;#39;s a
+that&amp;#39;s an interesting way to correlate
+the both but if you were online on the
+internet on Day Zero you would have no
+upside no impact on your bottom line
+because no one was online but what we&amp;#39;re
+seeing with AI is companies implementing
+it in like two quarters later they&amp;#39;re
+reporting impacts on their bottom line
+so you got some of those 10ks and 10 q&amp;#39;s
+and you see companies like Walmart like
+starting to save Millions on support you
+know like all right something is
+happening here so I think there&amp;#39;s a
+mandate on the executive level on this
+companies on the board level of this
+company that this is happening three
+years from now we need to figure it out
+how we&amp;#39;re going to manage deploy these
+resources and from the inside everyone
+is so again everyone&amp;#39;s tinkering with it
+and excited so it&amp;#39;s almost like a claw
+motion where like incentives are
+aligning and I think that is just
+fooling this up so I&amp;#39;m bullish that this
+is the year of agents and what I mean by
+that is people are going to deploy a lot
+of agents this year they&amp;#39;re going to try
+a lot of things this years now is this
+the year where companies are going to
+automate entire departments I don&amp;#39;t
+think just yet but I think this year is
+where things starts to get very pretty
+seriously could you maybe tell us how
+companies that are deploying these Crews
+and agents are doing it in the right way
+so to your point the wrong way is
+probably I&amp;#39;m going to go in and create
+agents to replicate what these humans
+are doing versus a lot of the success I
+have seen in agents is like they
+complete
+microtasks that make a part of your role
+freeing you up to do many other freeing
+you up to actually spend time on things
+that are much more important right so
+actually the human can become much
+better at that role but could you maybe
+talk to us like where do you see
+companies deploying them in the right
+way and like what examples one big thing
+that we talked about there is a cultural
+aspect on adopting agents in the company
+right people like people fear that
+people trying to understand what role
+will they play the companies that are
+being most successful what they are
+doing is they&amp;#39;re kind of promoting
+people right so you&amp;#39;re still accountable
+for the end of resuit you&amp;#39;re still
+accountable for reviewing this put a
+nice bow on it present this but now you
+have this extra tool and these agents
+can do something for you so um a cool
+example that I can mention is we&amp;#39;re
+working with a telekon company on a
+legal use case and basically like they
+have their legal like people that can do
+everything but what is happening now is
+there automating a lot of the contract
+analysis with these agents beforehand so
+by the time that it gets to Legal it
+already has recommendations red lines
+and a bunch of other things so kind of
+like basically scaling things that they
+couldn&amp;#39;t do before without it being
+prohibitive expensive but there&amp;#39;s so
+many more use cases we can talk about
+the the sales and the marketing use
+cases and the back office automations
+there&amp;#39;s there&amp;#39;s quite a lot going on out
+there we&amp;#39;ve talked a lot about kind of
+where agents are and now I was trying to
+understand like what are the core use
+cases that people are actually building
+like what should people go and do there
+are a lot of people who watch our show
+who are like hey I just want to like
+understand what I should be doing how I
+go out and build an MVP of that to see
+if it actually makes sense for for me my
+business what have you what&amp;#39;s happening
+and where should people start yeah so
+what we are seeing is these are the most
+common horizontals within the company
+that we are seeing agents and use cases
+being deployed now there&amp;#39;s a few
+interesting things things that you can
+infer from this one is there&amp;#39;s no clear
+winner it&amp;#39;s very much spread out what
+for companies like us is is good news
+because it means that you can land and
+expand into all this other areas right
+but if you interview these people as we
+did and we talk closer with them the
+common pattern is actually uh starting
+with simpler use cases it&amp;#39;s what we call
+low precision versus high Precision so
+low Precision use cases they require
+let&amp;#39;s say 9 % certainty or accuracy on
+their outputs but High Precision use
+case require
+99.999 uh so when example of a low
+Precision could be well I want an agents
+that will help me draft presentations
+for sales calls out of crossr scripts or
+my CRM information and high Precision
+use cases that we are seeing out there
+is helping companies and Banks Fu IRS
+forms where like don&amp;#39;t want to get that
+wrong right you can&amp;#39;t mess up your tax
+forms
+especially like if we&amp;#39;re talking about a
+big Corporation funny just an anote
+funny enough some of these forms they
+are 70 plus pages long but they call me
+for instruction manual that is 620 pages
+long so yeah agents can help with that
+but that&amp;#39;s more High Precision use cases
+right you&amp;#39;re going to don&amp;#39;t start there
+you might get a burned start with low
+precision and scale from there that&amp;#39;s
+that&amp;#39;s really great advice actually I
+just want to kind of recap that for the
+audience so if you were if you were like
+in a role and you wanted to even start
+with agents before you&amp;#39;ve even started
+to get into how to build them and we can
+get into that and show you some use
+cases what your recommendation is is
+like look uh and AI can help with this
+because I&amp;#39;ve actually used it as a test
+for this if you actually take a role
+let&amp;#39;s say Your Role is a bdr and you
+split out your tasks into low Precision
+High
+precision and you can actually start to
+pick some ones that are in that low
+Precision category and that&amp;#39;s like some
+places to experiment with a agents is
+that like the right way for someone to
+get started yeah the way that we put it
+is basically you have four bullet points
+uh one is be an adopter you want to get
+AE two is don&amp;#39;t wait for other people
+use cases right A lot of people want to
+know what are like what is company a
+doing like you don&amp;#39;t want to go there so
+start simple that&amp;#39;s basically what
+you&amp;#39;re saying start with something
+simple and when you expand you want to
+expand into kind of like the lowrisk
+high impact kind of like use cases and
+go in that direction but yeah exactly as
+you said and then in order for you to to
+view them there&amp;#39;s so many different ways
+right now right like there&amp;#39;s and if
+anything there&amp;#39;s going to be even more
+there&amp;#39;s for Less technical people
+there&amp;#39;s like a no code platforms and and
+we offer that as well for example crei
+but there&amp;#39;s many other
+um if you wanted to have like if you&amp;#39;re
+a more technical person you can use
+Frameworks like Ci itself where you can
+actually code and python some of these
+agents and some of this prompt so I
+think there&amp;#39;s like a there&amp;#39;s a bunch of
+different flavors that people can use
+now a lot of the True Value gets
+unlocked when you get more technical
+people involved and we can double click
+that in a second but I I would say you
+got that right and that is it start with
+kind of like low Precision use cases and
+simple and then expand into lowrisk high
+impact maybe we want to get in to like
+show some of these use cases but I do
+think an important point to make is okay
+I&amp;#39;ve decided that I understand what an
+agent is I&amp;#39;ve looked at my role and I
+understand like what are good use cases
+for an agent the other thing you
+mentioned is like how agents are being
+adopted within the company like how
+they&amp;#39;re being built for different teams
+can you maybe just talk a little bit
+about that Trend like how you see
+companies adopting agents um and you
+mentioned it&amp;#39;s like still quite a
+technical thing and maybe kind of just
+touch on that yeah for sure I think it&amp;#39;s
+it&amp;#39;s interesting because early days what
+you would have with like llms and I
+think a lot of people in the audience
+here probably experiences this firsthand
+is you would have on the edges out there
+ganization on the individual teams
+people would just pick up llms to do
+work for them so someone that&amp;#39;s a little
+more Savvy would start to play around
+with chat GPT and they would found this
+amazing prompt that would help them with
+kind of like customer proposals right
+and then that became a problem because
+well this person is putting information
+that might not be supposed to be there
+the company doesn&amp;#39;t approve and maybe
+this person unlocked an amazing case but
+that information now and that knowledge
+is silent
+so what we&amp;#39;re seeing with agents at
+least on the Enterprise sales motion for
+CI is more of a a central deployment so
+usually under a CIO a CTO a head of AI
+and you sell into this department that
+is going to configure everything and
+then start to enable these departments
+individually and the cool thing about
+that is you&amp;#39;re going to have way more
+control on what are the alms that are
+being used uh do I want to add future
+short pii and personal information and
+making sure that I&amp;#39;m controlling all
+these use cases so they are reusable and
+then even enabling people that can code
+to use the platform to build it so
+that&amp;#39;s kind of like what we&amp;#39;re seeing in
+terms of the Enterprise adoption um and
+and again funny enough like there&amp;#39;s a
+lot of kind of like low code easy to
+roll out and templates that you can use
+but once that you want to get into
+those very kind of like chunky use cases
+right because if you forget the name of
+agents for a second we are talking about
+AI powered automations and automation is
+going to be a very kind of like
+customized process because all these
+companies have no Eco process it&amp;#39;s when
+technical people in being involved
+unlocks a lot of value especially on
+Integrations with homegrown systems and
+such yeah like they&amp;#39;re much more
+powerful if they&amp;#39;re deeply intertwined
+within your unstructured data and
+they&amp;#39;re deeply intertwined within your
+systems yeah but I got to say it&amp;#39;s still
+very very much early day so we we
+basically um we pulled around
+400 uh
+4,500 people are from different
+companies and only 15% actually have
+features in production right now if you
+isolate at this only looking at large
+Enterprises then we&amp;#39;re talking about 23
+so it&amp;#39;s a higher number what kind of
+hints that enterprises are moving a
+little faster here but for a lot of
+people it&amp;#39;s in like early days or they
+just have done a few deep Dives that
+number is higher than I would have
+expected I would have expected like
+single digit adoption of like agents
+being deployed it just it shows they
+that even though it&amp;#39;s early there is a
+lot of just crappy stuff that has to get
+done out in the world that agents are
+good enough to go and solve today right
+or otherwise that number would be much
+much lower than it is in terms of like
+aglo what I would say though is there&amp;#39;s
+one caveat right these people they were
+coming into Ki to answer this for so
+they are definitely more Savvy they&amp;#39;re
+looking into agents so I think if you
+look at the broader population of like
+any company out there you&amp;#39;re going to
+have like smaller numbers like these are
+companies are actually engaging with us
+so they&amp;#39;re like the actual so I guess
+like even among the tech savvy that
+number that number still looks low but
+if you broaden out to like the lag Arts
+it&amp;#39;s going to be we&amp;#39;re still so early I
+think the point here is like if you&amp;#39;re
+listening to the podcast and you&amp;#39;re
+following along and you&amp;#39;re thinking well
+I&amp;#39;m going to create an agent and do
+something you&amp;#39;re in the fast movers yes
+exactly you still you still have an
+opportunity to be like an incredibly F
+fast mover here I think one of the
+things that would really help our
+audiences showcase some of the agents
+that have been built for real use cases
+and go through like what what these
+agents are actually doing for you know
+maybe a salesperson or a marketer or
+something that you really think is like
+a good a good demo or a good sorry a
+good uh example of a agent in action yes
+so there has a ton of use cases I think
+on the marketing and sales side one of
+the most interesting ones that I have
+seen is agents that are doing a couple
+things so um they start with enrichment
+so the way that they deploy this was
+actually an in product feature and a
+back office kind of like automation so
+when someone would come into their
+website and create an account they would
+have agents go online and start
+researching this this person so up to
+this point that&amp;#39;s okay right this is
+kind of like regular enrichment like
+find what does this person role find
+like more about this company virtual and
+all that so that&amp;#39;s good now where things
+starts to get interesting is they got
+some agents to get one step ahead and
+given the information that they found
+come up with hypothesis on how this
+person is going to use their product so
+what is the interesting if this person
+is kind of like a CMO at a company how
+they&amp;#39;re going to use like what value
+they&amp;#39;re going to get from this product
+and creates kind of like three
+hypothesis and then do the same thing
+for the company like for a company in
+this vertual what would be kind like the
+main three things that would take so now
+that the agents have done that they
+convert it into um Json so structur data
+and then push it in two places to their
+HubSpot and into their product database
+so what that means is now out there Mayo
+marketing is like super hyper targeted
+mentioning not only the name of the
+person and the company but like
+highlighting features in the ways that
+they could leverage and then in the
+product and this kind of like what
+they&amp;#39;re working out in the product they
+prefuse some of the informations and the
+templates that they show like basically
+using that um that inference that they
+made so very interesting use case and I
+think a great kind of like use case for
+agent in in general yeah yeah somewhat
+similar to what what we do and a I think
+the example going back all the way start
+all the way to what agent is and having
+memory tools like an example of a tool
+that is really good for research is
+something like perplexities new sonar
+like perplexity is a pretty good
+research tool that the agent can have
+access to and do some of that research
+on your behalf so I think that&amp;#39;s a
+that&amp;#39;s a good example of like the agent
+being able to autonomously complete
+those tasks without any real human in
+the loop and you as a sales rep have
+that stuff at hand and so you you can be
+much more productive because you you
+have this stuff being done for you by a
+smaller you know a small team of agents
+who each are like specialized in one of
+those tasks exactly and I think we go
+back to the comparison that we make with
+the operator early on right like yeah as
+you as a sales rap you could go out and
+research this customer and make sure
+that you&amp;#39;re engaging them like in a very
+custom format or like prepare for every
+meeting that you have yes you absolutely
+can and you might be able to do it
+faster than what an agent would do but
+if you can do that a scale does that
+means that you can take more meetings uh
+and be better prepared to them um I
+think that is and there&amp;#39;s also something
+Beauty about you being able to um
+customize it right so like let&amp;#39;s say
+that you always have that one sales rap
+in your company that is just like the
+Beast right the guy does the best prap
+the like why don&amp;#39;t you just like try to
+replicate that for everyone and now
+everyone has that level of notes I mean
+the sales rap might not be too happy
+about it but uh it might be definitely
+an interesting experiment I would love
+to get into another use case you
+mentioned off Mike but I think what one
+of the one of the interesting things
+here because it was a point you made
+which is you know the the rep can have
+these a agents and be much better at
+their role and other reps might not be
+happy about it like it creates some
+competition to actually use agents
+because you can&amp;#39;t compete unless you
+have access to the same sort of help and
+micro I don&amp;#39;t know if you saw there was
+an interview from Satya nadala the
+Microsoft C uh CEO this week and one of
+the things he said was in the future
+people might be hired
+because of the agents that they have
+helping them do their role and so he can
+imagine a world where you go to LinkedIn
+and instead of having certifications or
+anything like that and even prior work
+experience you actually list out the
+agents that you have built to help you
+be like the kind of employee that you
+are I&amp;#39;d love to just get your your kind
+of thoughts on that as a future version
+of what like a great employee might look
+like I a th% agree honestly not because
+of the agent themselves but also because
+what they tell about that verion and I
+can tell that we are doing this at CI so
+for example when we interview people for
+engineering roles we tell them during
+the interview you are allowed to use
+anything like you can use jet GPT you
+can use entropic you can use corser you
+can search Google whatever it is you&amp;#39;re
+allowed to use if they don&amp;#39;t use it it&amp;#39;s
+an automatic pass and how well they use
+it actually CS a lot on if we&amp;#39;re going
+to make them an offer or not
+and that can be counterintuitive for a
+lot of people like well but are you
+assessing like their engineering skills
+well on the dayto day they&amp;#39;re going to
+have the access to the shools anyway so
+I want to know how well they use it um
+and I would say like probably what he&amp;#39;s
+hinting there is some of that as well
+it&amp;#39;s not about the agent that they have
+as the companion uh but also the ability
+that you&amp;#39;re able to create something
+like that in what they tell about that
+person coming back to the use cases you
+mentioned off Mike I think one of the
+ones we should actually just cover real
+quick because everyone one loves a good
+SEO content use case could you maybe
+just go through that you case use case
+to just give another example of what
+what agents can help with so uh what we
+were buing together was agents that
+would like given your product it goes
+into our website would take screenshots
+of our website understand like the
+copies everything then would research
+what are their competitors would go into
+their websites and look at all their
+copies and everything and then would
+create hypothesis right what should we
+change on your website given what the
+agents were able to build an
+understanding around the industry and
+the competitors in order to get you a
+better conversion and then the idea is
+that they would go all the way to
+implementing those AB tasks and measure
+it so that you can then choose so it&amp;#39;s
+basically automating the whole kind of
+like uh AB testing kind of like process
+from SEO to copy and everything but
+going this One Step Beyond and kind of
+like understanding the industry and the
+competitors and thing uh and again
+something that you could do yourself but
+that would take quite a lot of time so
+it&amp;#39;s basically giving you
+recommendations on what AB test to run
+by in by ingesting that data and
+actually doing the the ab test
+themselves so you just basically come in
+and what the agent does like do you have
+to give it do you have to start off by
+giving it data like what&amp;#39;s the what&amp;#39;s
+the what&amp;#39;s the human doing and what&amp;#39;s
+the agent doing the input there was this
+is my website this is my description of
+my industry this is what I&amp;#39;m trying to
+optimize this is the human input and
+then the agents would go around and do
+everything behind the scenes and they
+would come back with all this like AB
+hypothesis for testing and then what the
+company that we were working with was
+actually doing is building a product
+around this right so you would be able
+to see out the hypothesis and you would
+say yes let&amp;#39;s do this one this one this
+one and then they would run for a few
+days and you could implement it but that
+was like that was not the agents anymore
+that was the proper product was the
+agent trained on any special did they
+fine tune the agent or use rag or
+anything like to build a hypothesis like
+a you know or was it just a public
+public information the AG knows
+everything about the internet yeah okay
+yeah I think there was I think there was
+something about they&amp;#39;re doing with the
+images that was kind of like more
+proprietary to them like the parsing the
+images where they&amp;#39;re doing something
+Fancy with there&amp;#39;s only this not only
+the screenshot but there&amp;#39;s also the HTML
+and then they would kind like create a
+better understanding of like the the web
+page by doing that but uh but no that
+was basically uh a lot of kind of like
+the the open models that you have now in
+terms of what you hear and how agents
+are spoken about what is the mismatch
+you see today and where the technology
+is today and where expectations may be
+uh for how people want to use agents
+like where do you see the biggest
+mismatch when you speak to people yeah I
+think honestly there&amp;#39;s going to be a lot
+of more uh humans in the loop than a lot
+of people believe um especially this
+year I don&amp;#39;t think it&amp;#39;s going to be kind
+of like uh once and done like we were
+seeing this with operator right like now
+there&amp;#39;s a bunch of tweets where like
+people set to do things and kind of like
+fails Midway through and you got to step
+in and take over and all that so I think
+like um this is not the years where
+we&amp;#39;re going to have like completely end
+to end especially on the more High
+Precision kind of processes kind of like
+oh agents are doing everything uh I
+think that will be kind of like a a step
+by step the other thing is implementing
+on especially the more complex use case
+is going to be a way like a bigger lift
+than what I think other people would
+believe I think there&amp;#39;s a lot of glue in
+this companies nowadays and in the
+softwares and how they connect to each
+other that in your FR agents you can
+like be able to navigate those paths
+you&amp;#39;re going to need to have like clear
+code and clear instructions on how to do
+it uh and I think like there&amp;#39;s a reason
+why everyone is doing the browser set of
+things first right that is easier like
+there&amp;#39;s a common interface but there&amp;#39;s a
+lot of like companies out there they
+have software that is not even online
+it&amp;#39;s desktop apps how you handle that so
+I think there&amp;#39;s going to be a lot of
+more challenges in there so I think this
+year is going to be definitely where
+we&amp;#39;re going to see a lot of Agents going
+into production but I think it&amp;#39;s going
+to be it&amp;#39;s very much early days still
+this is not the years like where agents
+are taking over the like a Workforce
+that&amp;#39;s not it right it&amp;#39;s all the
+YouTubers creating hype that the oh
+hyper bow it&amp;#39;s all those YouTubers uh
+everything has to be a dramatic as we
+realize as YouTubers ourself has to be
+like a dramatic headline Joe I think
+this was an incredible run through of
+agents in a in a way that will make it
+really easy for people to actually
+understand what&amp;#39;s the reality is and
+where they can go get started and
+obviously we would highly recommend they
+go to a platform like crew and build
+some agents and play with the technology
+you have a bunch of like cool templates
+actually that make it super easy to
+start to get inspiration one of the
+things that people actually struggle
+with which is why I wanted to really dig
+into like how you would suggest someone
+starts with a use case is people just
+study struggle with like what do I where
+do I even get started and I think your
+template Gallery is a really great way
+to find inspiration for your role so I
+appreciate you coming on and uh taking
+us through that explanation of Agents no
+worries thank you so much for having me
+I had a blast thank you so much and I
+catch you on
+by this data is wrong every freaking
+time have you heard of
+HubSpot HubSpot is a CRM platform where
+everything is fully integrated W I can
+see the client&amp;#39;s whole history calls
+support tickets emails and here&amp;#39;s a task
+from 3 days ago I totally
+missed HP spot grow better
