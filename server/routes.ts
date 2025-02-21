@@ -113,112 +113,152 @@ app.post("/api/extract-transcript", async (req, res) => {
   }
 });
 
-  app.post("/api/analyze/:type", async (req, res) => {
-    try {
-      const { videoId, llmProvider, type } = analysisOptionsSchema.parse({
-        ...req.body,
-        type: req.params.type
-      });
+app.post("/api/analyze/:type", async (req, res) => {
+  try {
+    const { videoId, llmProvider, type } = analysisOptionsSchema.parse({
+      ...req.body,
+      type: req.params.type
+    });
 
-      // Create temp directory if it doesn't exist
-      const tmpDir = mkTempDir();
-      const transcriptFile = path.join(tmpDir, `transcript_${Date.now()}.txt`);
-      const outputFile = path.join(tmpDir, `analysis_${Date.now()}.json`);
+    // Create temp directory if it doesn't exist
+    const tmpDir = mkTempDir();
+    console.log('Created/verified temp directory:', tmpDir);
 
-      // First extract transcript
-      const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', videoId]);
-      let transcriptError = '';
+    const transcriptFile = path.join(tmpDir, `transcript_${Date.now()}.txt`);
+    const outputFile = path.join(tmpDir, `analysis_${Date.now()}.json`);
 
-      pythonProcess.stderr.on('data', (data) => {
-        console.error('Transcript extraction error:', data.toString());
-        transcriptError += data.toString();
-      });
+    // First extract transcript
+    const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', videoId]);
+    let transcriptError = '';
+    let transcript = '';
 
-      await new Promise((resolve, reject) => {
-        let transcript = '';
-        pythonProcess.stdout.on('data', (data) => {
-          transcript += data.toString();
-        });
+    pythonProcess.stderr.on('data', (data) => {
+      console.error('Transcript extraction error:', data.toString());
+      transcriptError += data.toString();
+    });
 
-        pythonProcess.on('close', (code) => {
-          if (code === 0) {
-            try {
-              const transcriptData = JSON.parse(transcript);
-              if (transcriptData.success) {
-                // Convert transcript array to text format for analysis
-                let transcriptText;
-                if (Array.isArray(transcriptData.transcript)) {
-                  transcriptText = transcriptData.transcript
-                    .map(entry => entry.text)
-                    .join('\n');
-                } else {
-                  transcriptText = transcriptData.transcript;
-                }
-                fs.writeFileSync(transcriptFile, transcriptText, { encoding: 'utf8' });
+    pythonProcess.stdout.on('data', (data) => {
+      console.log('Transcript extraction output:', data.toString());
+      transcript += data.toString();
+    });
+
+    // Wait for transcript extraction to complete
+    await new Promise((resolve, reject) => {
+      pythonProcess.on('close', (code) => {
+        if (code === 0) {
+          try {
+            const transcriptData = JSON.parse(transcript);
+            if (transcriptData.success) {
+              // Convert transcript array to text format for analysis
+              let transcriptText;
+              if (Array.isArray(transcriptData.transcript)) {
+                transcriptText = transcriptData.transcript
+                  .map(entry => entry.text)
+                  .join('\n');
+              } else {
+                transcriptText = transcriptData.transcript;
+              }
+
+              console.log('Writing transcript to file:', transcriptFile);
+              console.log('Transcript length:', transcriptText.length);
+
+              fs.writeFileSync(transcriptFile, transcriptText, { encoding: 'utf8' });
+
+              // Verify file was written
+              if (fs.existsSync(transcriptFile)) {
+                const stats = fs.statSync(transcriptFile);
+                console.log('Transcript file size:', stats.size);
                 resolve(transcriptData);
               } else {
-                reject(new Error(transcriptData.error || 'Failed to extract transcript'));
+                reject(new Error('Failed to write transcript file'));
               }
-            } catch (err) {
-              reject(new Error(`Failed to parse transcript data: ${err.message}`));
+            } else {
+              reject(new Error(transcriptData.error || 'Failed to extract transcript'));
             }
-          } else {
-            reject(new Error(`Transcript extraction failed: ${transcriptError}`));
+          } catch (err) {
+            reject(new Error(`Failed to parse transcript data: ${err.message}`));
           }
-        });
+        } else {
+          reject(new Error(`Transcript extraction failed with code ${code}: ${transcriptError}`));
+        }
       });
+    });
 
-      // Now analyze the content
-      const analyzerProcess = spawn('python3', [
-        'scripts/content_analyzer.py',
-        transcriptFile,
-        type,
-        llmProvider,
-        outputFile
-      ]);
+    // Now analyze the content
+    console.log('Starting content analysis with:', {
+      transcriptFile,
+      type,
+      llmProvider,
+      outputFile
+    });
 
-      let analysisError = '';
-      analyzerProcess.stderr.on('data', (data) => {
-        console.error('Content analysis error:', data.toString());
-        analysisError += data.toString();
-      });
+    const analyzerProcess = spawn('python3', [
+      'scripts/content_analyzer.py',
+      transcriptFile,
+      type,
+      llmProvider,
+      outputFile
+    ]);
 
-      await new Promise((resolve, reject) => {
-        analyzerProcess.on('close', (code) => {
-          if (code === 0) {
-            try {
+    let analysisError = '';
+    let analysisOutput = '';
+
+    analyzerProcess.stderr.on('data', (data) => {
+      console.error('Content analysis error:', data.toString());
+      analysisError += data.toString();
+    });
+
+    analyzerProcess.stdout.on('data', (data) => {
+      console.log('Content analysis output:', data.toString());
+      analysisOutput += data.toString();
+    });
+
+    await new Promise((resolve, reject) => {
+      analyzerProcess.on('close', (code) => {
+        if (code === 0) {
+          try {
+            if (fs.existsSync(outputFile)) {
               const analysisData = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
               resolve(analysisData);
-            } catch (err) {
-              reject(new Error(`Failed to parse analysis data: ${err.message}`));
+            } else {
+              reject(new Error('Analysis output file not found'));
             }
-          } else {
-            reject(new Error(`Content analysis failed: ${analysisError}`));
+          } catch (err) {
+            reject(new Error(`Failed to parse analysis data: ${err.message}`));
           }
-        });
+        } else {
+          reject(new Error(`Content analysis failed with code ${code}: ${analysisError}`));
+        }
       });
+    });
 
-      // Read and return the analysis results
-      const analysisData = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+    // Read and return the analysis results
+    console.log('Reading analysis results from:', outputFile);
+    const analysisData = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
 
-      // Clean up temp files
-      try {
-        fs.unlinkSync(transcriptFile);
-        fs.unlinkSync(outputFile);
-      } catch (err) {
-        console.error('Error cleaning up temp files:', err);
-      }
-
-      if (!analysisData.success) {
-        throw new Error(analysisData.error || "Failed to analyze content");
-      }
-
-      res.json(analysisData.data);
-    } catch (error: any) {
-      console.error(`Analysis error (${req.params.type}):`, error);
-      res.status(500).json({ message: error.message });
+    // Clean up temp files
+    try {
+      fs.unlinkSync(transcriptFile);
+      fs.unlinkSync(outputFile);
+      console.log('Cleaned up temporary files');
+    } catch (err) {
+      console.error('Error cleaning up temp files:', err);
     }
-  });
+
+    if (!analysisData.success) {
+      throw new Error(analysisData.error || "Failed to analyze content");
+    }
+
+    res.json(analysisData.data);
+  } catch (error: any) {
+    console.error(`Analysis error (${req.params.type}):`, error);
+    res.status(500).json({ 
+      message: error.message,
+      type: req.params.type,
+      details: error.stack
+    });
+  }
+});
 
   app.get("/api/analysis/:videoId", async (req, res) => {
     const { videoId } = req.params;
