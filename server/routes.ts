@@ -19,77 +19,6 @@ const analysisOptionsSchema = z.object({
   type: z.enum(["hooks", "summary", "flashcards"])
 });
 
-// Verify Python availability and script paths
-const verifyPythonSetup = async () => {
-  try {
-    // Get absolute paths
-    const scriptDir = path.join(process.cwd(), 'scripts');
-    console.log('Script directory:', scriptDir);
-
-    // Check if scripts directory exists
-    if (!fs.existsSync(scriptDir)) {
-      throw new Error(`Scripts directory not found at: ${scriptDir}`);
-    }
-
-    // Verify Python availability
-    const pythonProcess = spawn('python3', ['--version']);
-    return new Promise((resolve, reject) => {
-      let version = '';
-
-      pythonProcess.stdout.on('data', (data) => {
-        version += data.toString();
-      });
-
-      pythonProcess.stderr.on('data', (data) => {
-        console.error('Python version check error:', data.toString());
-      });
-
-      pythonProcess.on('close', (code) => {
-        if (code === 0) {
-          console.log('Python version:', version.trim());
-          resolve(true);
-        } else {
-          reject(new Error('Python3 not found or not properly configured'));
-        }
-      });
-    });
-  } catch (err) {
-    console.error('Python setup verification failed:', err);
-    throw err;
-  }
-};
-
-// Enhanced spawn process with better error handling
-const spawnPythonProcess = (scriptName: string, args: string[]) => {
-  const scriptPath = path.join(process.cwd(), 'scripts', scriptName);
-
-  // Verify script exists
-  if (!fs.existsSync(scriptPath)) {
-    throw new Error(`Script not found: ${scriptPath}`);
-  }
-
-  console.log('Executing Python script:', scriptPath);
-  console.log('With arguments:', args);
-
-  const pythonProcess = spawn('python3', [scriptPath, ...args], {
-    env: {
-      ...process.env,
-      PYTHONUNBUFFERED: '1' // Ensure Python output is not buffered
-    }
-  });
-
-  // Enhanced logging
-  pythonProcess.stdout.on('data', (data) => {
-    console.log(`[${scriptName}] stdout:`, data.toString());
-  });
-
-  pythonProcess.stderr.on('data', (data) => {
-    console.error(`[${scriptName}] stderr:`, data.toString());
-  });
-
-  return pythonProcess;
-};
-
 // Enhanced temporary directory management
 const mkTempDir = () => {
   try {
@@ -181,12 +110,6 @@ const retryWithBackoff = async (
 };
 
 export function registerRoutes(app: Express) {
-  // Verify Python setup on startup
-  verifyPythonSetup().catch(err => {
-    console.error('Failed to verify Python setup:', err);
-    process.exit(1);
-  });
-
   const httpServer = createServer(app);
 
   app.get("/api/videos", async (req, res) => {
@@ -212,53 +135,95 @@ export function registerRoutes(app: Express) {
       const tmpDir = mkTempDir();
       console.log('Using temporary directory:', tmpDir);
 
-      // Use the enhanced spawn process
-      const pythonProcess = spawnPythonProcess('extract_transcript.py', [url]);
-      let stderr = '';
-      let stdout = '';
+      // Verify Python script exists
+      const scriptPath = path.join(process.cwd(), 'scripts', 'extract_transcript.py');
+      if (!fs.existsSync(scriptPath)) {
+        throw new Error(`Python script not found at ${scriptPath}`);
+      }
+      console.log('Found Python script at:', scriptPath);
 
-      pythonProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-        console.error('Python script error/log:', data.toString());
+      // Use retry logic for transcript extraction
+      const extractTranscript = async () => {
+        return new Promise((resolve, reject) => {
+          const pythonProcess = spawn('python3', [scriptPath, url]);
+          let stderr = '';
+          let stdout = '';
+
+          pythonProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+            console.error('Python script error/log:', data.toString());
+          });
+
+          pythonProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+            console.log('Python script output:', data.toString());
+          });
+
+          let processError: Error | null = null;
+
+          pythonProcess.on('error', (err) => {
+            console.error('Failed to start Python process:', err);
+            processError = err;
+          });
+
+          pythonProcess.on('close', (code) => {
+            if (processError) {
+              reject(processError);
+              return;
+            }
+
+            if (code !== 0 || !stdout.trim()) {
+              reject(new Error(`Transcript extraction failed with code ${code}: ${stderr}`));
+              return;
+            }
+
+            try {
+              const result = JSON.parse(stdout);
+              if (result.success) {
+                resolve(result);
+              } else {
+                const error = new Error(result.error || 'Unknown error occurred');
+                error.code = result.errorType;
+                error.details = result.details;
+                reject(error);
+              }
+            } catch (err) {
+              reject(new Error('Invalid response from transcript extractor'));
+            }
+          });
+        });
+      };
+
+      // Execute with retry logic
+      const result = await retryWithBackoff(extractTranscript);
+
+      if (!result.success) {
+        const errorResponse = {
+          message: result.error,
+          errorType: result.errorType,
+          details: result.details,
+          metadata: result.metadata
+        };
+
+        const statusCodes = {
+          'InvalidURL': 400,
+          'TranscriptsDisabled': 422,
+          'NoTranscriptFound': 404,
+          'InvalidInput': 400,
+          'RateLimitExceeded': 429,
+          'NetworkError': 503,
+          'UnknownError': 500
+        };
+
+        return res.status(statusCodes[result.errorType as keyof typeof statusCodes] || 500)
+          .json(errorResponse);
+      }
+
+      res.json({
+        transcript: JSON.stringify(result),
+        metadata: result.metadata
       });
 
-      pythonProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-        console.log('Python script output:', data.toString());
-      });
-
-      let processError: Error | null = null;
-
-      pythonProcess.on('error', (err) => {
-        console.error('Failed to start Python process:', err);
-        processError = err;
-      });
-
-      pythonProcess.on('close', (code) => {
-        if (processError) {
-          reject(processError);
-          return;
-        }
-
-        if (code !== 0 || !stdout.trim()) {
-          reject(new Error(`Transcript extraction failed with code ${code}: ${stderr}`));
-          return;
-        }
-
-        try {
-          const result = JSON.parse(stdout);
-          if (result.success) {
-            resolve(result);
-          } else {
-            const error = new Error(result.error || 'Unknown error occurred');
-            error.code = result.errorType;
-            error.details = result.details;
-            reject(error);
-          }
-        } catch (err) {
-          reject(new Error('Invalid response from transcript extractor'));
-        }
-      });
     } catch (error: any) {
       console.error('Transcript extraction failed:', error);
 
@@ -295,8 +260,8 @@ export function registerRoutes(app: Express) {
       const outputFile = path.join(tmpDir, `analysis_${Date.now()}.json`);
       tempFiles.push(transcriptFile, outputFile);
 
-      // Use enhanced spawn process for transcript extraction
-      const pythonProcess = spawnPythonProcess('extract_transcript.py', [videoId]);
+      // First extract transcript
+      const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', videoId]);
       let transcriptError = '';
       let transcript = '';
 
@@ -360,10 +325,13 @@ export function registerRoutes(app: Express) {
         outputFile
       });
 
-      const analyzerProcess = spawnPythonProcess(
-        'content_analyzer.py',
-        [transcriptFile, type, llmProvider, outputFile]
-      );
+      const analyzerProcess = spawn('python3', [
+        'scripts/content_analyzer.py',
+        transcriptFile,
+        type,
+        llmProvider,
+        outputFile
+      ]);
 
       let analysisError = '';
       let analysisOutput = '';
