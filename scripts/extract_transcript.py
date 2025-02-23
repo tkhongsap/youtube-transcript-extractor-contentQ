@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 import tempfile
+import time
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
@@ -41,6 +42,52 @@ def setup_logging():
 # Initialize logging
 logger = setup_logging()
 
+def test_api_connectivity():
+    """Test YouTube API connectivity and rate limits."""
+    try:
+        api_key = os.getenv('YOUTUBE_API_KEY')
+        if not api_key:
+            logger.warning("YOUTUBE_API_KEY not found, skipping API test")
+            return False
+
+        logger.info("Testing YouTube API connectivity...")
+
+        # Test video ID (use a known public video)
+        test_video_id = 'jNQXAC9IVRw'  # First YouTube video ever
+
+        response = requests.get(
+            "https://www.googleapis.com/youtube/v3/videos",
+            params={
+                "part": "snippet",
+                "id": test_video_id,
+                "key": api_key
+            },
+            timeout=10
+        )
+
+        logger.info(f"API Test Response: Status={response.status_code}, Headers={dict(response.headers)}")
+
+        if response.status_code == 429:
+            logger.error("YouTube API rate limit exceeded")
+            return False
+        elif response.status_code == 403:
+            logger.error("YouTube API access forbidden (check API key)")
+            return False
+        elif response.status_code != 200:
+            logger.error(f"YouTube API error: {response.status_code}")
+            return False
+
+        # Check remaining quota
+        if 'x-quota-remaining' in response.headers:
+            quota = response.headers['x-quota-remaining']
+            logger.info(f"Remaining API quota: {quota}")
+
+        return True
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"API connectivity test failed: {str(e)}")
+        return False
+
 def verify_environment():
     """Verify Python version, packages, and environment variables."""
     try:
@@ -71,12 +118,9 @@ def verify_environment():
             except pkg_resources.DistributionNotFound:
                 raise RuntimeError(f"Required package not found: {package}")
 
-        # Check environment variables
-        youtube_api_key = os.getenv('YOUTUBE_API_KEY')
-        if not youtube_api_key:
-            logger.warning("YOUTUBE_API_KEY not found in environment")
-        else:
-            logger.info("YOUTUBE_API_KEY is set")
+        # Check network connectivity
+        if not test_api_connectivity():
+            logger.warning("YouTube API connectivity test failed")
 
         # Set up and verify temporary directory
         base_dir = os.getcwd()
@@ -149,38 +193,60 @@ def extract_video_id(youtube_url: str) -> str:
         logger.error(f"Video ID extraction error: {str(e)}")
         raise ValueError(f"Failed to extract video ID: {str(e)}")
 
-def try_get_transcript(video_id: str, languages: list[str]) -> dict:
-    """Try multiple methods to get transcript with enhanced error handling."""
+def try_get_transcript(video_id: str, languages: list[str], max_retries: int = 3) -> dict:
+    """Try multiple methods to get transcript with enhanced error handling and retry logic."""
     errors = []
+    retry_delay = 1  # Initial delay in seconds
 
     for lang in languages:
-        try:
-            logger.info(f"Attempting to get transcript in {lang}")
-            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
-            logger.info(f"Successfully got transcript in {lang}")
+        retries = 0
+        while retries < max_retries:
+            try:
+                logger.info(f"Attempting to get transcript in {lang} (attempt {retries + 1}/{max_retries})")
+                transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
+                logger.info(f"Successfully got transcript in {lang}")
 
-            # Validate transcript content
-            if not transcript or not isinstance(transcript, list):
-                raise ValueError("Invalid transcript format received")
+                # Validate transcript content
+                if not transcript or not isinstance(transcript, list):
+                    raise ValueError("Invalid transcript format received")
 
-            return {
-                'success': True,
-                'transcript': transcript,
-                'language': lang,
-                'type': 'direct'
-            }
-        except TranscriptsDisabled as e:
-            error = f"Transcripts are disabled for this video: {str(e)}"
-            logger.error(error)
-            errors.append({"language": lang, "error": error, "type": "TranscriptsDisabled"})
-        except NoTranscriptFound as e:
-            error = f"No transcript found for language {lang}: {str(e)}"
-            logger.error(error)
-            errors.append({"language": lang, "error": error, "type": "NoTranscriptFound"})
-        except Exception as e:
-            error = f"Unexpected error getting transcript in {lang}: {str(e)}"
-            logger.error(error)
-            errors.append({"language": lang, "error": error, "type": "UnexpectedError"})
+                return {
+                    'success': True,
+                    'transcript': transcript,
+                    'language': lang,
+                    'type': 'direct'
+                }
+            except TranscriptsDisabled as e:
+                error = f"Transcripts are disabled for this video: {str(e)}"
+                logger.error(error)
+                errors.append({"language": lang, "error": error, "type": "TranscriptsDisabled"})
+                break  # No point retrying for this language
+            except NoTranscriptFound as e:
+                error = f"No transcript found for language {lang}: {str(e)}"
+                logger.error(error)
+                errors.append({"language": lang, "error": error, "type": "NoTranscriptFound"})
+                break  # No point retrying for this language
+            except requests.exceptions.RequestException as e:
+                error = f"Network error getting transcript in {lang}: {str(e)}"
+                logger.error(error)
+                if retries < max_retries - 1:
+                    logger.info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    retries += 1
+                    continue
+                errors.append({"language": lang, "error": error, "type": "NetworkError"})
+            except Exception as e:
+                error = f"Unexpected error getting transcript in {lang}: {str(e)}"
+                logger.error(error)
+                if retries < max_retries - 1:
+                    logger.info(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                    retries += 1
+                    continue
+                errors.append({"language": lang, "error": error, "type": "UnexpectedError"})
+            break  # Exit while loop if we get here (after retries or on non-retriable errors)
 
     return {
         'success': False,

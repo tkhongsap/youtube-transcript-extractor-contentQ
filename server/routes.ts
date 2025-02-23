@@ -9,6 +9,9 @@ import fs from 'fs';
 import { insertSavedContentSchema } from "@shared/schema";
 import axios from 'axios';
 
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
 // Schema for video URL and analysis options
 const analysisOptionsSchema = z.object({
   videoId: z.string(),
@@ -74,6 +77,38 @@ const safeCleanup = (filePaths: string[]) => {
   }
 };
 
+// Retry logic with exponential backoff
+const retryWithBackoff = async (
+  operation: () => Promise<any>,
+  maxRetries: number = MAX_RETRIES,
+  initialDelay: number = INITIAL_RETRY_DELAY
+): Promise<any> => {
+  let retries = 0;
+  let delay = initialDelay;
+
+  while (true) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      retries++;
+      if (retries >= maxRetries) {
+        throw error;
+      }
+
+      // Check if error is retriable
+      if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' ||
+          error.code === 'ECONNREFUSED' || error.response?.status === 429) {
+        console.log(`Retry ${retries}/${maxRetries} after ${delay}ms delay`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+        continue;
+      }
+
+      throw error;
+    }
+  }
+};
+
 export function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
@@ -107,70 +142,66 @@ export function registerRoutes(app: Express) {
       }
       console.log('Found Python script at:', scriptPath);
 
-      const pythonProcess = spawn('python3', [scriptPath, url]);
-      let stderr = '';
-      let stdout = '';
+      // Use retry logic for transcript extraction
+      const extractTranscript = async () => {
+        return new Promise((resolve, reject) => {
+          const pythonProcess = spawn('python3', [scriptPath, url]);
+          let stderr = '';
+          let stdout = '';
 
-      pythonProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-        console.error('Python script error/log:', data.toString());
-      });
+          pythonProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+            console.error('Python script error/log:', data.toString());
+          });
 
-      pythonProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-        console.log('Python script output:', data.toString());
-      });
+          pythonProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+            console.log('Python script output:', data.toString());
+          });
 
-      // Enhanced process error handling
-      await new Promise((resolve, reject) => {
-        let processError = null;
+          let processError: Error | null = null;
 
-        pythonProcess.on('error', (err) => {
-          console.error('Failed to start Python process:', err);
-          processError = err;
-        });
+          pythonProcess.on('error', (err) => {
+            console.error('Failed to start Python process:', err);
+            processError = err;
+          });
 
-        pythonProcess.on('close', (code) => {
-          console.log(`Python process exited with code ${code}`);
-
-          if (processError) {
-            reject(processError);
-            return;
-          }
-
-          if (!stdout.trim()) {
-            console.error('No output from Python script');
-            console.error('stderr:', stderr);
-            reject(new Error('No output from transcript extractor'));
-            return;
-          }
-
-          try {
-            const result = JSON.parse(stdout);
-            if (result.success) {
-              resolve(result);
-            } else {
-              const error = new Error(result.error || 'Unknown error occurred');
-              error.code = result.errorType;
-              error.details = result.details;
-              reject(error);
+          pythonProcess.on('close', (code) => {
+            if (processError) {
+              reject(processError);
+              return;
             }
-          } catch (err) {
-            console.error('Failed to parse Python output:', err);
-            console.error('Raw output:', stdout);
-            reject(new Error('Invalid response from transcript extractor'));
-          }
-        });
-      });
 
-      // Parse and handle the output
-      const result = JSON.parse(stdout);
+            if (code !== 0 || !stdout.trim()) {
+              reject(new Error(`Transcript extraction failed with code ${code}: ${stderr}`));
+              return;
+            }
+
+            try {
+              const result = JSON.parse(stdout);
+              if (result.success) {
+                resolve(result);
+              } else {
+                const error = new Error(result.error || 'Unknown error occurred');
+                error.code = result.errorType;
+                error.details = result.details;
+                reject(error);
+              }
+            } catch (err) {
+              reject(new Error('Invalid response from transcript extractor'));
+            }
+          });
+        });
+      };
+
+      // Execute with retry logic
+      const result = await retryWithBackoff(extractTranscript);
 
       if (!result.success) {
         const errorResponse = {
           message: result.error,
           errorType: result.errorType,
-          details: result.details || stderr,
+          details: result.details,
           metadata: result.metadata
         };
 
@@ -179,6 +210,8 @@ export function registerRoutes(app: Express) {
           'TranscriptsDisabled': 422,
           'NoTranscriptFound': 404,
           'InvalidInput': 400,
+          'RateLimitExceeded': 429,
+          'NetworkError': 503,
           'UnknownError': 500
         };
 
@@ -186,7 +219,7 @@ export function registerRoutes(app: Express) {
           .json(errorResponse);
       }
 
-      res.json({ 
+      res.json({
         transcript: JSON.stringify(result),
         metadata: result.metadata
       });
@@ -194,12 +227,13 @@ export function registerRoutes(app: Express) {
     } catch (error: any) {
       console.error('Transcript extraction failed:', error);
 
-      const statusCode = error.code === 'InvalidURL' ? 400 : 500;
-      const errorType = error.code || 'UnknownError';
+      const statusCode = error.code === 'InvalidURL' ? 400 :
+                        error.code === 'RateLimitExceeded' ? 429 :
+                        error.code === 'NetworkError' ? 503 : 500;
 
       res.status(statusCode).json({
         message: error.message || 'Failed to extract transcript',
-        errorType: errorType,
+        errorType: error.code || 'UnknownError',
         details: error.stack
       });
     } finally {
@@ -343,7 +377,7 @@ export function registerRoutes(app: Express) {
       res.json(analysisData.data);
     } catch (error: any) {
       console.error(`Analysis error (${req.params.type}):`, error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: error.message,
         type: req.params.type,
         details: error.stack
