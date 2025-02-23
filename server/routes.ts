@@ -4,31 +4,25 @@ import { z } from "zod";
 import { storage } from "./storage";
 import { searchVideos } from "./youtube";
 import { spawn } from "child_process";
-import { promisify } from "util";
+import path from 'path';
+import fs from 'fs';
 import { insertSavedContentSchema } from "@shared/schema";
 import axios from 'axios';
-import fs from 'fs';
-import path from 'path';
 
+// Update mkTempDir function with better error handling
 const mkTempDir = () => {
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    if (!fs.existsSync(tmpDir)) {
-      try {
-        fs.mkdirSync(tmpDir, { recursive: true, mode: 0o755 });
-      } catch (err) {
-        console.error('Error creating temp directory:', err);
-        throw new Error('Failed to create temporary directory');
-      }
+  const tmpDir = path.join(process.cwd(), 'tmp');
+  if (!fs.existsSync(tmpDir)) {
+    try {
+      fs.mkdirSync(tmpDir, { recursive: true, mode: 0o755 });
+      console.log('Created temporary directory:', tmpDir);
+    } catch (err) {
+      console.error('Error creating temp directory:', err);
+      throw new Error('Failed to create temporary directory');
     }
-    return tmpDir;
-  };
-
-// Schema for video URL and analysis options
-const analysisOptionsSchema = z.object({
-  videoId: z.string(),
-  llmProvider: z.enum(["deepseek-v3", "deepseek-r1", "gpt-4o-mini", "o3-mini"]).default("deepseek-r1"),
-  type: z.enum(["hooks", "summary", "flashcards"])
-});
+  }
+  return tmpDir;
+};
 
 export function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -51,17 +45,9 @@ app.post("/api/extract-transcript", async (req, res) => {
     const { url } = z.object({ url: z.string().url() }).parse(req.body);
     console.log('Extracting transcript for URL:', url);
 
-    // Create a temporary directory if it doesn't exist
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    if (!fs.existsSync(tmpDir)) {
-      try {
-        fs.mkdirSync(tmpDir, { recursive: true, mode: 0o755 });
-        console.log('Created temporary directory:', tmpDir);
-      } catch (err) {
-        console.error('Error creating temp directory:', err);
-        throw new Error('Failed to create temporary directory');
-      }
-    }
+    // Ensure tmp directory exists
+    const tmpDir = mkTempDir();
+    console.log('Using temporary directory:', tmpDir);
 
     const pythonProcess = spawn('python3', ['scripts/extract_transcript.py', url]);
     let stderr = '';
@@ -78,45 +64,51 @@ app.post("/api/extract-transcript", async (req, res) => {
       console.log('Python script output:', data.toString());
     });
 
-    // Wait for process to complete with enhanced error handling
+    // Enhanced process error handling
     await new Promise((resolve, reject) => {
-      pythonProcess.on('close', (code) => {
-        console.log(`Python process exited with code ${code}`);
-
-        if (stdout.trim()) {
-          try {
-            const result = JSON.parse(stdout);
-            if (result.success) {
-              resolve(result);
-            } else {
-              // Enhanced error handling with specific error types
-              const error = new Error(result.error || 'Unknown error occurred');
-              error.code = result.errorType;
-              error.details = result.details;
-              reject(error);
-            }
-          } catch (err) {
-            console.error('Failed to parse Python output:', err);
-            console.error('Raw output:', stdout);
-            reject(new Error('Invalid response from transcript extractor'));
-          }
-        } else {
-          console.error('No output from Python script');
-          console.error('stderr:', stderr);
-          reject(new Error('No output from transcript extractor'));
-        }
-      });
+      let processError = null;
 
       pythonProcess.on('error', (err) => {
         console.error('Failed to start Python process:', err);
-        reject(err);
+        processError = err;
+      });
+
+      pythonProcess.on('close', (code) => {
+        console.log(`Python process exited with code ${code}`);
+
+        if (processError) {
+          reject(processError);
+          return;
+        }
+
+        if (!stdout.trim()) {
+          console.error('No output from Python script');
+          console.error('stderr:', stderr);
+          reject(new Error('No output from transcript extractor'));
+          return;
+        }
+
+        try {
+          const result = JSON.parse(stdout);
+          if (result.success) {
+            resolve(result);
+          } else {
+            const error = new Error(result.error || 'Unknown error occurred');
+            error.code = result.errorType;
+            error.details = result.details;
+            reject(error);
+          }
+        } catch (err) {
+          console.error('Failed to parse Python output:', err);
+          console.error('Raw output:', stdout);
+          reject(new Error('Invalid response from transcript extractor'));
+        }
       });
     });
 
-    // Parse and validate the output
+    // Parse and handle the output
     const result = JSON.parse(stdout);
 
-    // Handle different error types with appropriate status codes
     if (!result.success) {
       const errorResponse = {
         message: result.error,
@@ -125,7 +117,6 @@ app.post("/api/extract-transcript", async (req, res) => {
         metadata: result.metadata
       };
 
-      // Map error types to appropriate HTTP status codes
       const statusCodes = {
         'InvalidURL': 400,
         'TranscriptsDisabled': 422,
@@ -138,7 +129,6 @@ app.post("/api/extract-transcript", async (req, res) => {
         .json(errorResponse);
     }
 
-    // Success response with metadata
     res.json({ 
       transcript: JSON.stringify(result),
       metadata: result.metadata
@@ -147,12 +137,12 @@ app.post("/api/extract-transcript", async (req, res) => {
   } catch (error: any) {
     console.error('Transcript extraction failed:', error);
 
-    // Determine appropriate status code based on error type
     const statusCode = error.code === 'InvalidURL' ? 400 : 500;
+    const errorType = error.code || 'UnknownError';
 
     res.status(statusCode).json({
       message: error.message || 'Failed to extract transcript',
-      errorType: error.code || 'UnknownError',
+      errorType: errorType,
       details: error.stack
     });
   }
