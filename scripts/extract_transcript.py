@@ -8,6 +8,7 @@ from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 import requests
 import isodate
+import pkg_resources
 
 # Enhanced logging configuration
 logging.basicConfig(
@@ -20,37 +21,59 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def check_environment():
-    """Check environment setup and permissions with enhanced error handling."""
+def verify_environment():
+    """Verify Python version, packages, and environment variables."""
     try:
-        env_info = {
-            'python_version': sys.version,
-            'working_dir': os.getcwd(),
-            'temp_dir': tempfile.gettempdir(),
-            'user': os.getenv('USER'),
-            'node_env': os.getenv('NODE_ENV'),
-            'path': os.getenv('PATH'),
+        # Check Python version
+        python_version = sys.version_info
+        logger.info(f"Python version: {sys.version}")
+        if python_version.major != 3 or python_version.minor < 11:
+            raise RuntimeError(f"Python 3.11+ required, found {python_version.major}.{python_version.minor}")
+
+        # Verify required packages
+        required_packages = {
+            'youtube-transcript-api': '0.6.3',
+            'requests': '2.31.0',
+            'isodate': '0.6.1'
         }
 
-        logger.info("Environment Check:")
-        for key, value in env_info.items():
-            logger.info(f"  {key}: {value}")
+        for package, version in required_packages.items():
+            try:
+                installed_version = pkg_resources.get_distribution(package).version
+                logger.info(f"Package {package}: required={version}, installed={installed_version}")
+                if installed_version != version:
+                    logger.warning(f"Package version mismatch: {package} {installed_version} (expected {version})")
+            except pkg_resources.DistributionNotFound:
+                raise RuntimeError(f"Required package not found: {package}")
 
-        # Create tmp directory if it doesn't exist
+        # Check environment variables
+        youtube_api_key = os.getenv('YOUTUBE_API_KEY')
+        if not youtube_api_key:
+            logger.warning("YOUTUBE_API_KEY not found in environment")
+        else:
+            logger.info("YOUTUBE_API_KEY is set")
+
+        # Create and verify tmp directory
         tmp_base = os.path.join(os.getcwd(), 'tmp')
         os.makedirs(tmp_base, mode=0o755, exist_ok=True)
         logger.info(f"Created/verified base tmp directory: {tmp_base}")
 
-        # Check write permissions using temp file
+        # Verify write permissions
         with tempfile.NamedTemporaryFile(dir=tmp_base, prefix='test_', suffix='.txt') as test_file:
             test_file.write(b"test")
             test_file.flush()
             logger.info(f"Successfully verified write permissions in {tmp_base}")
 
+        # Log current working directory and environment
+        logger.info(f"Current working directory: {os.getcwd()}")
+        logger.info(f"PYTHONPATH: {os.getenv('PYTHONPATH', 'Not set')}")
+        logger.info(f"NODE_ENV: {os.getenv('NODE_ENV', 'Not set')}")
+
         return tmp_base
+
     except Exception as e:
-        logger.error(f"Environment setup error: {str(e)}")
-        raise RuntimeError(f"Failed to setup environment: {str(e)}")
+        logger.error(f"Environment verification failed: {str(e)}")
+        raise RuntimeError(f"Failed to verify environment: {str(e)}")
 
 def extract_video_id(youtube_url: str) -> str:
     """Extract the video ID from a given YouTube URL with enhanced validation."""
@@ -158,8 +181,8 @@ def extract_transcript(video_id: str) -> dict:
                             elif method == 'generated':
                                 transcript = transcript_list.find_generated_transcript([lang])
                             else:
-                                available = (transcript_list.manual_transcripts or 
-                                        transcript_list.generated_transcripts)
+                                available = (transcript_list.manual_transcripts or
+                                            transcript_list.generated_transcripts)
                                 if available:
                                     first_transcript = next(iter(available.values()))
                                     transcript = first_transcript.translate('en')
@@ -257,10 +280,10 @@ def fetch_video_metadata(video_id: str) -> dict:
         return {}
 
 def main():
-    """Main function with enhanced error handling."""
+    """Main function with enhanced environment verification."""
     try:
-        # Check and setup environment first
-        tmp_dir = check_environment()
+        # Verify environment first
+        tmp_dir = verify_environment()
         logger.info(f"Using temporary directory: {tmp_dir}")
 
         if len(sys.argv) != 2:
