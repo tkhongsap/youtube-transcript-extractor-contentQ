@@ -212,53 +212,81 @@ export function registerRoutes(app: Express) {
       const tmpDir = mkTempDir();
       console.log('Using temporary directory:', tmpDir);
 
-      // Use the enhanced spawn process
-      const pythonProcess = spawnPythonProcess('extract_transcript.py', [url]);
-      let stderr = '';
-      let stdout = '';
+      // Use retry logic for transcript extraction
+      const extractTranscript = async () => {
+        return new Promise((resolve, reject) => {
+          const pythonProcess = spawnPythonProcess('extract_transcript.py', [url]);
+          let stderr = '';
+          let stdout = '';
 
-      pythonProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-        console.error('Python script error/log:', data.toString());
+          pythonProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+            console.error('Python script error/log:', data.toString());
+          });
+
+          pythonProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+            console.log('Python script output:', data.toString());
+          });
+
+          pythonProcess.on('error', (err) => {
+            console.error('Failed to start Python process:', err);
+            reject(err);
+          });
+
+          pythonProcess.on('close', (code) => {
+            if (code !== 0 || !stdout.trim()) {
+              reject(new Error(`Transcript extraction failed with code ${code}: ${stderr}`));
+              return;
+            }
+
+            try {
+              const result = JSON.parse(stdout);
+              if (result.success) {
+                resolve(result);
+              } else {
+                const error = new Error(result.error || 'Unknown error occurred');
+                (error as any).code = result.errorType;
+                (error as any).details = result.details;
+                reject(error);
+              }
+            } catch (err) {
+              reject(new Error('Invalid response from transcript extractor'));
+            }
+          });
+        });
+      };
+
+      // Execute with retry logic
+      const result = await retryWithBackoff(extractTranscript);
+
+      if (!result.success) {
+        const errorResponse = {
+          message: result.error,
+          errorType: result.errorType,
+          details: result.details,
+          metadata: result.metadata
+        };
+
+        const statusCodes: Record<string, number> = {
+          'InvalidURL': 400,
+          'TranscriptsDisabled': 422,
+          'NoTranscriptFound': 404,
+          'InvalidInput': 400,
+          'RateLimitExceeded': 429,
+          'NetworkError': 503,
+          'UnknownError': 500
+        };
+
+        return res.status(statusCodes[result.errorType] || 500)
+          .json(errorResponse);
+      }
+
+      res.json({
+        transcript: result.transcript,
+        metadata: result.metadata
       });
 
-      pythonProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-        console.log('Python script output:', data.toString());
-      });
-
-      let processError: Error | null = null;
-
-      pythonProcess.on('error', (err) => {
-        console.error('Failed to start Python process:', err);
-        processError = err;
-      });
-
-      pythonProcess.on('close', (code) => {
-        if (processError) {
-          reject(processError);
-          return;
-        }
-
-        if (code !== 0 || !stdout.trim()) {
-          reject(new Error(`Transcript extraction failed with code ${code}: ${stderr}`));
-          return;
-        }
-
-        try {
-          const result = JSON.parse(stdout);
-          if (result.success) {
-            resolve(result);
-          } else {
-            const error = new Error(result.error || 'Unknown error occurred');
-            error.code = result.errorType;
-            error.details = result.details;
-            reject(error);
-          }
-        } catch (err) {
-          reject(new Error('Invalid response from transcript extractor'));
-        }
-      });
     } catch (error: any) {
       console.error('Transcript extraction failed:', error);
 
