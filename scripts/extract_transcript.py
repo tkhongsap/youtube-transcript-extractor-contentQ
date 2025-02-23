@@ -10,20 +10,45 @@ import requests
 import isodate
 import pkg_resources
 
-# Enhanced logging configuration
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stderr),
-        logging.FileHandler(os.path.join(tempfile.gettempdir(), 'transcript_extraction.log'))
-    ]
-)
-logger = logging.getLogger(__name__)
+# Enhanced logging configuration with both file and console output
+def setup_logging():
+    """Configure logging with both file and console handlers."""
+    try:
+        # Create logs directory if it doesn't exist
+        log_dir = os.path.join(os.getcwd(), 'logs')
+        os.makedirs(log_dir, exist_ok=True)
+
+        # Log file path
+        log_file = os.path.join(log_dir, 'transcript_extraction.log')
+
+        # Configure logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(sys.stderr),
+                logging.FileHandler(log_file)
+            ]
+        )
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"Log file created at: {log_file}")
+        return logger
+    except Exception as e:
+        print(f"Failed to setup logging: {str(e)}", file=sys.stderr)
+        raise
+
+# Initialize logging
+logger = setup_logging()
 
 def verify_environment():
     """Verify Python version, packages, and environment variables."""
     try:
+        # Log script location and current directory
+        script_path = os.path.abspath(__file__)
+        logger.info(f"Script location: {script_path}")
+        logger.info(f"Current working directory: {os.getcwd()}")
+
         # Check Python version
         python_version = sys.version_info
         logger.info(f"Python version: {sys.version}")
@@ -53,21 +78,33 @@ def verify_environment():
         else:
             logger.info("YOUTUBE_API_KEY is set")
 
-        # Create and verify tmp directory
-        tmp_base = os.path.join(os.getcwd(), 'tmp')
-        os.makedirs(tmp_base, mode=0o755, exist_ok=True)
-        logger.info(f"Created/verified base tmp directory: {tmp_base}")
+        # Set up and verify temporary directory
+        base_dir = os.getcwd()
+        tmp_base = os.path.join(base_dir, 'tmp')
 
-        # Verify write permissions
-        with tempfile.NamedTemporaryFile(dir=tmp_base, prefix='test_', suffix='.txt') as test_file:
-            test_file.write(b"test")
-            test_file.flush()
+        try:
+            os.makedirs(tmp_base, mode=0o755, exist_ok=True)
+            logger.info(f"Created/verified base tmp directory: {tmp_base}")
+
+            # Get directory permissions and ownership
+            tmp_stat = os.stat(tmp_base)
+            logger.info(f"Tmp directory permissions: mode={oct(tmp_stat.st_mode)}, uid={tmp_stat.st_uid}, gid={tmp_stat.st_gid}")
+
+            # Test file operations
+            test_file = os.path.join(tmp_base, f'test_{os.getpid()}.txt')
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.unlink(test_file)
             logger.info(f"Successfully verified write permissions in {tmp_base}")
 
-        # Log current working directory and environment
-        logger.info(f"Current working directory: {os.getcwd()}")
-        logger.info(f"PYTHONPATH: {os.getenv('PYTHONPATH', 'Not set')}")
-        logger.info(f"NODE_ENV: {os.getenv('NODE_ENV', 'Not set')}")
+        except Exception as e:
+            logger.error(f"Failed to setup/verify tmp directory: {str(e)}")
+            raise
+
+        # Log environment variables
+        env_vars = ['PYTHONPATH', 'NODE_ENV', 'PATH', 'USER']
+        for var in env_vars:
+            logger.info(f"{var}: {os.getenv(var, 'Not set')}")
 
         return tmp_base
 
@@ -281,6 +318,7 @@ def fetch_video_metadata(video_id: str) -> dict:
 
 def main():
     """Main function with enhanced environment verification."""
+    temp_files = []
     try:
         # Verify environment first
         tmp_dir = verify_environment()
@@ -346,6 +384,15 @@ def main():
             }
         }))
         sys.exit(1)
+    finally:
+        # Clean up any temporary files
+        for temp_file in temp_files:
+            try:
+                if os.path.exists(temp_file):
+                    os.unlink(temp_file)
+                    logger.info(f"Cleaned up temporary file: {temp_file}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up {temp_file}: {str(e)}")
 
 if __name__ == "__main__":
     main()
