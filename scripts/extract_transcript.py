@@ -203,29 +203,69 @@ def try_get_transcript(video_id: str, languages: list[str], max_retries: int = 3
         while retries < max_retries:
             try:
                 logger.info(f"Attempting to get transcript in {lang} (attempt {retries + 1}/{max_retries})")
-                transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
-                logger.info(f"Successfully got transcript in {lang}")
 
-                # Validate transcript content
-                if not transcript or not isinstance(transcript, list):
-                    raise ValueError("Invalid transcript format received")
+                # Try listing available transcripts first
+                try:
+                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                    logger.info("Successfully listed available transcripts")
 
-                return {
-                    'success': True,
-                    'transcript': transcript,
-                    'language': lang,
-                    'type': 'direct'
-                }
+                    # Try different transcript types
+                    for method in ['manual', 'generated', 'translated']:
+                        try:
+                            if method == 'manual':
+                                transcript = transcript_list.find_manually_created_transcript([lang])
+                            elif method == 'generated':
+                                transcript = transcript_list.find_generated_transcript([lang])
+                            else:
+                                available = (transcript_list.manual_transcripts or
+                                          transcript_list.generated_transcripts)
+                                if available:
+                                    first_transcript = next(iter(available.values()))
+                                    transcript = first_transcript.translate('en')
+                                else:
+                                    continue
+
+                            transcript_data = transcript.fetch()
+                            if transcript_data:
+                                logger.info(f"Found {method} transcript in {lang}")
+                                return {
+                                    'success': True,
+                                    'transcript': transcript_data,
+                                    'language': lang if method != 'translated' else 'en-translated',
+                                    'type': method
+                                }
+                        except Exception as e:
+                            logger.warning(f"Failed to get {method} transcript in {lang}: {str(e)}")
+                            continue
+
+                except Exception as list_error:
+                    logger.warning(f"Failed to list transcripts: {str(list_error)}")
+                    # If listing fails, try direct extraction
+                    transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
+                    logger.info(f"Successfully got transcript in {lang} via direct extraction")
+
+                    # Validate transcript content
+                    if not transcript or not isinstance(transcript, list):
+                        raise ValueError("Invalid transcript format received")
+
+                    return {
+                        'success': True,
+                        'transcript': transcript,
+                        'language': lang,
+                        'type': 'direct'
+                    }
+
             except TranscriptsDisabled as e:
                 error = f"Transcripts are disabled for this video: {str(e)}"
-                logger.error(error)
+                logger.warning(error)  # Changed from error to warning since we have fallbacks
                 errors.append({"language": lang, "error": error, "type": "TranscriptsDisabled"})
-                break  # No point retrying for this language
+                # Don't break here, let it try other methods
+                continue #Changed from break to continue
             except NoTranscriptFound as e:
                 error = f"No transcript found for language {lang}: {str(e)}"
-                logger.error(error)
+                logger.warning(error)  # Changed from error to warning
                 errors.append({"language": lang, "error": error, "type": "NoTranscriptFound"})
-                break  # No point retrying for this language
+                break
             except requests.exceptions.RequestException as e:
                 error = f"Network error getting transcript in {lang}: {str(e)}"
                 logger.error(error)
