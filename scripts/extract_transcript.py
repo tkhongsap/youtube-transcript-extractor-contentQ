@@ -2,8 +2,6 @@ import os
 import sys
 import json
 import logging
-import tempfile
-import time
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
@@ -39,8 +37,43 @@ def setup_logging():
         print(f"Failed to setup logging: {str(e)}", file=sys.stderr)
         raise
 
-# Initialize logging
-logger = setup_logging()
+# Initialize logging (moved to after setup_logging is defined)
+
+# Added function to verify script environment
+def verify_script_environment():
+    """Verify script location and Python environment."""
+    try:
+        # Get script location
+        script_path = os.path.abspath(__file__)
+        script_dir = os.path.dirname(script_path)
+        logger.info(f"Script path: {script_path}")
+        logger.info(f"Script directory: {script_dir}")
+
+        # Check if running from correct directory
+        expected_dir = os.path.join(os.getcwd(), 'scripts')
+        if not script_dir.endswith('scripts'):
+            logger.warning(f"Script not running from expected directory: {expected_dir}")
+
+        # Log Python executable info
+        logger.info(f"Python executable: {sys.executable}")
+        logger.info(f"Python version: {sys.version}")
+
+        # Verify critical directories exist
+        required_dirs = ['logs', 'tmp']
+        for dir_name in required_dirs:
+            dir_path = os.path.join(os.getcwd(), dir_name)
+            os.makedirs(dir_path, exist_ok=True)
+            logger.info(f"Verified directory exists: {dir_path}")
+
+        # Log script file permissions
+        script_stat = os.stat(script_path)
+        logger.info(f"Script file permissions: {oct(script_stat.st_mode)}")
+
+        return True
+    except Exception as e:
+        logger.error(f"Script environment verification failed: {str(e)}")
+        return False
+
 
 def test_api_connectivity():
     """Test YouTube API connectivity and rate limits."""
@@ -383,10 +416,14 @@ def fetch_video_metadata(video_id: str) -> dict:
         return {}
 
 def main():
-    """Main function with enhanced environment verification."""
+    """Main function with enhanced process verification."""
     temp_files = []
     try:
-        # Verify environment first
+        # Verify script environment first
+        if not verify_script_environment():
+            raise RuntimeError("Failed to verify script environment")
+
+        # Verify environment dependencies
         tmp_dir = verify_environment()
         logger.info(f"Using temporary directory: {tmp_dir}")
 
@@ -461,4 +498,15 @@ def main():
                 logger.warning(f"Failed to clean up {temp_file}: {str(e)}")
 
 if __name__ == "__main__":
-    main()
+    try:
+        # Setup logging first
+        logger = setup_logging()
+        main()
+    except Exception as e:
+        logger.error(f"Fatal error in script execution: {str(e)}")
+        print(json.dumps({
+            "success": False,
+            "error": str(e),
+            "errorType": "FatalError"
+        }))
+        sys.exit(1)

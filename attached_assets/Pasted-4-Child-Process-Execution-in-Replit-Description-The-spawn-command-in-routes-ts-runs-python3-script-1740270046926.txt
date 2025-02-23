@@ -1,0 +1,51 @@
+4. Child Process Execution in Replit
+Description: The spawn command in routes.ts runs python3 scripts/extract_transcript.py. In Replit’s deployment, python3 might not be available or configured correctly.
+Suggestions:
+Verify Python Availability: Ensure python3 is installed and accessible in deployment. In Replit, you can check with:
+bash
+Wrap
+Copy
+which python3
+If it’s missing, specify python3 in your replit.nix or .replit file.
+Debug Spawn Process: Log the output and errors of the spawn process in routes.ts:
+typescript
+Wrap
+Copy
+pythonProcess.stdout.on('data', (data) => {
+  console.log('Python stdout:', data.toString());
+});
+pythonProcess.stderr.on('data', (data) => {
+  console.error('Python stderr:', data.toString());
+});
+This will help identify if the Python script fails to execute or returns an error.
+Path to Script: Ensure the path scripts/extract_transcript.py is correct in deployment. Use an absolute path if necessary:
+typescript
+Wrap
+Copy
+const scriptPath = path.join(process.cwd(), 'scripts', 'extract_transcript.py');
+const pythonProcess = spawn('python3', [scriptPath, url]);
+5. Logging and Error Handling in Replit
+Description: Replit’s logging might differ between WebView and deployment, and the current error handling masks issues by returning successful but empty responses.
+Suggestions:
+Enhance Logging: Use Replit’s console logging or add detailed logs in both transcript.py and routes.ts. For example, in transcript.py:
+python
+Wrap
+Copy
+logger.error(f"Fatal error details: {str(e)} with traceback: {traceback.format_exc()}")
+In routes.ts, log process outputs:
+typescript
+Wrap
+Copy
+console.error('Full error stack:', error.stack);
+Return Detailed Errors: Modify transcript.py to return {'success': False} with detailed errors instead of empty successful responses:
+python
+Wrap
+Copy
+return {
+    'success': False,
+    'error': str(e),
+    'errorType': 'TranscriptionError',
+    'stackTrace': traceback.format_exc()
+}
+Update routes.ts to handle these errors appropriately and return HTTP 500 with details.
+Check Replit Logs: Use Replit’s deployment logs (accessible via the Deploy tab or shell) to view Python and Node.js output. Look for errors related to spawn, API calls, or file operations.
