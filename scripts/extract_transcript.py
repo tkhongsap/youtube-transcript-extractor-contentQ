@@ -202,7 +202,7 @@ def try_get_transcript(video_id: str, languages: list[str], max_retries: int = 3
         retries = 0
         while retries < max_retries:
             try:
-                logger.info(f"Attempting to get transcript in {lang} (attempt {retries + 1}/{max_retries})")
+                logger.debug(f"Attempting to get transcript in {lang} (attempt {retries + 1}/{max_retries})")
 
                 # Try listing available transcripts first
                 try:
