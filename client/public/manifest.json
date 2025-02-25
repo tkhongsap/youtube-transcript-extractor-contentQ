@@ -1,0 +1,14 @@
+{
+  "name": "YouTube Content Analyzer",
+  "short_name": "YT Analyzer",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone"
+} 
