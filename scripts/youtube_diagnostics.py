@@ -236,8 +236,9 @@ def main():
             elif "youtu.be" in video_id:
                 video_id = urlparse(video_id).path.lstrip("/")
     
+    from datetime import datetime
     results = {
-        "timestamp": isodate.datetime_isoformat(isodate.parse_datetime("now")),
+        "timestamp": datetime.now().isoformat(),
         "video_id": video_id,
         "environment": environment_info(),
         "connectivity": test_youtube_connectivity(),
