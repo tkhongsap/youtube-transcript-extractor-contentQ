@@ -7,9 +7,11 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+from youtube_transcript_api.formatters import JSONFormatter
 import requests
 import isodate
 import pkg_resources
+import random
 
 # Enhanced logging configuration with both file and console output
 def setup_logging():
@@ -41,6 +43,39 @@ def setup_logging():
 
 # Initialize logging
 logger = setup_logging()
+
+# Define common user agents to rotate through
+COMMON_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+]
+
+def get_random_user_agent():
+    """Get a random user agent from the common list."""
+    return random.choice(COMMON_USER_AGENTS)
+
+# Instead of directly patching the YouTube API internals (which might be unstable),
+# let's create our own request function that will be used in our code
+def make_browser_like_request(url):
+    """Make a request with browser-like headers to avoid anti-scraping measures."""
+    headers = {
+        'User-Agent': get_random_user_agent(),
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Referer': 'https://www.youtube.com/',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1'
+    }
+    
+    logger.info(f"Making browser-like request to: {url}")
+    response = requests.get(url, headers=headers)
+    return response
 
 def test_api_connectivity():
     """Test YouTube API connectivity and rate limits."""
@@ -315,24 +350,61 @@ def extract_transcript(video_id: str) -> dict:
     """Extract transcript with enhanced error handling and fallback mechanisms."""
     try:
         logger.info(f"Starting transcript extraction for video ID: {video_id}")
+        logger.info(f"Using browser emulation with random user agent: {get_random_user_agent()}")
 
-        # First try direct extraction
+        # First try direct extraction with our browser emulation approach
         languages = ['en', 'en-US', 'en-GB', 'a.en']
-        result = try_get_transcript(video_id, languages)
-
-        if result['success']:
-            logger.info("Successfully extracted transcript directly")
-            return result
-
-        # If direct extraction fails, try listing available transcripts
+        
+        # Add headers to all requests to avoid anti-scraping measures
+        # The youtube_transcript_api uses requests internally
+        # Let's make sure each request has appropriate browser-like headers
+        original_get = requests.get
+        
+        def patched_get(*args, **kwargs):
+            if 'headers' not in kwargs:
+                kwargs['headers'] = {
+                    'User-Agent': get_random_user_agent(),
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                    'Referer': 'https://www.youtube.com/',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'Sec-Fetch-User': '?1',
+                    'Upgrade-Insecure-Requests': '1'
+                }
+            if args and isinstance(args[0], str) and 'youtube.com' in args[0]:
+                logger.info(f"Patched request to: {args[0]}")
+                logger.info(f"Using headers: {kwargs['headers']}")
+            return original_get(*args, **kwargs)
+        
+        # Apply the monkey patch temporarily
+        requests.get = patched_get
+        
         try:
+            # Proceed with transcript extraction using patched requests
+            result = try_get_transcript(video_id, languages)
+            
+            if result['success']:
+                logger.info("Successfully extracted transcript with browser emulation")
+                # Get metadata
+                try:
+                    metadata = fetch_video_metadata(video_id)
+                    if metadata:
+                        result['metadata'] = metadata
+                except Exception as metadata_err:
+                    logger.warning(f"Couldn't fetch metadata: {str(metadata_err)}")
+                
+                return result
+            
+            # If direct extraction fails, try listing available transcripts
             logger.info("Attempting to list available transcripts")
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-
+            
             if transcript_list:
                 available_languages = list(transcript_list.manual_transcripts.keys())
                 logger.info(f"Available transcripts: {available_languages}")
-
+                
                 # Try different transcript types
                 for method in ['manual', 'generated', 'translated']:
                     for lang in languages:
@@ -343,54 +415,86 @@ def extract_transcript(video_id: str) -> dict:
                                 transcript = transcript_list.find_generated_transcript([lang])
                             else:
                                 available = (transcript_list.manual_transcripts or
-                                            transcript_list.generated_transcripts)
+                                          transcript_list.generated_transcripts)
                                 if available:
                                     first_transcript = next(iter(available.values()))
                                     transcript = first_transcript.translate('en')
                                 else:
                                     continue
-
+                                    
                             transcript_data = transcript.fetch()
                             if transcript_data:
                                 logger.info(f"Found {method} transcript in {lang}")
-                                return {
+                                response = {
                                     'success': True,
                                     'transcript': transcript_data,
                                     'language': lang if method != 'translated' else 'en-translated',
                                     'type': method
                                 }
+                                
+                                # Get metadata
+                                try:
+                                    metadata = fetch_video_metadata(video_id)
+                                    if metadata:
+                                        response['metadata'] = metadata
+                                except Exception as metadata_err:
+                                    logger.warning(f"Couldn't fetch metadata: {str(metadata_err)}")
+                                    
+                                return response
                         except Exception as e:
                             logger.error(f"Failed to get {method} transcript in {lang}: {str(e)}")
                             continue
-
-        except Exception as e:
-            logger.error(f"Error listing transcripts: {str(e)}")
-            if isinstance(e, TranscriptsDisabled):
+                            
+        finally:
+            # Restore the original requests.get
+            requests.get = original_get
+            
+        # If all attempts fail, check for specific error types
+        for error in result.get('errors', []):
+            if 'TranscriptsDisabled' in error.get('error', ''):
                 return {
                     'success': False,
                     'error': "Transcripts are disabled for this video",
                     'errorType': "TranscriptsDisabled"
                 }
-            elif isinstance(e, NoTranscriptFound):
+            elif 'NoTranscriptFound' in error.get('error', ''):
                 return {
                     'success': False,
                     'error': "No transcripts found for this video",
                     'errorType': "NoTranscriptFound"
                 }
-
+                
         return {
             'success': False,
             'error': "Could not find any available transcripts",
             'errorType': "NoTranscriptFound",
             'details': result.get('errors', [])
         }
-
+                
     except Exception as e:
-        logger.error(f"Fatal error in extract_transcript: {str(e)}")
+        logger.error(f"Transcript extraction error: {str(e)}")
+        error_type = "UnknownError"
+        
+        if isinstance(e, TranscriptsDisabled):
+            error_type = "TranscriptsDisabled"
+            error_msg = "Transcripts are disabled for this video"
+        elif isinstance(e, NoTranscriptFound):
+            error_type = "NoTranscriptFound"
+            error_msg = "No transcripts found for this video"
+        elif isinstance(e, requests.exceptions.RequestException):
+            error_type = "NetworkError"
+            error_msg = f"Network error: {str(e)}"
+        elif isinstance(e, ValueError) and "URL" in str(e):
+            error_type = "InvalidURL"
+            error_msg = str(e)
+        else:
+            error_msg = str(e)
+            
         return {
             'success': False,
-            'error': str(e),
-            'errorType': "UnknownError"
+            'error': error_msg,
+            'errorType': error_type,
+            'details': str(e)
         }
 
 def fetch_video_metadata(video_id: str) -> dict:
@@ -444,6 +548,14 @@ def main():
     """Main function with enhanced environment verification."""
     temp_files = []
     try:
+        # Log the environment/request information
+        logger.info(f"Python version: {sys.version}")
+        logger.info(f"Environment: {os.environ.get('NODE_ENV', 'Not set')}")
+        
+        # Generate a unique session ID to track this request
+        session_id = f"session_{time.time()}"
+        logger.info(f"Session ID: {session_id}")
+        
         # Verify environment first
         tmp_dir = verify_environment()
         logger.info(f"Using temporary directory: {tmp_dir}")
@@ -462,13 +574,24 @@ def main():
             raise ValueError("Empty URL provided")
 
         logger.info(f"Starting process for URL: {youtube_url}")
+        
+        # Log network information
+        try:
+            import socket
+            hostname = socket.gethostname()
+            ip_addr = socket.gethostbyname(hostname)
+            logger.info(f"Host: {hostname}, IP: {ip_addr}")
+        except Exception as e:
+            logger.warning(f"Could not determine host info: {str(e)}")
 
         try:
             video_id = extract_video_id(youtube_url)
+            logger.info(f"Using user agent: {get_random_user_agent()}")
             result = extract_transcript(video_id)
             metadata = fetch_video_metadata(video_id)
 
             if result['success']:
+                logger.info(f"Successfully extracted transcript for video {video_id} ({result.get('type', 'unknown')}) in {result.get('language', 'unknown')}")
                 print(json.dumps({
                     "success": True,
                     "transcript": result['transcript'],
@@ -478,6 +601,7 @@ def main():
                 }))
                 sys.exit(0)
             else:
+                logger.error(f"Failed to extract transcript for video {video_id}: {result.get('error', 'Unknown error')}")
                 print(json.dumps({
                     "success": False,
                     "error": result.get('error', 'Unknown error occurred'),
