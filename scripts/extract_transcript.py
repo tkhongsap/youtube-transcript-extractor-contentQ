@@ -47,6 +47,27 @@ logger.info(f"HTTP_PROXY exists: {bool(os.getenv('HTTP_PROXY'))}")
 logger.info(f"HTTPS_PROXY exists: {bool(os.getenv('HTTPS_PROXY'))}")
 logger.info(f"Current working directory: {os.getcwd()}")
 
+# Standardized browser configuration
+BROWSER_CONFIG = {
+    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Referer': 'https://www.google.com/',
+        'Origin': 'https://www.google.com',
+        'Sec-Ch-Ua': '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+        'Cache-Control': 'max-age=0'
+    }
+}
+
 # Get version info safely
 try:
     youtube_api_version = version('youtube-transcript-api')
@@ -108,26 +129,9 @@ def establish_youtube_session():
     try:
         logger.info("Establishing YouTube session before transcript extraction")
         
-        # Enhanced browser-like fingerprinting
-        browser_headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Referer': 'https://www.google.com/',
-            'Origin': 'https://www.google.com',
-            'Sec-Ch-Ua': '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
-            'Sec-Ch-Ua-Mobile': '?0',
-            'Sec-Ch-Ua-Platform': '"Windows"',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'cross-site',
-            'Sec-Fetch-User': '?1',
-            'Upgrade-Insecure-Requests': '1',
-            'Cache-Control': 'max-age=0'
-        }
-        
+        # Create session with standardized browser headers
         session = requests.Session()
-        session.headers.update(browser_headers)
+        session.headers.update(BROWSER_CONFIG['headers'])
         
         # Add proxy support if configured
         proxies = {
@@ -164,11 +168,11 @@ def get_captions_via_data_api(video_id: str) -> list:
         # First get the caption tracks
         url = f"https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId={video_id}&key={api_key}"
         
-        # Use a session with browser-like headers
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        # Use browser-like headers with API
+        headers = BROWSER_CONFIG['headers'].copy()
+        headers.update({
             'Accept': 'application/json'
-        }
+        })
         
         response = requests.get(url, headers=headers, timeout=10)
         
@@ -256,6 +260,253 @@ def check_video_status(video_id: str) -> dict:
             'error': str(e)
         }
 
+def extract_captions_from_html(video_id: str, session=None):
+    """Extract captions directly from the YouTube video page HTML."""
+    try:
+        logger.info(f"Attempting to extract captions directly from HTML for video: {video_id}")
+        
+        if not session:
+            session = establish_youtube_session()
+            
+        if not session:
+            logger.warning("Failed to establish session for HTML extraction")
+            return None
+            
+        # Add additional headers for video page access
+        session.headers.update({
+            'Sec-Fetch-Site': 'none',  # Changed from cross-site since we're directly accessing
+            'Referer': 'https://www.google.com/'
+        })
+        
+        # Get the video page
+        url = f'https://www.youtube.com/watch?v={video_id}'
+        logger.info(f"Requesting video page: {url}")
+        
+        try:
+            response = session.get(url, timeout=15)
+            logger.info(f"Video page response: {response.status_code}, size: {len(response.text)} bytes")
+            
+            if response.status_code != 200:
+                logger.warning(f"Failed to get video page: {response.status_code}")
+                return None
+                
+            # Look for specific patterns indicating the presence of captions
+            if "\"captionTracks\":" not in response.text:
+                logger.warning("Caption tracks section not found in page source")
+                
+            # Try to find caption tracks in the page source using more specific patterns
+            caption_patterns = [
+                r'\"captionTracks\":\s*(\[.*?\])',
+                r'\"playerCaptionsTracklistRenderer\":\s*({.*?})\}',
+                r'\"captions\":\s*({.*?}),\s*\"videoDetails'
+            ]
+            
+            for pattern in caption_patterns:
+                match = re.search(pattern, response.text, re.DOTALL)
+                if match:
+                    try:
+                        logger.info(f"Found caption data with pattern: {pattern[:20]}...")
+                        captions_data = json.loads(match.group(1))
+                        tracks = []
+                        
+                        if isinstance(captions_data, list):
+                            tracks = captions_data
+                            logger.info(f"Found {len(tracks)} tracks directly in list")
+                        elif 'captionTracks' in captions_data:
+                            tracks = captions_data['captionTracks']
+                            logger.info(f"Found {len(tracks)} tracks in captionTracks")
+                        elif 'playerCaptionsTracklistRenderer' in captions_data:
+                            tracks = captions_data['playerCaptionsTracklistRenderer'].get('captionTracks', [])
+                            logger.info(f"Found {len(tracks)} tracks in playerCaptionsTracklistRenderer")
+                        else:
+                            logger.warning(f"Unexpected captions data structure: {list(captions_data.keys())}")
+                            
+                        # No tracks found, try next pattern
+                        if not tracks:
+                            logger.warning("No caption tracks found in matched data")
+                            continue
+                            
+                        logger.info(f"Found {len(tracks)} caption tracks in HTML")
+                        
+                        # Find English or first available track
+                        english_tracks = []
+                        other_tracks = []
+                        
+                        for track in tracks:
+                            if not isinstance(track, dict) or 'baseUrl' not in track:
+                                continue
+                                
+                            # Categorize tracks
+                            lang_code = track.get('languageCode', '').lower()
+                            name = track.get('name', {})
+                            if isinstance(name, dict):
+                                name = name.get('simpleText', '')
+                            
+                            logger.info(f"Found track: lang={lang_code}, name={name}")
+                            
+                            # Prefer English tracks
+                            if lang_code == 'en' or (name and 'english' in name.lower()):
+                                english_tracks.append(track)
+                            else:
+                                other_tracks.append(track)
+                        
+                        # Process tracks in priority order: English first, then others
+                        all_tracks = english_tracks + other_tracks
+                        
+                        for track in all_tracks:
+                            caption_url = track['baseUrl']
+                            logger.info(f"Attempting to download captions from: {caption_url[:50]}...")
+                            
+                            try:
+                                # Add a short delay before requesting captions
+                                time.sleep(random.uniform(0.5, 1.5))
+                                
+                                # Get the actual captions
+                                caption_response = session.get(caption_url, timeout=10)
+                                
+                                if caption_response.status_code != 200:
+                                    logger.warning(f"Failed to get caption content: {caption_response.status_code}")
+                                    continue
+                                
+                                # Check if we have content that looks like captions
+                                if '<text' not in caption_response.text:
+                                    logger.warning("Response doesn't contain caption text markers")
+                                    continue
+                                    
+                                # Parse the XML captions
+                                segments = []
+                                current_text = ""
+                                start_time = 0
+                                
+                                logger.info(f"Parsing caption content, size: {len(caption_response.text)} bytes")
+                                
+                                for line in caption_response.text.split('\n'):
+                                    if '<text' in line:
+                                        start_match = re.search(r'start="([\d.]+)"', line)
+                                        if start_match:
+                                            start_time = float(start_match.group(1))
+                                            
+                                        # Extract text content directly from this line if possible
+                                        text_match = re.search(r'>([^<]+)</text>', line)
+                                        if text_match:
+                                            text = text_match.group(1).strip()
+                                            if text:
+                                                segments.append({
+                                                    'text': text,
+                                                    'start': start_time,
+                                                    'duration': 0
+                                                })
+                                        else:
+                                            # Start collecting multi-line text
+                                            current_text = re.sub(r'<[^>]+>', '', line)
+                                    elif '</text>' in line:
+                                        text = re.sub(r'<[^>]+>', '', current_text).strip()
+                                        if text:
+                                            segments.append({
+                                                'text': text,
+                                                'start': start_time,
+                                                'duration': 0
+                                            })
+                                        current_text = ""
+                                    else:
+                                        current_text += line
+                                        
+                                if segments:
+                                    logger.info(f"Successfully extracted {len(segments)} caption segments directly from HTML")
+                                    # Set duration for each segment where possible
+                                    for i in range(len(segments) - 1):
+                                        segments[i]['duration'] = segments[i+1]['start'] - segments[i]['start']
+                                    # Last segment duration (assume 3 seconds if no other info)
+                                    if segments:
+                                        segments[-1]['duration'] = 3.0
+                                    return segments
+                                else:
+                                    logger.warning("No segments were extracted from caption content")
+                            except Exception as e:
+                                logger.warning(f"Error processing captions from URL: {str(e)}")
+                                continue
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"JSON decode error processing captions: {str(e)}")
+                        continue
+                    except Exception as e:
+                        logger.warning(f"Failed to process caption data from HTML: {str(e)}")
+                        continue
+            
+            # If we get here, no captions were found
+            logger.warning("No usable caption tracks found in HTML after trying all patterns")
+            
+            # Try one last time with a more permissive pattern for caption URLs
+            try:
+                logger.info("Attempting to find caption URL directly in page")
+                caption_url_pattern = r'\"(https://www\.youtube\.com/api/timedtext[^\"]+)"'
+                url_matches = re.findall(caption_url_pattern, response.text)
+                
+                if url_matches:
+                    logger.info(f"Found {len(url_matches)} direct caption URLs in page")
+                    
+                    for url_match in url_matches:
+                        caption_url = url_match.replace('\\u0026', '&')
+                        logger.info(f"Trying direct caption URL: {caption_url[:50]}...")
+                        
+                        try:
+                            caption_response = session.get(caption_url, timeout=10)
+                            
+                            if caption_response.status_code == 200 and '<text' in caption_response.text:
+                                logger.info("Found valid captions from direct URL")
+                                
+                                # Parse the XML captions (same as above)
+                                segments = []
+                                current_text = ""
+                                start_time = 0
+                                
+                                for line in caption_response.text.split('\n'):
+                                    if '<text' in line:
+                                        start_match = re.search(r'start="([\d.]+)"', line)
+                                        if start_match:
+                                            start_time = float(start_match.group(1))
+                                        
+                                        text_match = re.search(r'>([^<]+)</text>', line)
+                                        if text_match:
+                                            text = text_match.group(1).strip()
+                                            if text:
+                                                segments.append({
+                                                    'text': text,
+                                                    'start': start_time,
+                                                    'duration': 0
+                                                })
+                                        else:
+                                            current_text = re.sub(r'<[^>]+>', '', line)
+                                    elif '</text>' in line:
+                                        text = re.sub(r'<[^>]+>', '', current_text).strip()
+                                        if text:
+                                            segments.append({
+                                                'text': text,
+                                                'start': start_time,
+                                                'duration': 0
+                                            })
+                                        current_text = ""
+                                    else:
+                                        current_text += line
+                                
+                                if segments:
+                                    logger.info(f"Successfully extracted {len(segments)} segments from direct URL")
+                                    return segments
+                        except Exception as e:
+                            logger.warning(f"Error processing direct caption URL: {str(e)}")
+                            continue
+            except Exception as e:
+                logger.warning(f"Error in direct URL extraction attempt: {str(e)}")
+            
+            return None
+            
+        except requests.RequestException as e:
+            logger.warning(f"Request exception getting video page: {str(e)}")
+            return None
+    
+    except Exception as e:
+        logger.warning(f"Failed to extract captions from HTML: {str(e)}")
+        return None
+
 def try_get_transcript(video_id: str) -> dict:
     """Enhanced transcript extraction with better error handling."""
 
@@ -277,23 +528,6 @@ def try_get_transcript(video_id: str) -> dict:
     # Add a realistic delay to mimic human behavior
     time.sleep(random.uniform(3.0, 7.0))
     
-    # Set up browser-like headers with enhanced fingerprinting
-    browser_headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Referer': 'https://www.youtube.com/',
-        'Origin': 'https://www.youtube.com',
-        'Sec-Ch-Ua': '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
-    }
-    
     # Add proxy support
     proxies = {
         'http': os.getenv('HTTP_PROXY', ''),
@@ -305,9 +539,9 @@ def try_get_transcript(video_id: str) -> dict:
     
     def patched_get(*args, **kwargs):
         if 'headers' not in kwargs:
-            kwargs['headers'] = browser_headers
+            kwargs['headers'] = BROWSER_CONFIG['headers']
         else:
-            kwargs['headers'].update(browser_headers)
+            kwargs['headers'].update(BROWSER_CONFIG['headers'])
             
         # Add proxy if configured
         if (proxies['https'] or proxies['http']) and 'proxies' not in kwargs:
@@ -319,7 +553,17 @@ def try_get_transcript(video_id: str) -> dict:
     requests.get = patched_get
     
     try:
-        # Try direct API extraction first with browser emulation
+        # Try direct HTML extraction first (NEW PRIMARY METHOD)
+        captions = extract_captions_from_html(video_id, session)
+        if captions:
+            logger.info("Successfully extracted captions directly from HTML")
+            return {
+                'success': True,
+                'transcript': captions,
+                'type': 'html_direct'
+            }
+            
+        # Try direct API extraction next with browser emulation
         try:
             logger.info("Attempting transcript extraction via API with browser emulation")
             transcript = YouTubeTranscriptApi.get_transcript(video_id)
