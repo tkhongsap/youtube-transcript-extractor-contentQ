@@ -1,0 +1,102 @@
+Here’s a breakdown of what your new logs are telling us, plus some likely root causes and next steps to investigate.
+
+---
+
+## What the New Logs Show
+
+1. **Transcript extraction** is attempted via youtube-transcript-api:
+   - Fails with `TranscriptsDisabled`.
+   - That triggers a fallback to PyTube with “browser emulation.”
+
+2. **PyTube fallback** then fails with `HTTP Error 400: Bad Request`.
+
+3. **Video metadata fetch** works just fine, so network connectivity to YouTube in general does not seem entirely blocked.
+
+4. **Environment details** indicate that:
+   - `YOUTUBE_API_KEY` is present (so you’re not missing that).
+   - youtube-transcript-api version is **0.6.3** (which is up-to-date).
+   - Python 3.11.10 on a Linux environment.
+   - We see “TranscriptsDisabled” from youtube-transcript-api and a 400 error from PyTube while trying to fetch captions.
+
+5. **In the dev environment**, you do not see `TranscriptsDisabled` or `HTTP Error 400`; you get successful transcripts.  
+
+This strongly indicates that YouTube is responding *differently* to your production environment’s requests.
+
+---
+
+## 5–7 Possible Causes for the Difference
+
+1. **IP Address / Regional Restriction**  
+   - YouTube may flag the production IP range as suspicious or regionally blocked for auto-generated captions.  
+   - If Replit’s “Deploy to Production” uses a different container/region, it might be tripping YouTube’s restrictions.
+
+2. **Rate Limiting or Bot-Detection**  
+   - YouTube might see your production environment as high-volume or “bot-like” and disable generated subtitles.  
+   - The dev environment, by contrast, could be sending fewer requests or coming from a more “normal” IP.
+
+3. **Different Request Signatures**  
+   - Even though you added browser headers, YouTube might still detect something off about the production environment’s TLS handshake, IP reputation, or missing cookies.  
+   - The dev environment might implicitly have other headers (like an authenticated session) while testing.
+
+4. **PyTube or youtube-transcript-api Mechanisms**  
+   - PyTube’s `HTTP Error 400` can occur if the underlying call to YouTube’s caption endpoints is malformed or if YouTube forcibly returns 400 for certain geographic regions or suspicious requests.  
+   - Another possibility is that the fallback code in production has a library-version mismatch for PyTube specifically (less likely if your logs confirm matching versions).
+
+5. **Video-Specific Region Blocking**  
+   - Some videos, especially those featuring certain content or channels, can have weird region restrictions for auto-generated transcripts.  
+   - Possibly your dev environment is in a whitelisted region while the production environment is not.
+
+6. **Network or Proxy Issues in Production**  
+   - Even if you can retrieve metadata, some specific endpoints (like the transcripts or caption-manifest endpoints) may be failing if your production environment’s network blocks (or rewrites) certain types of requests.
+
+7. **Deployment Configuration**  
+   - The production environment might skip certain environment initialization steps if it’s using a different Dockerfile, buildpack, or ignoring `.env`.  
+   - That could lead to partial setups where PyTube or youtube-transcript-api can’t do their normal flows.
+
+---
+
+## 2 Most Likely Root Causes
+
+1. **YouTube IP-based Blocking or “Suspicious” Classification**  
+   - The logs say “TranscriptsDisabled,” but you clearly see in dev that transcripts are in fact available. That mismatch typically arises when YouTube decides to serve a locked-down version of the page or returns a “no captions” response to certain IPs/regions.  
+   - The subsequent fallback with PyTube returns `HTTP 400`, which also supports the theory that YouTube is refusing these calls or returning an error to your production environment’s requests.
+
+2. **Slight Differences in Request Behavior**  
+   - Even with browser emulation headers, the production environment might be missing additional behaviors (cookies, or some sequence of requests that a real browser does).  
+   - YouTube often changes how caption endpoints are served based on heuristics. It can be as subtle as TLS handshake differences, user-agent mismatches, or missing cookies that a real web browser would have set.
+
+---
+
+## Suggestions & Next Steps
+
+1. **Test from a Different Production-Like IP**  
+   - Try deploying the same code in another environment (e.g., a different hosting provider or a different Replit account) to confirm if IP-based blocking is the culprit.  
+   - If it works elsewhere but not on your production instance, that strongly indicates an IP or region issue.
+
+2. **Try the Official YouTube Data API**  
+   - Although youtube-transcript-api is simpler for auto-generated subtitles, the YouTube Data API (with a valid API key) can sometimes retrieve closed captions if you have the right privileges.  
+   - This approach can confirm whether standard endpoints are blocked or restricted from your environment.
+
+3. **Add More Debugging to the PyTube HTTP Calls**  
+   - One approach is to monkey-patch or wrap PyTube’s actual HTTP calls to log the full request/response.  
+   - That can expose if YouTube is returning a “captcha page,” a “403 Forbidden,” or a “400” with a certain error message in the response body.
+
+4. **Check for Potential Rate Limits**  
+   - If you’re making many requests from the same IP in production, you might be hitting a rate limit. Try spacing out requests or only making a single request to see if that changes anything.
+
+5. **Confirm the Exact PyTube Version**  
+   - PyTube can break from time to time when YouTube changes its internal endpoints. Make sure your production environment has the same (and recent) PyTube version as dev. Checking the commit or pip freeze in both environments helps.
+
+6. **Remove the `?si=` Parameter from the URL**  
+   - The snippet you provided includes `?si=5qRzZWDEfYvoHFnC`. While your code seems to parse out the video ID (`yr0GiSgUvPU`), sometimes that leftover parameter can confuse fallback logic. Make sure you fully strip query parameters or test with a plain `https://www.youtube.com/watch?v=yr0GiSgUvPU` to see if it changes anything.
+
+7. **Look for Additional Dependencies**  
+   - Some folks have reported success by installing `pycryptodome` or other libraries that can fix certain PyTube decryption or signature issues. (Though usually that’s for stream downloads, it can sometimes help with certain requests.)
+
+---
+
+## Summary
+
+The new logs confirm that YouTube sees your production request differently and reports disabled subtitles. Your fallback approach (PyTube + headers) also fails—likely because YouTube returns a 400 error or a protective challenge. This is typical of IP-based or region-based blocks, or partial “bot detection” at YouTube’s end.
+
+Your best next steps are to verify if it’s specifically an IP/region limit by trying the same code from another production environment, ensuring your requests look as browser-like as possible, and possibly exploring the YouTube Data API. If all else fails, you might truly be dealing with a region or content restriction that dev can bypass but production cannot.

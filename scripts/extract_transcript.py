@@ -16,6 +16,22 @@ from importlib.metadata import version
 from pytube import YouTube
 from dotenv import load_dotenv
 
+# List of user agents to randomize requests
+USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (iPad; CPU OS 17_0_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36 Edg/118.0.2088.76',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'
+]
+
+def get_random_user_agent():
+    """Get a random user agent from the list."""
+    return random.choice(USER_AGENTS)
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -167,7 +183,7 @@ def try_get_transcript_pytube(video_id: str) -> list:
         return None
 
 def try_get_transcript(video_id: str) -> dict:
-    """Enhanced transcript extraction with better error handling."""
+    """Enhanced transcript extraction with better error handling and browser emulation."""
 
     def create_error_response(error_type: str, error_message: str) -> dict:
         return {
@@ -175,6 +191,42 @@ def try_get_transcript(video_id: str) -> dict:
             'error': error_message,
             'errorType': error_type
         }
+        
+    # Create a session for consistent cookies and browser-like behavior
+    session = requests.Session()
+    
+    # First, establish a session with YouTube to get cookies
+    try:
+        logger.info("Establishing YouTube session before transcript extraction")
+        user_agent = get_random_user_agent()
+        headers = {
+            'User-Agent': user_agent,
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Referer': 'https://www.google.com/',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'cross-site',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+            'Connection': 'keep-alive',
+            'Cache-Control': 'max-age=0'
+        }
+        
+        # First visit YouTube homepage to establish cookies
+        response = session.get('https://www.youtube.com/', headers=headers, timeout=15)
+        logger.info(f"Established YouTube session with status {response.status_code}, cookies: {len(session.cookies)}")
+        
+        # Add a small delay to mimic human behavior
+        time.sleep(random.uniform(1.5, 3.0))
+        
+        # Then visit the specific video page
+        video_url = f'https://www.youtube.com/watch?v={video_id}'
+        response = session.get(video_url, headers=headers, timeout=15)
+        logger.info(f"Visited video page with status {response.status_code}")
+        
+    except Exception as e:
+        logger.warning(f"Failed to establish YouTube session: {str(e)}")
     
     # Additional debugging
     logger.info(f"Starting transcript extraction for video ID: {video_id}")

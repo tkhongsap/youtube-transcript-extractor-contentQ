@@ -125,11 +125,65 @@ export function registerRoutes(app: Express) {
     }
   });
 
-  app.post("/api/extract-transcript", async (req, res) => {
+  app.get("/api/diagnostics/youtube", async (req, res) => {
+    try {
+      const scriptPath = path.join(process.cwd(), 'scripts', 'youtube_diagnostics.py');
+      if (!fs.existsSync(scriptPath)) {
+        throw new Error(`Diagnostics script not found at ${scriptPath}`);
+      }
+      
+      const { videoId } = req.query;
+      const testVideoId = videoId?.toString() || 'jNQXAC9IVRw'; // Default to first YouTube video
+      
+      console.log('Running YouTube diagnostics with video ID:', testVideoId);
+      
+      const pythonProcess = spawn('python3', [scriptPath, testVideoId]);
+      let stdout = '';
+      let stderr = '';
+      
+      pythonProcess.stdout.on('data', (data) => {
+        stdout += data.toString();
+        console.log('Python diagnostics output:', data.toString());
+      });
+      
+      pythonProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+        console.error('Python diagnostics error/log:', data.toString());
+      });
+      
+      pythonProcess.on('close', (code) => {
+        res.json({
+          status: code === 0 ? 'success' : 'error',
+          stdout,
+          stderr,
+          environment: {
+            nodeEnv: process.env.NODE_ENV,
+            isProd: process.env.NODE_ENV === 'production',
+            host: req.headers.host,
+            userAgent: req.headers['user-agent']
+          }
+        });
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        message: error.message || 'Diagnostics failed',
+        stack: error.stack
+      });
+    }
+  });
+
+app.post("/api/extract-transcript", async (req, res) => {
     let tempFiles: string[] = [];
     try {
       const { url } = z.object({ url: z.string().url() }).parse(req.body);
       console.log('Extracting transcript for URL:', url);
+      
+      // Log environment information to help debug production issues
+      console.log('Environment:', {
+        nodeEnv: process.env.NODE_ENV,
+        isProd: process.env.NODE_ENV === 'production',
+        host: req.headers.host
+      });
 
       // Setup temporary directory with enhanced error handling
       const tmpDir = mkTempDir();
