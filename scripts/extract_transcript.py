@@ -4,562 +4,353 @@ import json
 import logging
 import tempfile
 import time
-from pathlib import Path
+import random
 from urllib.parse import urlparse, parse_qs
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 from youtube_transcript_api.formatters import JSONFormatter
 import requests
 import isodate
-import pkg_resources
-import random
+import re
+import platform
+from importlib.metadata import version
+from pytube import YouTube
+from dotenv import load_dotenv
 
-# Enhanced logging configuration with both file and console output
-def setup_logging():
-    """Configure logging with both file and console handlers."""
-    try:
-        # Create logs directory if it doesn't exist
-        log_dir = os.path.join(os.getcwd(), 'logs')
-        os.makedirs(log_dir, exist_ok=True)
+# Load environment variables from .env file
+load_dotenv()
 
-        # Log file path
-        log_file = os.path.join(log_dir, 'transcript_extraction.log')
+# Add diagnostic logging for environment variables
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger.info("Environment variables diagnostic:")
+logger.info(f"YOUTUBE_API_KEY exists: {bool(os.getenv('YOUTUBE_API_KEY'))}")
+logger.info(f"NODE_ENV: {os.getenv('NODE_ENV', 'not set')}")
+logger.info(f"Current working directory: {os.getcwd()}")
 
-        # Configure logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.StreamHandler(sys.stderr),
-                logging.FileHandler(log_file)
-            ]
-        )
+# Get version info safely
+try:
+    youtube_api_version = version('youtube-transcript-api')
+except Exception:
+    youtube_api_version = "unknown"
 
-        logger = logging.getLogger(__name__)
-        logger.info(f"Log file created at: {log_file}")
-        return logger
-    except Exception as e:
-        print(f"Failed to setup logging: {str(e)}", file=sys.stderr)
-        raise
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Platform: {platform.platform()}")
+logger.info(f"youtube-transcript-api version: {youtube_api_version}")
+logger.info(f"Environment: {os.getenv('NODE_ENV', 'development')}")
+logger.info(f"Working directory: {os.getcwd()}")
 
-# Initialize logging
-logger = setup_logging()
-
-# Define common user agents to rotate through
-COMMON_USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-]
-
-def get_random_user_agent():
-    """Get a random user agent from the common list."""
-    return random.choice(COMMON_USER_AGENTS)
-
-# Instead of directly patching the YouTube API internals (which might be unstable),
-# let's create our own request function that will be used in our code
-def make_browser_like_request(url):
-    """Make a request with browser-like headers to avoid anti-scraping measures."""
-    headers = {
-        'User-Agent': get_random_user_agent(),
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Referer': 'https://www.youtube.com/',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
-    }
-    
-    logger.info(f"Making browser-like request to: {url}")
-    response = requests.get(url, headers=headers)
-    return response
-
-def test_api_connectivity():
-    """Test YouTube API connectivity and rate limits."""
-    try:
-        api_key = os.getenv('YOUTUBE_API_KEY')
-        if not api_key:
-            logger.warning("YOUTUBE_API_KEY not found, skipping API test")
-            return False
-
-        logger.info("Testing YouTube API connectivity...")
-
-        # Test video ID (use a known public video)
-        test_video_id = 'jNQXAC9IVRw'  # First YouTube video ever
-
-        response = requests.get(
-            "https://www.googleapis.com/youtube/v3/videos",
-            params={
-                "part": "snippet",
-                "id": test_video_id,
-                "key": api_key
-            },
-            timeout=10
-        )
-
-        logger.info(f"API Test Response: Status={response.status_code}, Headers={dict(response.headers)}")
-
-        if response.status_code == 429:
-            logger.error("YouTube API rate limit exceeded")
-            return False
-        elif response.status_code == 403:
-            logger.error("YouTube API access forbidden (check API key)")
-            return False
-        elif response.status_code != 200:
-            logger.error(f"YouTube API error: {response.status_code}")
-            return False
-
-        # Check remaining quota
-        if 'x-quota-remaining' in response.headers:
-            quota = response.headers['x-quota-remaining']
-            logger.info(f"Remaining API quota: {quota}")
-
-        return True
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"API connectivity test failed: {str(e)}")
-        return False
-
-def verify_environment():
-    """Verify Python version, packages, and environment variables."""
-    try:
-        # Log script location and current directory
-        script_path = os.path.abspath(__file__)
-        logger.info(f"Script location: {script_path}")
-        logger.info(f"Current working directory: {os.getcwd()}")
-
-        # Check Python version
-        python_version = sys.version_info
-        logger.info(f"Python version: {sys.version}")
-        if python_version.major != 3 or python_version.minor < 11:
-            raise RuntimeError(f"Python 3.11+ required, found {python_version.major}.{python_version.minor}")
-
-        # Verify required packages
-        required_packages = {
-            'youtube-transcript-api': '0.6.3',
-            'requests': '2.31.0',
-            'isodate': '0.6.1'
-        }
-
-        for package, version in required_packages.items():
-            try:
-                installed_version = pkg_resources.get_distribution(package).version
-                logger.info(f"Package {package}: required={version}, installed={installed_version}")
-                if installed_version != version:
-                    logger.warning(f"Package version mismatch: {package} {installed_version} (expected {version})")
-            except pkg_resources.DistributionNotFound:
-                raise RuntimeError(f"Required package not found: {package}")
-
-        # Check network connectivity
-        if not test_api_connectivity():
-            logger.warning("YouTube API connectivity test failed")
-
-        # Set up and verify temporary directory
-        base_dir = os.getcwd()
-        tmp_base = os.path.join(base_dir, 'tmp')
-
+def backoff_retry(func, max_retries=3, initial_delay=1):
+    """Implements exponential backoff with shorter delays."""
+    for attempt in range(max_retries):
         try:
-            os.makedirs(tmp_base, mode=0o755, exist_ok=True)
-            logger.info(f"Created/verified base tmp directory: {tmp_base}")
-
-            # Get directory permissions and ownership
-            tmp_stat = os.stat(tmp_base)
-            logger.info(f"Tmp directory permissions: mode={oct(tmp_stat.st_mode)}, uid={tmp_stat.st_uid}, gid={tmp_stat.st_gid}")
-
-            # Test file operations
-            test_file = os.path.join(tmp_base, f'test_{os.getpid()}.txt')
-            with open(test_file, 'w') as f:
-                f.write('test')
-            os.unlink(test_file)
-            logger.info(f"Successfully verified write permissions in {tmp_base}")
-
+            return func()
         except Exception as e:
-            logger.error(f"Failed to setup/verify tmp directory: {str(e)}")
-            raise
-
-        # Log environment variables
-        env_vars = ['PYTHONPATH', 'NODE_ENV', 'PATH', 'USER']
-        for var in env_vars:
-            logger.info(f"{var}: {os.getenv(var, 'Not set')}")
-
-        return tmp_base
-
-    except Exception as e:
-        logger.error(f"Environment verification failed: {str(e)}")
-        raise RuntimeError(f"Failed to verify environment: {str(e)}")
+            if attempt == max_retries - 1:
+                raise
+            delay = (initial_delay * (2 ** attempt)) + random.uniform(0, 1)
+            logger.warning(f"Attempt {attempt+1} failed. Retrying in {delay:.1f}s")
+            time.sleep(delay)
+    return None
 
 def extract_video_id(youtube_url: str) -> str:
-    """Extract the video ID from a given YouTube URL with enhanced validation."""
+    """Extract the video ID from a given YouTube URL."""
     try:
         logger.info(f"Processing URL: {youtube_url}")
-        if not youtube_url:
-            raise ValueError("Empty URL provided")
-
         parsed_url = urlparse(youtube_url)
 
-        # Handle youtu.be URLs
         if 'youtu.be' in parsed_url.netloc:
             video_id = parsed_url.path.lstrip('/').split('?')[0]
-            if not video_id:
-                raise ValueError(f"Invalid youtu.be URL format: {youtube_url}")
-            logger.info(f"Extracted video ID from youtu.be URL: {video_id}")
-            return video_id
+            if video_id:
+                logger.info(f"Successfully extracted video ID from youtu.be URL: {video_id}")
+                return video_id
+            raise ValueError(f"Could not extract video ID from youtu.be URL: {youtube_url}")
 
-        # Handle youtube.com URLs
         if 'youtube.com' in parsed_url.netloc:
             query_params = parse_qs(parsed_url.query)
             if 'v' in query_params:
                 video_id = query_params['v'][0]
-                logger.info(f"Extracted video ID from youtube.com URL: {video_id}")
+                logger.info(f"Successfully extracted video ID from youtube.com URL: {video_id}")
                 return video_id
             elif '/v/' in parsed_url.path:
                 video_id = parsed_url.path.split('/v/')[1].split('?')[0]
-                logger.info(f"Extracted video ID from /v/ path: {video_id}")
+                logger.info(f"Successfully extracted video ID from /v/ path: {video_id}")
                 return video_id
+            raise ValueError(f"Could not extract video ID from URL: {youtube_url}")
 
-            raise ValueError(f"Could not find video ID in URL: {youtube_url}")
-
-        raise ValueError(f"Not a valid YouTube URL: {youtube_url}")
+        raise ValueError(f"Unsupported YouTube URL format: {youtube_url}")
 
     except Exception as e:
-        logger.error(f"Video ID extraction error: {str(e)}")
-        raise ValueError(f"Failed to extract video ID: {str(e)}")
+        logger.error(f"Error in extract_video_id: {str(e)}")
+        raise
 
-def try_get_transcript(video_id: str, languages: list[str], max_retries: int = 3) -> dict:
-    """Try multiple methods to get transcript with enhanced error handling and retry logic."""
-    errors = []
-    retry_delay = 1  # Initial delay in seconds
+def check_video_status(video_id: str) -> dict:
+    """Check video status with PyTube to get more information about availability."""
+    try:
+        logger.info(f"Checking video status for ID: {video_id}")
+        yt = YouTube(f'https://www.youtube.com/watch?v={video_id}')
+        
+        # Get basic video info
+        status = {
+            'available': True,
+            'title': yt.title,
+            'author': yt.author,
+            'captions_available': bool(yt.captions),
+            'caption_tracks': len(yt.captions) if yt.captions else 0
+        }
+        
+        if yt.captions:
+            status['caption_languages'] = list(yt.captions.keys())
+            
+        logger.info(f"Video status: {json.dumps(status)}")
+        return status
+    except Exception as e:
+        logger.warning(f"Error checking video status: {str(e)}")
+        return {
+            'available': False,
+            'error': str(e)
+        }
 
-    for lang in languages:
-        retries = 0
-        while retries < max_retries:
-            try:
-                logger.info(f"Attempting to get transcript in {lang} (attempt {retries + 1}/{max_retries})")
+def try_get_transcript_pytube(video_id: str) -> list:
+    """Try to get transcript using pytube as a fallback."""
+    try:
+        logger.info("Attempting to get transcript using pytube")
+        yt = YouTube(f'https://www.youtube.com/watch?v={video_id}')
+        captions = yt.captions
 
-                # Try listing available transcripts first
-                try:
-                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                    logger.info("Successfully listed available transcripts")
+        if not captions:
+            logger.warning("No captions found via pytube")
+            return None
 
-                    # Try different transcript types with more aggressive fallbacks
-                    for method in ['manual', 'generated', 'translated', 'fallback']:
-                        try:
-                            if method == 'manual':
-                                transcript = transcript_list.find_manually_created_transcript([lang])
-                            elif method == 'generated':
-                                transcript = transcript_list.find_generated_transcript([lang])
-                            elif method == 'translated':
-                                available = (transcript_list.manual_transcripts or
-                                         transcript_list.generated_transcripts)
-                                if available:
-                                    first_transcript = next(iter(available.values()))
-                                    transcript = first_transcript.translate('en')
-                                else:
-                                    continue
-                            else:  # fallback method - try direct extraction
-                                transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
-                                if transcript_data:
-                                    return {
-                                        'success': True,
-                                        'transcript': transcript_data,
-                                        'language': lang,
-                                        'type': 'fallback'
-                                    }
-                                continue
+        # Try to get English captions first
+        caption_track = None
+        for lang_code in ['en', 'a.en']:
+            if lang_code in captions:
+                caption_track = captions[lang_code]
+                break
 
-                            transcript_data = transcript.fetch()
-                            if transcript_data:
-                                logger.info(f"Found {method} transcript in {lang}")
-                                return {
-                                    'success': True,
-                                    'transcript': transcript_data,
-                                    'language': lang if method != 'translated' else 'en-translated',
-                                    'type': method
-                                }
-                        except Exception as e:
-                            logger.warning(f"Failed to get {method} transcript in {lang}: {str(e)}")
-                            continue
+        # If no English captions, take the first available
+        if not caption_track and captions:
+            caption_track = list(captions.values())[0]
 
-                except TranscriptsDisabled as e:
-                    # Don't treat TranscriptsDisabled as a fatal error, try fallback methods
-                    logger.warning(f"Transcripts marked as disabled, attempting fallback methods: {str(e)}")
-                    try:
-                        # Try direct extraction even if transcripts are marked as disabled
-                        transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
-                        if transcript_data:
-                            logger.info("Successfully retrieved transcript through fallback method")
-                            return {
-                                'success': True,
-                                'transcript': transcript_data,
-                                'language': lang,
-                                'type': 'fallback'
-                            }
-                    except Exception as fallback_error:
-                        logger.warning(f"Fallback method also failed: {str(fallback_error)}")
-                        continue
+        if caption_track:
+            xml_captions = caption_track.xml_captions
 
-                except Exception as list_error:
-                    logger.warning(f"Failed to list transcripts: {str(list_error)}")
-                    # If listing fails, try direct extraction
-                    try:
-                        transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
-                        logger.info(f"Successfully got transcript in {lang} via direct extraction")
+            # Parse the XML captions
+            segments = []
+            current_text = ""
+            start_time = 0
 
+            for line in xml_captions.split('\n'):
+                if '<text' in line:
+                    start_match = re.search(r'start="([\d.]+)"', line)
+                    if start_match:
+                        start_time = float(start_match.group(1))
+                if '</text>' in line:
+                    text = re.sub(r'<[^>]+>', '', current_text).strip()
+                    if text:
+                        segments.append({
+                            'text': text,
+                            'start': start_time,
+                            'duration': 0
+                        })
+                    current_text = ""
+                else:
+                    current_text += line
+
+            if segments:
+                logger.info("Successfully extracted transcript using pytube")
+                return segments
+
+        return None
+    except Exception as e:
+        logger.warning(f"Pytube transcript extraction failed: {str(e)}")
+        return None
+
+def try_get_transcript(video_id: str) -> dict:
+    """Enhanced transcript extraction with better error handling."""
+
+    def create_error_response(error_type: str, error_message: str) -> dict:
+        return {
+            'success': False,
+            'error': error_message,
+            'errorType': error_type
+        }
+    
+    # Additional debugging
+    logger.info(f"Starting transcript extraction for video ID: {video_id}")
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"YouTube API key exists: {bool(os.getenv('YOUTUBE_API_KEY'))}")
+    
+    # Set up browser-like headers
+    browser_headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Referer': 'https://www.youtube.com/',
+        'Origin': 'https://www.youtube.com'
+    }
+    
+    # Apply browser emulation via monkey patching
+    original_get = requests.get
+    
+    def patched_get(*args, **kwargs):
+        if 'headers' not in kwargs:
+            kwargs['headers'] = browser_headers
+        else:
+            kwargs['headers'].update(browser_headers)
+        return original_get(*args, **kwargs)
+    
+    # Apply the patch
+    requests.get = patched_get
+    
+    try:
+        # Try direct API extraction first with browser emulation
+        try:
+            logger.info("Attempting transcript extraction via API with browser emulation")
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            if transcript:
+                logger.info("Successfully retrieved transcript via API with browser emulation")
+                return {
+                    'success': True,
+                    'transcript': transcript,
+                    'type': 'api_emulated'
+                }
+        except Exception as e:
+            error_msg = str(e).lower()
+            logger.warning(f"API transcript extraction with browser emulation failed: {error_msg}")
+            
+            # Log exception type for better debugging
+            logger.warning(f"Exception type: {type(e).__name__}")
+            
+            # Check for specific error conditions
+            if "subtitles are disabled" in error_msg:
+                if isinstance(e, TranscriptsDisabled):
+                    logger.warning("Confirmed TranscriptsDisabled exception")
+                    
+                # Even with TranscriptsDisabled, try pytube as it uses a different approach
+        
+        # Try pytube as fallback
+        try:
+            logger.info("Attempting transcript extraction via pytube with browser emulation")
+            yt = YouTube(f'https://www.youtube.com/watch?v={video_id}')
+            captions = yt.captions
+    
+            if not captions:
+                logger.warning("No captions found via pytube")
+            else:
+                logger.info(f"PyTube found captions: {list(captions.keys())}")
+                
+                # Try to get English captions first
+                caption_track = None
+                for lang_code in ['en', 'a.en']:
+                    if lang_code in captions:
+                        caption_track = captions[lang_code]
+                        break
+    
+                # If no English captions, take the first available
+                if not caption_track and captions:
+                    caption_track = list(captions.values())[0]
+    
+                if caption_track:
+                    xml_captions = caption_track.xml_captions
+                    segments = []
+                    current_text = ""
+                    start_time = 0
+    
+                    for line in xml_captions.split('\n'):
+                        if '<text' in line:
+                            start_match = re.search(r'start="([\d.]+)"', line)
+                            if start_match:
+                                start_time = float(start_match.group(1))
+                        if '</text>' in line:
+                            text = re.sub(r'<[^>]+>', '', current_text).strip()
+                            if text:
+                                segments.append({
+                                    'text': text,
+                                    'start': start_time,
+                                    'duration': 0
+                                })
+                            current_text = ""
+                        else:
+                            current_text += line
+    
+                    if segments:
+                        logger.info("Successfully extracted transcript using pytube with browser emulation")
                         return {
                             'success': True,
-                            'transcript': transcript,
-                            'language': lang,
-                            'type': 'direct'
+                            'transcript': segments,
+                            'type': 'pytube_emulated'
                         }
-                    except Exception as direct_error:
-                        logger.warning(f"Direct extraction also failed: {str(direct_error)}")
-                        continue
-
-            except requests.exceptions.RequestException as e:
-                error = f"Network error getting transcript in {lang}: {str(e)}"
-                logger.error(error)
-                if retries < max_retries - 1:
-                    logger.info(f"Retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                    retries += 1
-                    continue
-                errors.append({"language": lang, "error": error, "type": "NetworkError"})
-
-            except Exception as e:
-                error = f"Unexpected error getting transcript in {lang}: {str(e)}"
-                logger.error(error)
-                if retries < max_retries - 1:
-                    logger.info(f"Retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                    retries += 1
-                    continue
-                errors.append({"language": lang, "error": error, "type": "UnexpectedError"})
-            break  # Exit while loop if we get here (after retries or on non-retriable errors)
-
-    return {
-        'success': False,
-        'errors': errors
-    }
-
-def extract_transcript(video_id: str) -> dict:
-    """Extract transcript with enhanced error handling and fallback mechanisms."""
-    try:
-        logger.info(f"Starting transcript extraction for video ID: {video_id}")
-        logger.info(f"Using browser emulation with random user agent: {get_random_user_agent()}")
-
-        # First try direct extraction with our browser emulation approach
-        languages = ['en', 'en-US', 'en-GB', 'a.en']
+        except Exception as e:
+            logger.warning(f"Pytube transcript extraction with browser emulation failed: {str(e)}")
         
-        # Add headers to all requests to avoid anti-scraping measures
-        # The youtube_transcript_api uses requests internally
-        # Let's make sure each request has appropriate browser-like headers
-        original_get = requests.get
-        
-        def patched_get(*args, **kwargs):
-            if 'headers' not in kwargs:
-                kwargs['headers'] = {
-                    'User-Agent': get_random_user_agent(),
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Referer': 'https://www.youtube.com/',
-                    'Sec-Fetch-Dest': 'document',
-                    'Sec-Fetch-Mode': 'navigate',
-                    'Sec-Fetch-Site': 'same-origin',
-                    'Sec-Fetch-User': '?1',
-                    'Upgrade-Insecure-Requests': '1'
-                }
-            if args and isinstance(args[0], str) and 'youtube.com' in args[0]:
-                logger.info(f"Patched request to: {args[0]}")
-                logger.info(f"Using headers: {kwargs['headers']}")
-            return original_get(*args, **kwargs)
-        
-        # Apply the monkey patch temporarily
-        requests.get = patched_get
-        
-        try:
-            # Proceed with transcript extraction using patched requests
-            result = try_get_transcript(video_id, languages)
-            
-            if result['success']:
-                logger.info("Successfully extracted transcript with browser emulation")
-                # Get metadata
-                try:
-                    metadata = fetch_video_metadata(video_id)
-                    if metadata:
-                        result['metadata'] = metadata
-                except Exception as metadata_err:
-                    logger.warning(f"Couldn't fetch metadata: {str(metadata_err)}")
-                
-                return result
-            
-            # If direct extraction fails, try listing available transcripts
-            logger.info("Attempting to list available transcripts")
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            
-            if transcript_list:
-                available_languages = list(transcript_list.manual_transcripts.keys())
-                logger.info(f"Available transcripts: {available_languages}")
-                
-                # Try different transcript types
-                for method in ['manual', 'generated', 'translated']:
-                    for lang in languages:
-                        try:
-                            if method == 'manual':
-                                transcript = transcript_list.find_manually_created_transcript([lang])
-                            elif method == 'generated':
-                                transcript = transcript_list.find_generated_transcript([lang])
-                            else:
-                                available = (transcript_list.manual_transcripts or
-                                          transcript_list.generated_transcripts)
-                                if available:
-                                    first_transcript = next(iter(available.values()))
-                                    transcript = first_transcript.translate('en')
-                                else:
-                                    continue
-                                    
-                            transcript_data = transcript.fetch()
-                            if transcript_data:
-                                logger.info(f"Found {method} transcript in {lang}")
-                                response = {
-                                    'success': True,
-                                    'transcript': transcript_data,
-                                    'language': lang if method != 'translated' else 'en-translated',
-                                    'type': method
-                                }
-                                
-                                # Get metadata
-                                try:
-                                    metadata = fetch_video_metadata(video_id)
-                                    if metadata:
-                                        response['metadata'] = metadata
-                                except Exception as metadata_err:
-                                    logger.warning(f"Couldn't fetch metadata: {str(metadata_err)}")
-                                    
-                                return response
-                        except Exception as e:
-                            logger.error(f"Failed to get {method} transcript in {lang}: {str(e)}")
-                            continue
-                            
-        finally:
-            # Restore the original requests.get
-            requests.get = original_get
-            
-        # If all attempts fail, check for specific error types
-        for error in result.get('errors', []):
-            if 'TranscriptsDisabled' in error.get('error', ''):
-                return {
-                    'success': False,
-                    'error': "Transcripts are disabled for this video",
-                    'errorType': "TranscriptsDisabled"
-                }
-            elif 'NoTranscriptFound' in error.get('error', ''):
-                return {
-                    'success': False,
-                    'error': "No transcripts found for this video",
-                    'errorType': "NoTranscriptFound"
-                }
-                
-        return {
-            'success': False,
-            'error': "Could not find any available transcripts",
-            'errorType': "NoTranscriptFound",
-            'details': result.get('errors', [])
-        }
-                
-    except Exception as e:
-        logger.error(f"Transcript extraction error: {str(e)}")
-        error_type = "UnknownError"
-        
-        if isinstance(e, TranscriptsDisabled):
-            error_type = "TranscriptsDisabled"
-            error_msg = "Transcripts are disabled for this video"
-        elif isinstance(e, NoTranscriptFound):
-            error_type = "NoTranscriptFound"
-            error_msg = "No transcripts found for this video"
-        elif isinstance(e, requests.exceptions.RequestException):
-            error_type = "NetworkError"
-            error_msg = f"Network error: {str(e)}"
-        elif isinstance(e, ValueError) and "URL" in str(e):
-            error_type = "InvalidURL"
-            error_msg = str(e)
-        else:
-            error_msg = str(e)
-            
-        return {
-            'success': False,
-            'error': error_msg,
-            'errorType': error_type,
-            'details': str(e)
-        }
+        # If all attempts fail, create error response
+        logger.warning("All transcript extraction attempts failed")
+        return create_error_response(
+            "NoTranscriptFound",
+            "No transcripts available for this video after trying multiple methods with browser emulation"
+        )
+    finally:
+        # Restore original function
+        requests.get = original_get
 
 def fetch_video_metadata(video_id: str) -> dict:
-    """Fetch video metadata with enhanced error handling."""
+    """Fetch video metadata with retry mechanism."""
     try:
         api_key = os.getenv('YOUTUBE_API_KEY')
         if not api_key:
             logger.warning("YouTube API key not found in environment")
             return {}
 
-        logger.info(f"Fetching metadata for video: {video_id}")
-        response = requests.get(
-            "https://www.googleapis.com/youtube/v3/videos",
-            params={
-                "part": "snippet,statistics,contentDetails",
-                "id": video_id,
-                "key": api_key
-            },
-            timeout=10
-        )
+        logger.info(f"Fetching metadata for: {video_id}")
+        def fetch_data():
+            response = requests.get(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={
+                    "part": "snippet,statistics,contentDetails",
+                    "id": video_id,
+                    "key": api_key
+                },
+                timeout=10
+            )
+            response.raise_for_status()
+            return response.json()
 
-        response.raise_for_status()
-        data = response.json()
-
-        if not data.get("items"):
+        data = backoff_retry(fetch_data)
+        if not data or not data.get("items"):
             logger.error("No metadata items found in response")
             return {}
 
         video = data["items"][0]
-        duration = isodate.parse_duration(video["contentDetails"]["duration"])
+        raw_duration = video["contentDetails"].get("duration", "")
+        try:
+            if raw_duration.startswith("PT"):
+                duration = str(isodate.parse_duration(raw_duration)).split('.')[0]
+            else:
+                duration = raw_duration
+                logger.warning(f"Unexpected duration format: {raw_duration}")
+        except Exception as parse_error:
+            logger.warning(f"Failed to parse duration '{raw_duration}': {str(parse_error)}")
+            duration = raw_duration
 
         metadata = {
             "title": video["snippet"]["title"],
             "channelTitle": video["snippet"]["channelTitle"],
             "publishedAt": video["snippet"]["publishedAt"],
             "viewCount": video["statistics"]["viewCount"],
-            "duration": str(duration).split('.')[0]
+            "duration": duration
         }
 
         logger.info("Successfully retrieved metadata")
         return metadata
 
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request error in fetch_video_metadata: {str(e)}")
-        return {}
     except Exception as e:
         logger.error(f"Error in fetch_video_metadata: {str(e)}")
         return {}
 
 def main():
-    """Main function with enhanced environment verification."""
-    temp_files = []
+    """Main function with enhanced error handling."""
     try:
-        # Log the environment/request information
-        logger.info(f"Python version: {sys.version}")
-        logger.info(f"Environment: {os.environ.get('NODE_ENV', 'Not set')}")
-        
-        # Generate a unique session ID to track this request
-        session_id = f"session_{time.time()}"
-        logger.info(f"Session ID: {session_id}")
-        
-        # Verify environment first
-        tmp_dir = verify_environment()
-        logger.info(f"Using temporary directory: {tmp_dir}")
-
         if len(sys.argv) != 2:
             logger.error("Missing YouTube URL argument")
             print(json.dumps({
@@ -569,45 +360,34 @@ def main():
             }))
             sys.exit(1)
 
-        youtube_url = sys.argv[1].strip()
-        if not youtube_url:
-            raise ValueError("Empty URL provided")
-
+        youtube_url = sys.argv[1]
         logger.info(f"Starting process for URL: {youtube_url}")
-        
-        # Log network information
-        try:
-            import socket
-            hostname = socket.gethostname()
-            ip_addr = socket.gethostbyname(hostname)
-            logger.info(f"Host: {hostname}, IP: {ip_addr}")
-        except Exception as e:
-            logger.warning(f"Could not determine host info: {str(e)}")
 
         try:
             video_id = extract_video_id(youtube_url)
-            logger.info(f"Using user agent: {get_random_user_agent()}")
-            result = extract_transcript(video_id)
+            
+            # Check video status first
+            video_status = check_video_status(video_id)
+            
+            result = try_get_transcript(video_id)
             metadata = fetch_video_metadata(video_id)
 
             if result['success']:
-                logger.info(f"Successfully extracted transcript for video {video_id} ({result.get('type', 'unknown')}) in {result.get('language', 'unknown')}")
                 print(json.dumps({
                     "success": True,
                     "transcript": result['transcript'],
-                    "language": result['language'],
                     "type": result['type'],
-                    "metadata": metadata
+                    "metadata": metadata,
+                    "video_status": video_status
                 }))
                 sys.exit(0)
             else:
-                logger.error(f"Failed to extract transcript for video {video_id}: {result.get('error', 'Unknown error')}")
                 print(json.dumps({
                     "success": False,
-                    "error": result.get('error', 'Unknown error occurred'),
+                    "error": result.get('error', 'Unknown error'),
                     "errorType": result.get('errorType', 'UnknownError'),
                     "metadata": metadata,
-                    "details": result.get('details', [])
+                    "video_status": video_status
                 }))
                 sys.exit(1)
 
@@ -624,23 +404,10 @@ def main():
         logger.error(f"Fatal error in main: {str(e)}")
         print(json.dumps({
             "success": False,
-            "error": str(e),
-            "errorType": "FatalError",
-            "details": {
-                "type": type(e).__name__,
-                "message": str(e)
-            }
+            "error": "An unexpected error occurred",
+            "errorType": "FatalError"
         }))
         sys.exit(1)
-    finally:
-        # Clean up any temporary files
-        for temp_file in temp_files:
-            try:
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
-                    logger.info(f"Cleaned up temporary file: {temp_file}")
-            except Exception as e:
-                logger.warning(f"Failed to clean up {temp_file}: {str(e)}")
 
 if __name__ == "__main__":
     main()
