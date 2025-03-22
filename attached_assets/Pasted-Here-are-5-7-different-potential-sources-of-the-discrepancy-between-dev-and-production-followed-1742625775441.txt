@@ -1,0 +1,41 @@
+Here are **5–7 different potential sources** of the discrepancy between dev and production, followed by **1–2 most likely causes**:
+
+---
+
+## Possible Sources
+
+1. **IP or Geolocation Differences**  
+   - YouTube sometimes treats requests from different regions or IP addresses differently. In dev, your requests might come from a Replit Dev IP range that has no issues, but in production, they could come from a different region that triggers restrictions on transcripts.
+
+2. **Environment Variable or Configuration Discrepancies**  
+   - The production environment might have missing or different environment variables (e.g., language preferences, timeouts, API keys) compared to the dev environment.
+
+3. **Version Mismatch in the youtube_transcript_api or Dependencies**  
+   - If dev and production do not pin the same version of youtube_transcript_api—or if other library dependencies differ—it can lead to different request behaviors or fallback logic.
+
+4. **HTTP Headers or User-Agent Differences**  
+   - YouTube may grant or deny certain data based on specific headers (like the `User-Agent`). In dev, it could be recognized as a standard browser agent, while in production it might look like a bot, leading to disabled transcripts.
+
+5. **Caching in Replit Dev vs. Fresh Requests in Production**  
+   - Sometimes transcripts are cached locally or in memory by the library. If you tested the same video multiple times in dev, it may be pulling from a local copy rather than fetching a fresh transcript, whereas production always starts fresh.
+
+6. **Rate Limiting or Quota Issues**  
+   - If production is making many requests quickly (possibly from multiple users or instances), it might be hitting a YouTube rate limit or triggering more stringent checks.
+
+7. **Video Privacy or Region Restrictions**  
+   - Even though the logs say “Subtitles are disabled,” some videos have nuanced region or license restrictions. It could be that in your dev environment, those restrictions are bypassed for some reason—while in production, YouTube enforces them.
+
+---
+
+## Distilling to the 1–2 Most Likely Causes
+
+1. **IP/Geolocation & HTTP Request Differences**  
+   - This is a common reason for “subtitles disabled” messages. The production server could be hitting a different YouTube region policy or being flagged differently.  
+   - Also closely tied into this is the possibility of a **User-Agent** mismatch or missing cookies/headers that the dev environment might be implicitly providing.
+
+2. **Version or Configuration Discrepancies**  
+   - A mismatch in the version of `youtube_transcript_api` or its dependencies—especially if you pinned them in dev but not in production—can cause diverging code paths, fallback logic, or bug fixes that appear in one environment and not the other.
+
+These two areas are generally the first places to check, because they account for the majority of “it works locally but not in production” issues:
+- **How/where** the requests are being sent from (region, IP, headers).  
+- **What** exact software versions (and environment variables) are being used.
