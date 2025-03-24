@@ -49,7 +49,7 @@ const Sidebar: FC = () => {
       <nav className="space-y-2 p-2">
         {navItems.map((item) => (
           <Link key={item.href} href={item.href}>
-            <a className={cn(
+            <div className={cn(
               "flex items-center space-x-2 px-3 py-2 rounded-md transition-colors",
               "hover:bg-accent hover:text-accent-foreground",
               location === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground",
@@ -57,7 +57,7 @@ const Sidebar: FC = () => {
             )}>
               <item.icon size={20} />
               {!isCollapsed && <span>{item.label}</span>}
-            </a>
+            </div>
           </Link>
         ))}
       </nav>
