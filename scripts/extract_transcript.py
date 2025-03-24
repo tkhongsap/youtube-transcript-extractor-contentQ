@@ -373,44 +373,71 @@ def extract_captions_from_html(video_id: str, session=None):
                                     logger.warning("Response doesn't contain caption text markers")
                                     continue
                                     
-                                # Parse the XML captions
+                                # Parse the XML captions (same as above)
                                 segments = []
                                 current_text = ""
                                 start_time = 0
                                 
-                                logger.info(f"Parsing caption content, size: {len(caption_response.text)} bytes")
-                                
-                                for line in caption_response.text.split('\n'):
-                                    if '<text' in line:
-                                        start_match = re.search(r'start="([\d.]+)"', line)
-                                        if start_match:
-                                            start_time = float(start_match.group(1))
+                                # First try structured XML parsing
+                                try:
+                                    import xml.etree.ElementTree as ET
+                                    root = ET.fromstring(caption_response.text)
+                                    for text_elem in root.findall('.//text'):
+                                        start = float(text_elem.get('start', '0'))
+                                        duration = float(text_elem.get('dur', '0'))
+                                        content = text_elem.text or ""
+                                        if content.strip():
+                                            segments.append({
+                                                'text': content.strip(),
+                                                'start': start,
+                                                'duration': duration
+                                            })
                                             
-                                        # Extract text content directly from this line if possible
-                                        text_match = re.search(r'>([^<]+)</text>', line)
-                                        if text_match:
-                                            text = text_match.group(1).strip()
+                                    if segments:
+                                        logger.info(f"Successfully extracted {len(segments)} caption segments using XML parser")
+                                    else:
+                                        logger.warning("XML parsing did not yield any segments, falling back to regex")
+                                        # Fall back to regex-based parsing if no segments were found
+                                        segments = []
+                                except Exception as xml_error:
+                                    logger.warning(f"XML parsing failed: {str(xml_error)}. Falling back to regex.")
+                                    segments = []
+                                
+                                # If XML parsing failed or found no segments, use the regex approach
+                                if not segments:
+                                    for line in caption_response.text.split('\n'):
+                                        if '<text' in line:
+                                            start_match = re.search(r'start="([\d.]+)"', line)
+                                            dur_match = re.search(r'dur="([\d.]+)"', line)
+                                            
+                                            if start_match:
+                                                start_time = float(start_match.group(1))
+                                                
+                                            duration = float(dur_match.group(1)) if dur_match else 0
+                                            
+                                            text_match = re.search(r'>([^<]+)</text>', line)
+                                            if text_match:
+                                                text = text_match.group(1).strip()
+                                                if text:
+                                                    segments.append({
+                                                        'text': text,
+                                                        'start': start_time,
+                                                        'duration': duration
+                                                    })
+                                            else:
+                                                current_text = re.sub(r'<[^>]+>', '', line)
+                                        elif '</text>' in line:
+                                            text = re.sub(r'<[^>]+>', '', current_text).strip()
                                             if text:
                                                 segments.append({
                                                     'text': text,
                                                     'start': start_time,
                                                     'duration': 0
                                                 })
+                                            current_text = ""
                                         else:
-                                            # Start collecting multi-line text
-                                            current_text = re.sub(r'<[^>]+>', '', line)
-                                    elif '</text>' in line:
-                                        text = re.sub(r'<[^>]+>', '', current_text).strip()
-                                        if text:
-                                            segments.append({
-                                                'text': text,
-                                                'start': start_time,
-                                                'duration': 0
-                                            })
-                                        current_text = ""
-                                    else:
-                                        current_text += line
-                                        
+                                            current_text += line
+                                
                                 if segments:
                                     logger.info(f"Successfully extracted {len(segments)} caption segments directly from HTML")
                                     # Set duration for each segment where possible
@@ -462,34 +489,65 @@ def extract_captions_from_html(video_id: str, session=None):
                                 current_text = ""
                                 start_time = 0
                                 
-                                for line in caption_response.text.split('\n'):
-                                    if '<text' in line:
-                                        start_match = re.search(r'start="([\d.]+)"', line)
-                                        if start_match:
-                                            start_time = float(start_match.group(1))
-                                        
-                                        text_match = re.search(r'>([^<]+)</text>', line)
-                                        if text_match:
-                                            text = text_match.group(1).strip()
+                                # First try structured XML parsing
+                                try:
+                                    import xml.etree.ElementTree as ET
+                                    root = ET.fromstring(caption_response.text)
+                                    for text_elem in root.findall('.//text'):
+                                        start = float(text_elem.get('start', '0'))
+                                        duration = float(text_elem.get('dur', '0'))
+                                        content = text_elem.text or ""
+                                        if content.strip():
+                                            segments.append({
+                                                'text': content.strip(),
+                                                'start': start,
+                                                'duration': duration
+                                            })
+                                            
+                                    if segments:
+                                        logger.info(f"Successfully extracted {len(segments)} caption segments using XML parser")
+                                    else:
+                                        logger.warning("XML parsing did not yield any segments, falling back to regex")
+                                        # Fall back to regex-based parsing if no segments were found
+                                        segments = []
+                                except Exception as xml_error:
+                                    logger.warning(f"XML parsing failed: {str(xml_error)}. Falling back to regex.")
+                                    segments = []
+                                
+                                # If XML parsing failed or found no segments, use the regex approach
+                                if not segments:
+                                    for line in caption_response.text.split('\n'):
+                                        if '<text' in line:
+                                            start_match = re.search(r'start="([\d.]+)"', line)
+                                            dur_match = re.search(r'dur="([\d.]+)"', line)
+                                            
+                                            if start_match:
+                                                start_time = float(start_match.group(1))
+                                                
+                                            duration = float(dur_match.group(1)) if dur_match else 0
+                                            
+                                            text_match = re.search(r'>([^<]+)</text>', line)
+                                            if text_match:
+                                                text = text_match.group(1).strip()
+                                                if text:
+                                                    segments.append({
+                                                        'text': text,
+                                                        'start': start_time,
+                                                        'duration': duration
+                                                    })
+                                            else:
+                                                current_text = re.sub(r'<[^>]+>', '', line)
+                                        elif '</text>' in line:
+                                            text = re.sub(r'<[^>]+>', '', current_text).strip()
                                             if text:
                                                 segments.append({
                                                     'text': text,
                                                     'start': start_time,
                                                     'duration': 0
                                                 })
+                                            current_text = ""
                                         else:
-                                            current_text = re.sub(r'<[^>]+>', '', line)
-                                    elif '</text>' in line:
-                                        text = re.sub(r'<[^>]+>', '', current_text).strip()
-                                        if text:
-                                            segments.append({
-                                                'text': text,
-                                                'start': start_time,
-                                                'duration': 0
-                                            })
-                                        current_text = ""
-                                    else:
-                                        current_text += line
+                                            current_text += line
                                 
                                 if segments:
                                     logger.info(f"Successfully extracted {len(segments)} segments from direct URL")

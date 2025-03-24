@@ -1,0 +1,80 @@
+8:22:00 AM [express] serving on port 5000 in development mode
+Extracting transcript for URL: https://youtu.be/qvNCVYkHKfg?si=nFbsjQq8a3THILN0
+Environment: {
+  nodeEnv: 'development',
+  isProd: false,
+  host: 'dc4882eb-c757-49a9-8c85-62b7650ccf54-00-2vty4r2vivejg.riker.replit.dev'
+}
+Current working directory: /home/runner/workspace
+Attempting to create/verify tmp directory at: /home/runner/workspace/tmp
+Verified write permissions in tmp directory
+Tmp directory details: { mode: 16877, uid: 1000, gid: 1000, size: 336 }
+Using temporary directory: /home/runner/workspace/tmp
+Found Python script at: /home/runner/workspace/scripts/extract_transcript.py
+Python script error/log: /home/runner/workspace/scripts/extract_transcript.py:19: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+  import pkg_resources
+
+Python script error/log: INFO:__main__:Environment variables diagnostic:
+
+Python script error/log: INFO:__main__:YOUTUBE_API_KEY exists: True
+INFO:__main__:NODE_ENV: development
+INFO:__main__:HTTP_PROXY exists: False
+INFO:__main__:HTTPS_PROXY exists: False
+INFO:__main__:Current working directory: /home/runner/workspace
+
+Python script error/log: INFO:__main__:Python version: 3.11.10 (main, Sep  7 2024, 01:03:31) [GCC 13.3.0]
+
+Python script error/log: INFO:__main__:Platform: Linux-6.2.16-x86_64-with-glibc2.40
+
+Python script error/log: INFO:__main__:youtube-transcript-api version: 0.6.3
+INFO:__main__:Environment: development
+INFO:__main__:Working directory: /home/runner/workspace
+INFO:__main__:Starting process for URL: https://youtu.be/qvNCVYkHKfg?si=nFbsjQq8a3THILN0
+INFO:__main__:Processing URL: https://youtu.be/qvNCVYkHKfg?si=nFbsjQq8a3THILN0
+INFO:__main__:Successfully extracted video ID from youtu.be URL: qvNCVYkHKfg
+INFO:__main__:Checking video status for ID: qvNCVYkHKfg
+INFO:__main__:Establishing YouTube session before transcript extraction
+
+Python script error/log: INFO:__main__:Established YouTube session with status 200, cookies: 5
+
+Python script error/log: INFO:__main__:Visited video page with status 200
+
+Python script error/log: WARNING:__main__:Error checking video status: HTTP Error 400: Bad Request
+
+Python script error/log: INFO:__main__:Starting transcript extraction for video ID: qvNCVYkHKfg
+
+Python script error/log: INFO:__main__:Python version: 3.11.10 (main, Sep  7 2024, 01:03:31) [GCC 13.3.0]
+INFO:__main__:YouTube API key exists: True
+INFO:__main__:Establishing YouTube session before transcript extraction
+
+Python script error/log: INFO:__main__:Established YouTube session with status 200, cookies: 5
+
+Python script error/log: INFO:__main__:Attempting to extract captions directly from HTML for video: qvNCVYkHKfg
+
+Python script error/log: INFO:__main__:Requesting video page: https://www.youtube.com/watch?v=qvNCVYkHKfg
+
+Python script error/log: INFO:__main__:Video page response: 200, size: 1431744 bytes
+
+Python script error/log: INFO:__main__:Found caption data with pattern: \"captionTracks\":\s...
+
+Python script error/log: INFO:__main__:Found 1 tracks directly in list
+INFO:__main__:Found 1 caption tracks in HTML
+INFO:__main__:Found track: lang=en, name=English (auto-generated)
+INFO:__main__:Attempting to download captions from: https://www.youtube.com/api/timedtext?v=qvNCVYkHKf...
+
+Python script error/log: INFO:__main__:Parsing caption content, size: 115883 bytes
+
+Python script error/log: INFO:__main__:Successfully extracted 1 caption segments directly from HTML
+
+Python script error/log: INFO:__main__:First few segments: [{'text': 'why has generative AI ingested all the', 'start': 0.12, 'duration': 3.0}]
+INFO:__main__:Total segment count: 1
+
+Python script error/log: INFO:__main__:Successfully extracted captions directly from HTML
+
+Python script error/log: INFO:__main__:Fetching metadata for: qvNCVYkHKfg
+
+Python script error/log: INFO:__main__:Successfully retrieved metadata
+
+Python script output: {"success": true, "transcript": [{"text": "why has generative AI ingested all the", "start": 0.12, "duration": 3.0}], "type": "html_direct", "metadata": {"title": "Why Can't AI Make Its Own Discoveries? \u2014 With Yann LeCun", "channelTitle": "Alex Kantrowitz", "publishedAt": "2025-03-19T19:42:21Z", "viewCount": "32312", "duration": "0:59:23"}, "video_status": {"available": false, "error": "HTTP Error 400: Bad Request"}}
+
+8:23:15 AM [express] POST /api/extract-transcript 200 in 17847ms :: {"success":true,"transcript":[{"…
