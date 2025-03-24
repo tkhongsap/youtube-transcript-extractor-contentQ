@@ -419,6 +419,9 @@ def extract_captions_from_html(video_id: str, session=None):
                                     # Last segment duration (assume 3 seconds if no other info)
                                     if segments:
                                         segments[-1]['duration'] = 3.0
+                                    # Log the first few segments and the total count
+                                    logger.info(f"First few segments: {segments[:3]}")
+                                    logger.info(f"Total segment count: {len(segments)}")
                                     return segments
                                 else:
                                     logger.warning("No segments were extracted from caption content")

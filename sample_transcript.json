@@ -1,0 +1,7 @@
+{
+  "transcript": [
+    {"text": "first segment", "start": 0.0, "duration": 3.0},
+    {"text": "second segment", "start": 3.0, "duration": 3.0},
+    {"text": "third segment", "start": 6.0, "duration": 3.0}
+  ]
+}

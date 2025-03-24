@@ -147,18 +147,18 @@ const Extractions: FC = () => {
         throw new Error(errorMessage);
       }
 
-      const parsedData = JSON.parse(data.transcript);
-      if (parsedData.success) {
-        setTranscript(parsedData.transcript);
-        if (parsedData.metadata) {
-          setMetadata(parsedData.metadata);
+      // Data is already JSON (not stringified)
+      if (data.success) {
+        setTranscript(data.transcript);
+        if (data.metadata) {
+          setMetadata(data.metadata);
         }
         toast({
           title: "Success",
           description: "Transcript extracted successfully. Select a tab to analyze content.",
         });
       } else {
-        throw new Error(parsedData.error || "Failed to parse transcript");
+        throw new Error(data.error || "Failed to parse transcript");
       }
     } catch (error: any) {
       console.error('Transcript extraction error:', error);

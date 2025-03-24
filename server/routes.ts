@@ -273,8 +273,11 @@ app.post("/api/extract-transcript", async (req, res) => {
           .json(errorResponse);
       }
 
+      // Return the raw result without additional stringification
       res.json({
-        transcript: JSON.stringify(result),
+        success: true,
+        transcript: result.transcript,
+        type: result.type,
         metadata: result.metadata
       });
 
