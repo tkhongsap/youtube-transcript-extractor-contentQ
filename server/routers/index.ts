@@ -7,6 +7,7 @@ import flashcardsRouter from './flashcards.router';
 import ideasRouter from './ideas.router';
 import devRouter from './dev.router';
 import { setupAuth } from '../replitAuth';
+import { errorHandler } from './middleware';
 
 export async function registerAppRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -19,6 +20,9 @@ export async function registerAppRoutes(app: Express): Promise<Server> {
   app.use('/api/flashcard-sets', flashcardsRouter);
   app.use('/api/idea-sets', ideasRouter);
   app.use('/api/dev', devRouter);
+
+  // Apply global error handling middleware
+  app.use(errorHandler);
 
   // Create HTTP server
   const httpServer = createServer(app);

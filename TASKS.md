@@ -13,7 +13,10 @@ This file tracks progress on modularizing the routes.ts file for improved mainta
 ## Completed Tasks (continued)
 - [x] Test all endpoints after refactoring
 - [x] Add a new /api/videos/:id/transcript endpoint for accessing video transcripts
+- [x] Add error handling middleware for each router if needed
+- [x] Document the new router structure
 
-## Upcoming Tasks
-- [ ] Add error handling middleware for each router if needed
-- [ ] Document the new router structure
+## Future Enhancements
+- [ ] Consider adding request validation middleware using Zod for all endpoints
+- [ ] Add automated tests for API routes
+- [ ] Implement versioning for API endpoints if needed in the future
