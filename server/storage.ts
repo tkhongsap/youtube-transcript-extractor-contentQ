@@ -36,6 +36,7 @@ export interface IStorage {
   getVideo(id: number): Promise<Video | undefined>;
   getVideoByYoutubeId(youtubeId: string, userId: string): Promise<Video | undefined>;
   createVideo(video: InsertVideo): Promise<Video>;
+  updateVideo(id: number, data: Partial<InsertVideo>): Promise<Video | null>;
   getUserVideos(userId: string, limit?: number): Promise<Video[]>;
   
   // Summary operations
@@ -106,6 +107,20 @@ export class DatabaseStorage implements IStorage {
     return createdVideo;
   }
   
+  async updateVideo(id: number, data: Partial<InsertVideo>): Promise<Video | null> {
+    const [updatedVideo] = await db
+      .update(videos)
+      .set({
+        ...data,
+        // Don't update these fields
+        userId: undefined,
+        youtubeId: undefined,
+      })
+      .where(eq(videos.id, id))
+      .returning();
+    return updatedVideo || null;
+  }
+  
   async getUserVideos(userId: string, limit: number = 10): Promise<Video[]> {
     return db
       .select()
@@ -117,7 +132,12 @@ export class DatabaseStorage implements IStorage {
   
   // Summary operations
   async createSummary(summary: InsertSummary): Promise<Summary> {
-    const [createdSummary] = await db.insert(summaries).values(summary).returning();
+    // Ensure keyTopics is an array
+    const formattedSummary = {
+      ...summary,
+      keyTopics: Array.isArray(summary.keyTopics) ? summary.keyTopics : []
+    };
+    const [createdSummary] = await db.insert(summaries).values(formattedSummary).returning();
     return createdSummary;
   }
   

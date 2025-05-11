@@ -70,11 +70,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get transcript
           const transcript = await youtube.getVideoTranscript(videoId);
           
-          // Update video with transcript
-          await storage.createVideo({
-            ...video,
-            transcript
-          });
+          // Update video with transcript - use updateVideo instead of createVideo
+          // to avoid the duplicate key error
+          await storage.updateVideo(video.id, { transcript });
           
           // Generate summary
           const summarization = await openai.generateVideoSummary(transcript, videoDetails.title);
