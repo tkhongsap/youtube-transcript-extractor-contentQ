@@ -63,70 +63,80 @@ export async function getVideoDetails(videoId: string) {
 }
 
 /**
- * Get video transcript using YouTube's captions
+ * Get video transcript using a specialized package for YouTube transcripts
  */
 export async function getVideoTranscript(videoId: string): Promise<string> {
   try {
-    // First, we need to get the captions track ID
-    const captionsResponse = await fetch(
-      `${BASE_URL}/captions?videoId=${videoId}&part=snippet&key=${API_KEY}`
-    );
-
-    if (!captionsResponse.ok) {
-      const text = await captionsResponse.text();
-      throw new Error(`YouTube Captions API error: ${captionsResponse.status} ${text}`);
-    }
-
-    const captionsData = await captionsResponse.json();
+    // Import using dynamic import for ES modules
+    const youtubeTranscript = await import('youtube-transcript');
     
-    if (!captionsData.items || captionsData.items.length === 0) {
-      console.log('No captions found for this video, attempting to use alternative method');
+    console.log(`Fetching transcript for video ID: ${videoId}`);
+    
+    // Get the detailed transcript
+    // The package exports the transcript function directly
+    const transcriptResponse = await youtubeTranscript.getTranscript(videoId);
+    
+    // Process the transcript into readable text
+    if (transcriptResponse && Array.isArray(transcriptResponse) && transcriptResponse.length > 0) {
+      // Map through transcript entries and combine them
+      const fullTranscript = transcriptResponse.map(entry => entry.text).join(' ');
       
-      // If no captions are found, we can use a simplified approach by fetching the video description
-      // and additional metadata which might contain useful information
-      const videoResponse = await fetch(
-        `${BASE_URL}/videos?id=${videoId}&part=snippet&key=${API_KEY}`
+      // Segment into paragraphs for readability (roughly every 5-6 sentences)
+      const sentences = fullTranscript.match(/[^.!?]+[.!?]+/g) || [];
+      let paragraphs = [];
+      
+      for (let i = 0; i < sentences.length; i += 5) {
+        const paragraph = sentences.slice(i, i + 5).join(' ');
+        paragraphs.push(paragraph);
+      }
+      
+      // Add video information at the beginning
+      const videoInfoResponse = await fetch(
+        `${BASE_URL}/videos?id=${videoId}&part=snippet,contentDetails&key=${API_KEY}`
       );
       
-      if (!videoResponse.ok) {
-        throw new Error('Failed to retrieve video information');
+      if (!videoInfoResponse.ok) {
+        throw new Error('Failed to retrieve video info');
       }
       
-      const videoData = await videoResponse.json();
-      if (!videoData.items || videoData.items.length === 0) {
-        throw new Error('Video not found');
-      }
+      const videoInfo = await videoInfoResponse.json();
+      const videoTitle = videoInfo.items[0].snippet.title;
+      const channelTitle = videoInfo.items[0].snippet.channelTitle;
       
-      // Use the description as a fallback
-      const description = videoData.items[0].snippet.description;
-      return `No transcript available from YouTube captions. Using video description instead:\n\n${description}`;
+      const formattedTranscript = 
+        `Title: ${videoTitle}\n` +
+        `Channel: ${channelTitle}\n\n` +
+        `Full Transcript:\n\n${paragraphs.join('\n\n')}`;
+        
+      return formattedTranscript;
+    } else {
+      throw new Error('No transcript segments found');
     }
-    
-    // In a real application, we would now try to fetch the actual transcript data
-    // using the YouTube Data API or a third-party service
-
-    // For demonstration purposes, we'll create a more realistic transcript using the video title
-    // and information about the video from the API
-    const videoInfoResponse = await fetch(
-      `${BASE_URL}/videos?id=${videoId}&part=snippet,contentDetails&key=${API_KEY}`
-    );
-
-    if (!videoInfoResponse.ok) {
-      throw new Error('Failed to retrieve video info');
-    }
-
-    const videoInfo = await videoInfoResponse.json();
-    const videoTitle = videoInfo.items[0].snippet.title;
-    const channelTitle = videoInfo.items[0].snippet.channelTitle;
-    const description = videoInfo.items[0].snippet.description;
-
-    // For now, we'll return a combination of video information to provide useful context
-    // until we implement a proper transcript extraction method
-    return `Title: ${videoTitle}\n\nChannel: ${channelTitle}\n\nDescription:\n${description}\n\n` +
-      `Note: This is video information data. A complete transcript would require additional third-party services or YouTube Data API with proper permissions.`;
   } catch (error) {
     console.error('Error fetching video transcript:', error);
-    return "Failed to retrieve transcript. Please check your YouTube API key and ensure the video has captions available.";
+    
+    // Fallback to basic information if transcript retrieval fails
+    try {
+      const videoInfoResponse = await fetch(
+        `${BASE_URL}/videos?id=${videoId}&part=snippet,contentDetails&key=${API_KEY}`
+      );
+      
+      if (!videoInfoResponse.ok) {
+        throw new Error('Failed to retrieve video info');
+      }
+      
+      const videoInfo = await videoInfoResponse.json();
+      const videoTitle = videoInfo.items[0].snippet.title;
+      const channelTitle = videoInfo.items[0].snippet.channelTitle;
+      const description = videoInfo.items[0].snippet.description;
+      
+      return `Title: ${videoTitle}\n\nChannel: ${channelTitle}\n\n` +
+        `Description:\n${description}\n\n` +
+        `Note: Unable to retrieve the full transcript for this video. ` +
+        `This could be due to unavailable captions or regional restrictions.`;
+    } catch (secondaryError) {
+      return "Failed to retrieve transcript. The video may not have captions available or there might be regional restrictions.";
+    }
   }
 }
 
