@@ -140,6 +140,59 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
 }
 
 /**
+ * Get video transcript with timestamps
+ */
+export async function getVideoTranscriptWithTimestamps(videoId: string): Promise<any> {
+  try {
+    // Import the YouTube transcript module
+    const { YoutubeTranscript } = await import('youtube-transcript');
+    
+    console.log(`Fetching transcript with timestamps for video ID: ${videoId}`);
+    
+    // Get the detailed transcript using the proper class method
+    const transcriptResponse = await YoutubeTranscript.fetchTranscript(videoId);
+    
+    if (transcriptResponse && Array.isArray(transcriptResponse) && transcriptResponse.length > 0) {
+      // Return the raw transcript data with timestamps
+      return {
+        success: true,
+        transcript: transcriptResponse.map(entry => ({
+          text: entry.text,
+          offset: entry.offset,
+          duration: entry.duration,
+          // Convert milliseconds to readable timestamp (MM:SS)
+          timestamp: formatTimestamp(entry.offset)
+        }))
+      };
+    } else {
+      throw new Error('No transcript segments found');
+    }
+  } catch (error) {
+    console.error('Error fetching video transcript with timestamps:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+/**
+ * Format milliseconds into a timestamp (MM:SS or HH:MM:SS)
+ */
+function formatTimestamp(milliseconds: number): string {
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
  * Validate YouTube URL
  */
 export function isValidYoutubeUrl(url: string): boolean {
