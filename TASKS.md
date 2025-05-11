@@ -10,8 +10,9 @@ This file tracks progress on modularizing the routes.ts file for improved mainta
 - [x] Refactor routes.ts to use the new modular router structure
 - [x] Update server/index.ts to use the new routing structure
 
-## In Progress Tasks
-- [ ] Test all endpoints after refactoring
+## Completed Tasks (continued)
+- [x] Test all endpoints after refactoring
+- [x] Add a new /api/videos/:id/transcript endpoint for accessing video transcripts
 
 ## Upcoming Tasks
 - [ ] Add error handling middleware for each router if needed

@@ -205,6 +205,32 @@ router.get('/:id', isAuthenticated, async (req: any, res) => {
   }
 });
 
+// Get video transcript
+router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
+  try {
+    const videoId = parseInt(req.params.id, 10);
+    const video = await storage.getVideo(videoId);
+    
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+    
+    // Check if user owns the video
+    if (video.userId !== req.user.claims.sub) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    
+    if (!video.transcript) {
+      return res.status(404).json({ message: "Transcript not available for this video" });
+    }
+    
+    res.json({ transcript: video.transcript });
+  } catch (error) {
+    console.error("Error fetching transcript:", error);
+    res.status(500).json({ message: "Failed to fetch transcript" });
+  }
+});
+
 // Get video summary
 router.get('/:id/summary', isAuthenticated, async (req: any, res) => {
   try {
