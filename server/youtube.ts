@@ -67,14 +67,13 @@ export async function getVideoDetails(videoId: string) {
  */
 export async function getVideoTranscript(videoId: string): Promise<string> {
   try {
-    // Import using dynamic import for ES modules
-    const youtubeTranscript = await import('youtube-transcript');
+    // Import the YouTube transcript module
+    const { YoutubeTranscript } = await import('youtube-transcript');
     
     console.log(`Fetching transcript for video ID: ${videoId}`);
     
-    // Get the detailed transcript
-    // The package exports the transcript function directly
-    const transcriptResponse = await youtubeTranscript.getTranscript(videoId);
+    // Get the detailed transcript using the proper class method
+    const transcriptResponse = await YoutubeTranscript.fetchTranscript(videoId);
     
     // Process the transcript into readable text
     if (transcriptResponse && Array.isArray(transcriptResponse) && transcriptResponse.length > 0) {
