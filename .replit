@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["q-text-as-data"]
+packages = ["q-text-as-data", "jq"]
 
 [deployment]
 deploymentTarget = "autoscale"
