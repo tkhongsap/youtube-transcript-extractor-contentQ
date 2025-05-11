@@ -221,10 +221,9 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
     
-    if (!video.transcript) {
-      return res.status(404).json({ message: "Transcript not available for this video" });
-    }
-
+    // Always fetch fresh transcript directly from YouTube
+    console.log(`Fetching fresh transcript for video: ${video.youtubeId}`);
+    
     // If the format is 'timestamped', fetch the transcript with timestamps
     if (format === 'timestamped') {
       try {
@@ -232,13 +231,35 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
         return res.json(timestampedTranscript);
       } catch (timestampError) {
         console.error("Error fetching timestamped transcript:", timestampError);
-        // Fall back to the stored transcript if timestamped format fails
-        return res.json({ transcript: video.transcript });
+        // If we can't get the timestamped version, try to get the regular version
+        try {
+          const fullTranscript = await youtube.getVideoTranscript(video.youtubeId);
+          return res.json({ transcript: fullTranscript });
+        } catch (textError) {
+          console.error("Error fetching text transcript:", textError);
+          // Last resort: return the stored transcript if both fresh fetches fail
+          if (video.transcript) {
+            return res.json({ transcript: video.transcript });
+          } else {
+            return res.status(404).json({ message: "Unable to retrieve transcript from YouTube" });
+          }
+        }
+      }
+    } else {
+      // For text format, get fresh transcript
+      try {
+        const fullTranscript = await youtube.getVideoTranscript(video.youtubeId);
+        return res.json({ transcript: fullTranscript });
+      } catch (textError) {
+        console.error("Error fetching text transcript:", textError);
+        // Fall back to stored transcript if fresh fetch fails
+        if (video.transcript) {
+          return res.json({ transcript: video.transcript });
+        } else {
+          return res.status(404).json({ message: "Unable to retrieve transcript from YouTube" });
+        }
       }
     }
-    
-    // Default: return the stored transcript text
-    res.json({ transcript: video.transcript });
   } catch (error) {
     console.error("Error fetching transcript:", error);
     res.status(500).json({ message: "Failed to fetch transcript" });

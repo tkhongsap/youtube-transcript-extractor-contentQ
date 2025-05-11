@@ -153,14 +153,48 @@ export async function getVideoTranscriptWithTimestamps(videoId: string): Promise
     const transcriptResponse = await YoutubeTranscript.fetchTranscript(videoId);
     
     if (transcriptResponse && Array.isArray(transcriptResponse) && transcriptResponse.length > 0) {
-      // Return the raw transcript data with timestamps
+      // Get video details for metadata
+      try {
+        const videoInfoResponse = await fetch(
+          `${BASE_URL}/videos?id=${videoId}&part=snippet,contentDetails&key=${API_KEY}`
+        );
+        
+        if (videoInfoResponse.ok) {
+          const videoInfo = await videoInfoResponse.json();
+          const videoTitle = videoInfo.items[0].snippet.title;
+          const channelTitle = videoInfo.items[0].snippet.channelTitle;
+          const duration = videoInfo.items[0].contentDetails.duration;
+          
+          // Return the complete raw transcript data with timestamps and metadata
+          return {
+            success: true,
+            videoId: videoId,
+            title: videoTitle,
+            channel: channelTitle,
+            duration: duration,
+            segmentCount: transcriptResponse.length,
+            transcript: transcriptResponse.map(entry => ({
+              text: entry.text,
+              offset: entry.offset,
+              duration: entry.duration,
+              // Convert milliseconds to readable timestamp (MM:SS)
+              timestamp: formatTimestamp(entry.offset)
+            }))
+          };
+        }
+      } catch (metadataError) {
+        console.error("Error fetching video metadata:", metadataError);
+      }
+      
+      // Fallback without metadata
       return {
         success: true,
+        videoId: videoId,
+        segmentCount: transcriptResponse.length,
         transcript: transcriptResponse.map(entry => ({
           text: entry.text,
           offset: entry.offset,
           duration: entry.duration,
-          // Convert milliseconds to readable timestamp (MM:SS)
           timestamp: formatTimestamp(entry.offset)
         }))
       };
