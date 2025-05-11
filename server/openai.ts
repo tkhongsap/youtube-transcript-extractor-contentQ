@@ -4,12 +4,17 @@ if (!process.env.OPENAI_API_KEY) {
   console.warn("OPENAI_API_KEY not found in environment variables. AI features will not work correctly.");
 }
 
+if (!process.env.OPENAI_MODEL) {
+  console.warn("OPENAI_MODEL not found in environment variables. Using default model.");
+}
+
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY || 'dummy-key-for-development'
 });
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const MODEL = "gpt-4o";
+// The model to use for OpenAI API calls, read from environment variable with fallback to "gpt-4o"
+// the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+const MODEL = process.env.OPENAI_MODEL || "gpt-4o";
 
 export async function generateVideoSummary(transcript: string, title: string = ""): Promise<{summary: string, keyTopics: string[]}> {
   try {
