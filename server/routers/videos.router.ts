@@ -1,10 +1,53 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { isAuthenticated } from '../replitAuth';
 import { storage } from '../storage';
 import * as youtube from '../youtube';
 import * as openai from '../openai';
 import { youtubeUrlSchema } from '@shared/schema';
 import { ZodError } from 'zod';
+
+// Define types for better documentation and code completion, 
+// but we'll use 'any' in the request handlers to avoid TypeScript compatibility issues with Express
+interface AuthenticatedUser {
+  claims: {
+    sub: string;
+    // other claims as needed
+  };
+  access_token?: string;
+  refresh_token?: string;
+  expires_at?: number;
+}
+
+interface VideoData {
+  id: number;
+  userId: string;
+  youtubeId: string;
+  title: string;
+  channelTitle: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  duration: string | null;
+  transcript: string | null;
+  createdAt?: Date | null;
+}
+
+interface TimestampedTranscriptSegment {
+  text: string;
+  offset: number;
+  duration: number;
+  timestamp: string;
+}
+
+interface TimestampedTranscript {
+  success: boolean;
+  videoId: string;
+  title?: string;
+  channel?: string;
+  duration?: string;
+  segmentCount: number;
+  transcript: TimestampedTranscriptSegment[];
+  error?: string;
+}
 
 const router = Router();
 
@@ -208,16 +251,28 @@ router.get('/:id', isAuthenticated, async (req: any, res) => {
 // Get video transcript
 router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
   try {
-    const videoId = parseInt(req.params.id, 10);
-    const video = await storage.getVideo(videoId);
-    const format = req.query.format || 'text'; // Default to text format
+    const videoIdParam = req.params.id;
+    // Validate videoIdParam is a number string before parsing
+    if (!/^\d+$/.test(videoIdParam)) {
+      return res.status(400).json({ message: "Invalid video ID format." });
+    }
+    const videoId = parseInt(videoIdParam, 10);
+    
+    // Ensure user information exists
+    if (!req.user?.claims?.sub) {
+      return res.status(401).json({ message: "User information is missing." });
+    }
+    const userId = req.user.claims.sub;
+    
+    const video = await storage.getVideo(videoId) as VideoData | null;
+    const format = (req.query.format as string) || 'text'; // Default to text format
     
     if (!video) {
       return res.status(404).json({ message: "Video not found" });
     }
     
     // Check if user owns the video
-    if (video.userId !== req.user.claims.sub) {
+    if (video.userId !== userId) {
       return res.status(403).json({ message: "Unauthorized" });
     }
     
@@ -227,42 +282,61 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
     // If the format is 'timestamped', fetch the transcript with timestamps
     if (format === 'timestamped') {
       try {
-        const timestampedTranscript = await youtube.getVideoTranscriptWithTimestamps(video.youtubeId);
-        return res.json(timestampedTranscript);
+        const timestampedTranscriptData = await youtube.getVideoTranscriptWithTimestamps(video.youtubeId);
+        return res.json({
+          format: 'timestamped',
+          data: timestampedTranscriptData
+        });
       } catch (timestampError) {
-        console.error("Error fetching timestamped transcript:", timestampError);
+        console.error(`Error fetching timestamped transcript for YouTube ID ${video.youtubeId} (DB video ID: ${video.id}):`, timestampError);
         // If we can't get the timestamped version, try to get the regular version
         try {
-          const fullTranscript = await youtube.getVideoTranscript(video.youtubeId);
-          return res.json({ transcript: fullTranscript });
+          const fullTranscriptText = await youtube.getVideoTranscript(video.youtubeId);
+          return res.json({
+            format: 'text',
+            data: { transcript: fullTranscriptText }
+          });
         } catch (textError) {
-          console.error("Error fetching text transcript:", textError);
+          console.error(`Error fetching text transcript for YouTube ID ${video.youtubeId} (DB video ID: ${video.id}) after timestamped attempt failed:`, textError);
           // Last resort: return the stored transcript if both fresh fetches fail
           if (video.transcript) {
-            return res.json({ transcript: video.transcript });
+            console.warn(`Falling back to stored transcript for YouTube ID ${video.youtubeId} (DB video ID: ${video.id}).`);
+            return res.json({
+              format: 'text-stored',
+              data: { transcript: video.transcript }
+            });
           } else {
-            return res.status(404).json({ message: "Unable to retrieve transcript from YouTube" });
+            console.warn(`Unable to retrieve transcript from YouTube API for YouTube ID ${video.youtubeId} (DB video ID: ${video.id}), and no stored transcript was found.`);
+            return res.status(404).json({ message: "Transcript not available from YouTube and not found in storage." });
           }
         }
       }
     } else {
       // For text format, get fresh transcript
       try {
-        const fullTranscript = await youtube.getVideoTranscript(video.youtubeId);
-        return res.json({ transcript: fullTranscript });
+        const fullTranscriptText = await youtube.getVideoTranscript(video.youtubeId);
+        return res.json({
+          format: 'text',
+          data: { transcript: fullTranscriptText }
+        });
       } catch (textError) {
-        console.error("Error fetching text transcript:", textError);
+        console.error(`Error fetching text transcript for YouTube ID ${video.youtubeId} (DB video ID: ${video.id}):`, textError);
         // Fall back to stored transcript if fresh fetch fails
         if (video.transcript) {
-          return res.json({ transcript: video.transcript });
+          console.warn(`Falling back to stored transcript for YouTube ID ${video.youtubeId} (DB video ID: ${video.id}).`);
+          return res.json({
+            format: 'text-stored',
+            data: { transcript: video.transcript }
+          });
         } else {
-          return res.status(404).json({ message: "Unable to retrieve transcript from YouTube" });
+          console.warn(`Unable to retrieve transcript from YouTube API for YouTube ID ${video.youtubeId} (DB video ID: ${video.id}), and no stored transcript was found.`);
+          return res.status(404).json({ message: "Transcript not available from YouTube and not found in storage." });
         }
       }
     }
   } catch (error) {
-    console.error("Error fetching transcript:", error);
-    res.status(500).json({ message: "Failed to fetch transcript" });
+    console.error(`General error in /:id/transcript for DB video ID ${req.params.id}:`, error);
+    res.status(500).json({ message: "Failed to fetch transcript due to a server error." });
   }
 });
 
