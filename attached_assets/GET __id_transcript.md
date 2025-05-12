@@ -1,4 +1,3 @@
-Okay, let's focus on making the GET /:id/transcript endpoint more robust and developer-friendly in bite-sized pieces. The primary goal remains to reliably fetch the *full* transcript.
 
 Here are some targeted recommendations:
 
