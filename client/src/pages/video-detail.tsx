@@ -1,18 +1,24 @@
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type Video, type Summary } from "@shared/schema";
 import GenerateContentGrid from "@/components/content/GenerateContentGrid";
 import TranscriptView from "@/components/video/TranscriptView";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const VideoDetailPage = () => {
   const [, params] = useRoute("/videos/:id");
   const [, navigate] = useLocation();
   const videoId = params?.id ? parseInt(params.id, 10) : null;
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const [activeTab, setActiveTab] = useState("summary");
+  const [isReprocessing, setIsReprocessing] = useState(false);
   
   // Fetch video details
   const { data: video, isLoading: isLoadingVideo } = useQuery<Video>({
@@ -25,6 +31,42 @@ const VideoDetailPage = () => {
     queryKey: [`/api/videos/${videoId}/summary`],
     enabled: !!videoId,
   });
+  
+  // Reprocess video mutation
+  const reprocessMutation = useMutation({
+    mutationFn: async () => {
+      setIsReprocessing(true);
+      return apiRequest('POST', `/api/videos/${videoId}/reprocess`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Reprocessing started",
+        description: "The video is being reprocessed to retrieve the full transcript and regenerate content. This may take a minute.",
+      });
+      
+      // Invalidate all queries related to this video
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/summary`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/reports`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/flashcard-sets`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/idea-sets`] });
+        setIsReprocessing(false);
+      }, 30000); // Wait 30 seconds before invalidating queries
+    },
+    onError: (error) => {
+      toast({
+        title: "Reprocessing failed",
+        description: error instanceof Error ? error.message : "Failed to reprocess video. Please try again.",
+        variant: "destructive",
+      });
+      setIsReprocessing(false);
+    },
+  });
+  
+  const handleReprocess = () => {
+    reprocessMutation.mutate();
+  };
   
   const handleBackClick = () => {
     navigate("/");
@@ -132,6 +174,18 @@ const VideoDetailPage = () => {
           <h1 className="text-lg font-semibold text-gray-900">Video Results</h1>
         </div>
         <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReprocess}
+            disabled={isReprocessing || reprocessMutation.isPending}
+            className="flex items-center gap-1.5"
+          >
+            <span className={`material-icons text-sm ${isReprocessing ? "animate-spin" : ""}`}>
+              {isReprocessing ? "refresh" : "restart_alt"}
+            </span>
+            {isReprocessing ? "Reprocessing..." : "Reprocess Video"}
+          </Button>
           <button className="text-gray-500 hover:text-gray-700 focus:outline-none" aria-label="Download">
             <span className="material-icons">file_download</span>
           </button>

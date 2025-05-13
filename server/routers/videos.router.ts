@@ -437,4 +437,163 @@ router.get('/:id/idea-sets', isAuthenticated, async (req: any, res) => {
   }
 });
 
+// Reprocess video to get fresh transcript and derived content
+router.post('/:id/reprocess', isAuthenticated, async (req: any, res) => {
+  try {
+    const videoIdParam = req.params.id;
+    // Validate videoIdParam is a number string before parsing
+    if (!/^\d+$/.test(videoIdParam)) {
+      return res.status(400).json({ message: "Invalid video ID format." });
+    }
+    const videoId = parseInt(videoIdParam, 10);
+    
+    // Ensure user information exists
+    if (!req.user?.claims?.sub) {
+      return res.status(401).json({ message: "User information is missing." });
+    }
+    const userId = req.user.claims.sub;
+    
+    const video = await storage.getVideo(videoId) as VideoData | null;
+    
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+    
+    // Check if user owns the video
+    if (video.userId !== userId) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+    
+    // Start reprocessing and return immediately
+    res.json({ 
+      message: "Video reprocessing started", 
+      video,
+      reprocessing: true
+    });
+    
+    // Continue processing asynchronously
+    (async () => {
+      try {
+        // Re-fetch video details from YouTube API to get the latest metadata
+        const videoDetails = await youtube.getVideoDetails(video.youtubeId);
+        
+        // Update video metadata
+        await storage.updateVideo(video.id, {
+          title: videoDetails.title,
+          channelTitle: videoDetails.channelTitle,
+          description: videoDetails.description,
+          thumbnailUrl: videoDetails.thumbnailUrl,
+          duration: videoDetails.duration,
+        });
+        
+        // Get fresh transcript
+        const transcript = await youtube.getVideoTranscript(video.youtubeId);
+        
+        // Update video with transcript
+        await storage.updateVideo(video.id, { transcript });
+        
+        // Generate fresh summary
+        const summarization = await openai.generateVideoSummary(transcript, videoDetails.title);
+        
+        // Delete existing summary and create new one
+        // Note: There's no direct method to delete a summary, so we're just updating it
+        await storage.createSummary({
+          videoId: video.id,
+          summary: summarization.summary,
+          keyTopics: summarization.keyTopics
+        });
+        
+        // Generate and store Medium report
+        const mediumReport = await openai.generateMediumReport(transcript, videoDetails.title, summarization.summary);
+        await storage.createReport({
+          videoId: video.id,
+          title: mediumReport.title,
+          content: mediumReport.content,
+          type: "medium"
+        });
+        
+        // Generate and store LinkedIn post
+        const linkedInPost = await openai.generateLinkedInPost(transcript, videoDetails.title, summarization.summary);
+        await storage.createReport({
+          videoId: video.id,
+          title: linkedInPost.title,
+          content: linkedInPost.content,
+          type: "linkedin"
+        });
+        
+        // Generate and store flashcards
+        const flashcardGeneration = await openai.generateFlashcards(transcript, videoDetails.title, summarization.summary);
+        const flashcardSet = await storage.createFlashcardSet({
+          videoId: video.id,
+          title: flashcardGeneration.title,
+          description: flashcardGeneration.description
+        });
+        
+        for (const card of flashcardGeneration.flashcards) {
+          await storage.createFlashcard({
+            flashcardSetId: flashcardSet.id,
+            question: card.question,
+            answer: card.answer
+          });
+        }
+        
+        // Generate and store blog ideas
+        const blogIdeas = await openai.generateBlogIdeas(transcript, videoDetails.title, summarization.summary);
+        const blogIdeaSet = await storage.createIdeaSet({
+          videoId: video.id,
+          type: "blog_titles"
+        });
+        
+        for (const idea of blogIdeas) {
+          await storage.createIdea({
+            ideaSetId: blogIdeaSet.id,
+            content: idea
+          });
+        }
+        
+        // Generate and store social media hooks
+        const socialMediaHooks = await openai.generateSocialMediaHooks(transcript, videoDetails.title, summarization.summary);
+        const socialMediaSet = await storage.createIdeaSet({
+          videoId: video.id,
+          type: "social_media_hooks"
+        });
+        
+        for (const hook of socialMediaHooks) {
+          await storage.createIdea({
+            ideaSetId: socialMediaSet.id,
+            content: hook
+          });
+        }
+        
+        // Generate and store follow-up questions
+        const followUpQuestions = await openai.generateFollowUpQuestions(transcript, videoDetails.title, summarization.summary);
+        const questionsSet = await storage.createIdeaSet({
+          videoId: video.id,
+          type: "questions"
+        });
+        
+        for (const question of followUpQuestions) {
+          await storage.createIdea({
+            ideaSetId: questionsSet.id,
+            content: question
+          });
+        }
+        
+        console.log(`Completed reprocessing for video ${video.id}`);
+        
+      } catch (error) {
+        console.error(`Error in background reprocessing for video ${video.id}:`, error);
+      }
+    })();
+    
+  } catch (error) {
+    console.error("Error reprocessing video:", error);
+    
+    res.status(500).json({ 
+      message: "Failed to reprocess video", 
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 export default router;

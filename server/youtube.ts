@@ -113,11 +113,14 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
     
     // Create an AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // Extended to 30 second timeout for large transcripts
     
     // Get the detailed transcript using the proper class method
+    // The library handles the YouTube API call to get transcript data
     const transcriptResponse = await Promise.race([
-      YoutubeTranscript.fetchTranscript(videoId),
+      YoutubeTranscript.fetchTranscript(videoId, {
+        lang: 'en' // Specify English language to ensure we get the main transcript
+      }),
       new Promise((_, reject) => {
         controller.signal.addEventListener('abort', () => 
           reject(new TranscriptApiError('Transcript request timed out'))
@@ -129,6 +132,8 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
     
     // Process the transcript into readable text
     if (transcriptResponse && Array.isArray(transcriptResponse) && transcriptResponse.length > 0) {
+      console.log(`Retrieved ${transcriptResponse.length} transcript segments for video ID: ${videoId}`);
+      
       // Map through transcript entries and combine them
       const fullTranscript = transcriptResponse.map(entry => entry.text).join(' ');
       
@@ -240,11 +245,13 @@ export async function getVideoTranscriptWithTimestamps(videoId: string): Promise
     
     // Create an AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // Extended to 30 second timeout for large transcripts
     
-    // Get the detailed transcript using the proper class method
+    // Get the detailed transcript using the proper class method with language specification
     const transcriptResponse = await Promise.race([
-      YoutubeTranscript.fetchTranscript(videoId),
+      YoutubeTranscript.fetchTranscript(videoId, {
+        lang: 'en' // Specify English language to ensure we get the main transcript
+      }),
       new Promise((_, reject) => {
         controller.signal.addEventListener('abort', () => 
           reject(new TranscriptApiError('Transcript request timed out'))
