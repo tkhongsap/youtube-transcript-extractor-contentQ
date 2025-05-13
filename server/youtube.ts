@@ -134,16 +134,41 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
     if (transcriptResponse && Array.isArray(transcriptResponse) && transcriptResponse.length > 0) {
       console.log(`Retrieved ${transcriptResponse.length} transcript segments for video ID: ${videoId}`);
       
-      // Map through transcript entries and combine them
+      // Map through transcript entries and combine them with spaces
       const fullTranscript = transcriptResponse.map(entry => entry.text).join(' ');
+      console.log(`Transcript length: ${fullTranscript.length} characters`);
+      
+      // If we have very little text, try another approach
+      if (fullTranscript.length < 50) {
+        console.log("Very short transcript detected, trying alternate format");
+        // Join with newlines for better separation
+        const rawTranscript = transcriptResponse.map(entry => entry.text).join('\n');
+        return `Full raw transcript (${transcriptResponse.length} segments):\n\n${rawTranscript}`;
+      }
       
       // Segment into paragraphs for readability (roughly every 5-6 sentences)
       const sentences = fullTranscript.match(/[^.!?]+[.!?]+/g) || [];
+      console.log(`Detected ${sentences.length} sentences in transcript`);
+      
+      // If too few sentences were detected, use a different approach
       let paragraphs = [];
       
-      for (let i = 0; i < sentences.length; i += 5) {
-        const paragraph = sentences.slice(i, i + 5).join(' ');
-        paragraphs.push(paragraph);
+      if (sentences.length < 10) {
+        // Use time-based chunking instead
+        console.log("Few sentences detected, using time-based chunking");
+        
+        // Group segments into paragraphs of roughly 10 segments each
+        for (let i = 0; i < transcriptResponse.length; i += 10) {
+          const chunk = transcriptResponse.slice(i, i + 10);
+          const paragraph = chunk.map(entry => entry.text).join(' ');
+          paragraphs.push(paragraph);
+        }
+      } else {
+        // Use sentence-based chunking (original approach)
+        for (let i = 0; i < sentences.length; i += 5) {
+          const paragraph = sentences.slice(i, i + 5).join(' ');
+          paragraphs.push(paragraph);
+        }
       }
       
       // Add video information at the beginning
