@@ -2,15 +2,31 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 interface TranscriptViewProps {
   videoId: number;
   transcript: string;
 }
 
-const TranscriptView = ({ videoId, transcript }: TranscriptViewProps) => {
+interface TranscriptResponse {
+  format: string;
+  data: {
+    transcript: string;
+  };
+}
+
+const TranscriptView = ({ videoId }: TranscriptViewProps) => {
   const { toast } = useToast();
   const [isCopying, setIsCopying] = useState(false);
+  
+  // Fetch fresh transcript directly from the API
+  const { data: transcriptData, isLoading } = useQuery<TranscriptResponse>({
+    queryKey: [`/api/videos/${videoId}/transcript`],
+    enabled: !!videoId,
+  });
+  
+  const transcript = transcriptData?.data?.transcript || "";
   
   const handleCopyTranscript = () => {
     setIsCopying(true);
@@ -61,7 +77,7 @@ const TranscriptView = ({ videoId, transcript }: TranscriptViewProps) => {
             </Button>
           </div>
           
-          {!transcript ? (
+          {isLoading ? (
             <div className="space-y-4">
               {Array(5).fill(0).map((_, index) => (
                 <div key={index} className="space-y-2">

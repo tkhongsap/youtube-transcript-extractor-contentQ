@@ -134,7 +134,7 @@ const VideoDetailPage = () => {
         );
       case "transcript":
         return (
-          <TranscriptView videoId={videoId || 0} transcript={video?.transcript || ""} />
+          <TranscriptView videoId={videoId || 0} transcript="" />
         );
       case "reports":
         return (
