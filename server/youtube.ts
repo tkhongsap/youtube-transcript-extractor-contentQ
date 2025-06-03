@@ -247,7 +247,8 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
       return `Title: ${videoTitle}\n\nChannel: ${channelTitle}\n\n` +
         `Description:\n${description}\n\n` +
         `Note: Unable to retrieve the full transcript for this video. ` +
-        `This could be due to unavailable captions or regional restrictions.`;
+        `This could be due to unavailable captions or regional restrictions. ` +
+        `The video may not have auto-generated captions or manually uploaded subtitles.`;
     } catch (secondaryError) {
       if (secondaryError instanceof TranscriptError || secondaryError instanceof VideoNotFoundError) {
         throw secondaryError;
@@ -389,4 +390,83 @@ export function isValidYoutubeUrl(url: string): boolean {
   } catch (error) {
     return false;
   }
+}
+
+/**
+ * Try to get transcript with multiple fallback strategies
+ * This function attempts different approaches to get a transcript
+ */
+export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<string> {
+  const strategies = [
+    // Strategy 1: Try English captions
+    async () => {
+      const { YoutubeTranscript } = await import('youtube-transcript');
+      return await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+    },
+    // Strategy 2: Try auto-generated captions (any language)
+    async () => {
+      const { YoutubeTranscript } = await import('youtube-transcript');
+      return await YoutubeTranscript.fetchTranscript(videoId);
+    },
+    // Strategy 3: Try with different language codes
+    async () => {
+      const { YoutubeTranscript } = await import('youtube-transcript');
+      const languages = ['en-US', 'en-GB', 'auto'];
+      for (const lang of languages) {
+        try {
+          return await YoutubeTranscript.fetchTranscript(videoId, { lang });
+                 } catch (e: any) {
+           continue;
+         }
+      }
+      throw new Error('No transcript found in any language');
+    }
+  ];
+
+  for (let i = 0; i < strategies.length; i++) {
+    try {
+      console.log(`Trying transcript strategy ${i + 1} for video ${videoId}`);
+      const transcript = await strategies[i]();
+      
+      if (transcript && transcript.length > 0) {
+        console.log(`Strategy ${i + 1} succeeded: Retrieved ${transcript.length} segments`);
+        
+        // Process the transcript using the same logic as getVideoTranscript
+        const fullTranscript = transcript.map(entry => entry.text).join(' ');
+        
+        if (fullTranscript.length > 0) {
+          // Create paragraphs
+          const sentences = fullTranscript.match(/[^.!?]+[.!?]+/g) || [];
+          let paragraphs = [];
+          
+          if (sentences.length < 10) {
+            for (let j = 0; j < transcript.length; j += 10) {
+              const chunk = transcript.slice(j, j + 10);
+              const paragraph = chunk.map(entry => entry.text).join(' ');
+              paragraphs.push(paragraph);
+            }
+          } else {
+            for (let j = 0; j < sentences.length; j += 5) {
+              const paragraph = sentences.slice(j, j + 5).join(' ');
+              paragraphs.push(paragraph);
+            }
+          }
+          
+          // Get video metadata
+          try {
+            const videoDetails = await getVideoDetails(videoId);
+            return `Title: ${videoDetails.title}\nChannel: ${videoDetails.channelTitle}\n\nFull Transcript:\n\n${paragraphs.join('\n\n')}`;
+          } catch (metadataError) {
+            return `Full Transcript:\n\n${paragraphs.join('\n\n')}`;
+          }
+        }
+      }
+         } catch (error: any) {
+       console.log(`Strategy ${i + 1} failed:`, error.message);
+       continue;
+     }
+  }
+  
+  // If all strategies fail, throw an error
+  throw new TranscriptNotFoundError(videoId);
 }

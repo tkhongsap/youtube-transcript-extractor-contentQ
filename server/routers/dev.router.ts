@@ -19,9 +19,9 @@ router.get('/update-transcript/:videoId', async (req, res) => {
     }
     
     try {
-      // Get new transcript
+      // Get new transcript with fallback strategies
       console.log("Fetching transcript...");
-      const transcript = await youtube.getVideoTranscript(videoId);
+      const transcript = await youtube.getVideoTranscriptWithFallbacks(videoId);
       console.log("Transcript fetched successfully");
       
       // Update the video with the new transcript

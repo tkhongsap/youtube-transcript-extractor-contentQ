@@ -291,7 +291,7 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
         console.error(`Error fetching timestamped transcript for YouTube ID ${video.youtubeId} (DB video ID: ${video.id}):`, timestampError);
         // If we can't get the timestamped version, try to get the regular version
         try {
-          const fullTranscriptText = await youtube.getVideoTranscript(video.youtubeId);
+          const fullTranscriptText = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
           return res.json({
             format: 'text',
             data: { transcript: fullTranscriptText }
@@ -314,7 +314,7 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
     } else {
       // For text format, get fresh transcript
       try {
-        const fullTranscriptText = await youtube.getVideoTranscript(video.youtubeId);
+        const fullTranscriptText = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
         return res.json({
           format: 'text',
           data: { transcript: fullTranscriptText }
@@ -486,8 +486,8 @@ router.post('/:id/reprocess', isAuthenticated, async (req: any, res) => {
           duration: videoDetails.duration,
         });
         
-        // Get fresh transcript
-        const transcript = await youtube.getVideoTranscript(video.youtubeId);
+        // Get fresh transcript with fallback strategies
+        const transcript = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
         
         // Update video with transcript
         await storage.updateVideo(video.id, { transcript });
