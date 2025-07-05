@@ -30,4 +30,20 @@ router.delete('/:id', isAuthenticated, async (req: any, res) => {
   }
 });
 
+// Update report
+router.put('/:id', isAuthenticated, async (req: any, res) => {
+  try {
+    const reportId = parseInt(req.params.id, 10);
+    const { title, content } = req.body;
+    const updated = await storage.updateReport(reportId, { title, content });
+    if (!updated) {
+      return res.status(404).json({ message: 'Report not found' });
+    }
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating report:', error);
+    res.status(500).json({ message: 'Failed to update report' });
+  }
+});
+
 export default router;

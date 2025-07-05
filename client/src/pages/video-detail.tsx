@@ -9,6 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import ReportsTab from "@/components/video-detail/ReportsTab";
 
 const VideoDetailPage = () => {
   const [, params] = useRoute("/videos/:id");
@@ -137,11 +138,7 @@ const VideoDetailPage = () => {
           <TranscriptView videoId={videoId || 0} transcript="" />
         );
       case "reports":
-        return (
-          <div className="max-w-6xl mx-auto p-4">
-            <p className="text-center py-10 text-gray-500">Reports view will be implemented soon.</p>
-          </div>
-        );
+        return <ReportsTab videoId={videoId || 0} />;
       case "flashcards":
         return (
           <div className="max-w-6xl mx-auto p-4">

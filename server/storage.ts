@@ -47,6 +47,7 @@ export interface IStorage {
   createReport(report: InsertReport): Promise<Report>;
   getVideoReports(videoId: number): Promise<Report[]>;
   getUserReports(userId: string, limit?: number): Promise<Report[]>;
+  updateReport(id: number, data: Partial<InsertReport>): Promise<Report | null>;
   deleteReport(id: number): Promise<void>;
   
   // Flashcard operations
@@ -182,7 +183,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reports.createdAt))
       .limit(limit);
   }
-  
+
+  async updateReport(
+    id: number,
+    data: Partial<InsertReport>
+  ): Promise<Report | null> {
+    const [updated] = await db
+      .update(reports)
+      .set({
+        ...data,
+        videoId: undefined,
+      })
+      .where(eq(reports.id, id))
+      .returning();
+    return updated || null;
+  }
+
   async deleteReport(id: number): Promise<void> {
     await db.delete(reports).where(eq(reports.id, id));
   }
