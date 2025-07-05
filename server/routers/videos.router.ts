@@ -3,6 +3,7 @@ import { isAuthenticated } from '../replitAuth';
 import { storage } from '../storage';
 import * as youtube from '../youtube';
 import * as openai from '../openai';
+import * as rateLimiter from '../rateLimiter';
 import { youtubeUrlSchema } from '@shared/schema';
 import { ZodError } from 'zod';
 
@@ -434,6 +435,149 @@ router.get('/:id/idea-sets', isAuthenticated, async (req: any, res) => {
   } catch (error) {
     console.error("Error fetching idea sets:", error);
     res.status(500).json({ message: "Failed to fetch idea sets" });
+  }
+});
+
+// Generate individual reports (Medium or LinkedIn)
+router.post('/:id/generate-report', isAuthenticated, async (req: any, res, next) => {
+  try {
+    const videoId = parseInt(req.params.id, 10);
+    const type = req.query.type as string;
+    if (!['medium', 'linkedin'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid report type' });
+    }
+
+    const video = await storage.getVideo(videoId);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    if (video.userId !== req.user.claims.sub) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    if (!rateLimiter.consume(req.user.claims.sub)) {
+      return res.status(429).json({ message: 'Rate limit exceeded' });
+    }
+
+    let transcript = video.transcript;
+    if (!transcript) {
+      transcript = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
+      await storage.updateVideo(video.id, { transcript });
+    }
+
+    const summary = await storage.getVideoSummary(video.id);
+    const summaryText = summary?.summary || '';
+
+    const result = type === 'medium'
+      ? await openai.generateMediumReport(transcript, video.title, summaryText)
+      : await openai.generateLinkedInPost(transcript, video.title, summaryText);
+
+    const saved = await storage.createReport({
+      videoId: video.id,
+      title: result.title,
+      content: result.content,
+      type
+    });
+
+    res.status(201).json({ success: true, data: saved });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Generate flashcards
+router.post('/:id/generate-flashcards', isAuthenticated, async (req: any, res, next) => {
+  try {
+    const videoId = parseInt(req.params.id, 10);
+    const video = await storage.getVideo(videoId);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    if (video.userId !== req.user.claims.sub) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    if (!rateLimiter.consume(req.user.claims.sub)) {
+      return res.status(429).json({ message: 'Rate limit exceeded' });
+    }
+
+    let transcript = video.transcript;
+    if (!transcript) {
+      transcript = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
+      await storage.updateVideo(video.id, { transcript });
+    }
+    const summary = await storage.getVideoSummary(video.id);
+    const summaryText = summary?.summary || '';
+
+    const generation = await openai.generateFlashcards(transcript, video.title, summaryText);
+    const set = await storage.createFlashcardSet({
+      videoId: video.id,
+      title: generation.title,
+      description: generation.description
+    });
+    for (const card of generation.flashcards) {
+      await storage.createFlashcard({
+        flashcardSetId: set.id,
+        question: card.question,
+        answer: card.answer
+      });
+    }
+
+    res.status(201).json({ success: true, data: set });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Generate ideas (blog titles, social hooks, questions)
+router.post('/:id/generate-ideas', isAuthenticated, async (req: any, res, next) => {
+  try {
+    const videoId = parseInt(req.params.id, 10);
+    const type = req.query.type as string;
+    if (!['blog_titles', 'social_media_hooks', 'questions'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid ideas type' });
+    }
+
+    const video = await storage.getVideo(videoId);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    if (video.userId !== req.user.claims.sub) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    if (!rateLimiter.consume(req.user.claims.sub)) {
+      return res.status(429).json({ message: 'Rate limit exceeded' });
+    }
+
+    let transcript = video.transcript;
+    if (!transcript) {
+      transcript = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
+      await storage.updateVideo(video.id, { transcript });
+    }
+    const summary = await storage.getVideoSummary(video.id);
+    const summaryText = summary?.summary || '';
+
+    let ideas: string[] = [];
+    if (type === 'blog_titles') {
+      ideas = await openai.generateBlogIdeas(transcript, video.title, summaryText);
+    } else if (type === 'social_media_hooks') {
+      ideas = await openai.generateSocialMediaHooks(transcript, video.title, summaryText);
+    } else {
+      ideas = await openai.generateFollowUpQuestions(transcript, video.title, summaryText);
+    }
+
+    const set = await storage.createIdeaSet({ videoId: video.id, type });
+    for (const idea of ideas) {
+      await storage.createIdea({ ideaSetId: set.id, content: idea });
+    }
+
+    res.status(201).json({ success: true, data: set });
+  } catch (err) {
+    next(err);
   }
 });
 

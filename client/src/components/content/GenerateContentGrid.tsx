@@ -88,19 +88,11 @@ const GenerateContentGrid = ({ videoId }: GenerateContentGridProps) => {
     }
   ];
   
-  // This is a mock mutation since the endpoints to regenerate content don't exist yet
-  // In a real implementation, we would use the actual endpoints
+  // Mutation to call backend endpoints for content generation
   const generateContentMutation = useMutation({
     mutationFn: async (option: ContentOption) => {
-      // In a real implementation, we would call apiRequest here
-      // await apiRequest("POST", option.path);
-      
-      // For now, we'll simulate a delay
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({ success: true });
-        }, 2000);
-      });
+      const response = await apiRequest("POST", option.path);
+      return await response.json();
     },
     onMutate: (option) => {
       setPendingContent(option.id);
