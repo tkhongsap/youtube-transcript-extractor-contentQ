@@ -9,6 +9,7 @@ import {
   flashcards,
   ideaSets,
   ideas,
+  additionalTexts,
   type Video,
   type InsertVideo,
   type Summary,
@@ -22,7 +23,9 @@ import {
   type IdeaSet,
   type InsertIdeaSet,
   type Idea,
-  type InsertIdea
+  type InsertIdea,
+  type AdditionalText,
+  type InsertAdditionalText
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -76,6 +79,13 @@ export interface IStorage {
   getUserIdeaSets(userId: string, type?: string, limit?: number): Promise<IdeaSet[]>;
   getIdeas(setId: number): Promise<Idea[]>;
   deleteIdeaSet(id: number): Promise<void>;
+
+  // Additional text operations
+  createAdditionalText(text: InsertAdditionalText): Promise<AdditionalText>;
+  getAdditionalText(id: string): Promise<AdditionalText | undefined>;
+  getAdditionalTextByVideoId(videoId: number): Promise<AdditionalText[]>;
+  updateAdditionalText(videoId: number, id: string, data: Partial<InsertAdditionalText>): Promise<AdditionalText | null>;
+  deleteAdditionalText(videoId: number, id: string): Promise<boolean>;
 
   // Deletion helpers
   deleteVideo(id: number): Promise<void>;
@@ -469,6 +479,58 @@ export class DatabaseStorage implements IStorage {
     await db.delete(ideaSets).where(eq(ideaSets.id, id));
   }
 
+  // Additional text operations
+  async createAdditionalText(text: InsertAdditionalText): Promise<AdditionalText> {
+    const [created] = await db
+      .insert(additionalTexts)
+      .values(text)
+      .returning();
+    return created;
+  }
+
+  async getAdditionalText(id: string): Promise<AdditionalText | undefined> {
+    const [additionalText] = await db
+      .select()
+      .from(additionalTexts)
+      .where(eq(additionalTexts.id, id));
+    return additionalText;
+  }
+
+  async getAdditionalTextByVideoId(videoId: number): Promise<AdditionalText[]> {
+    return db
+      .select()
+      .from(additionalTexts)
+      .where(eq(additionalTexts.videoId, videoId))
+      .orderBy(additionalTexts.timestamp, additionalTexts.createdAt);
+  }
+
+  async updateAdditionalText(videoId: number, id: string, data: Partial<InsertAdditionalText>): Promise<AdditionalText | null> {
+    const [updated] = await db
+      .update(additionalTexts)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+        videoId: undefined, // Don't allow videoId updates
+        id: undefined // Don't allow id updates
+      })
+      .where(and(
+        eq(additionalTexts.id, id),
+        eq(additionalTexts.videoId, videoId)
+      ))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteAdditionalText(videoId: number, id: string): Promise<boolean> {
+    const result = await db
+      .delete(additionalTexts)
+      .where(and(
+        eq(additionalTexts.id, id),
+        eq(additionalTexts.videoId, videoId)
+      ));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
   // Delete a video and all related data
   async deleteVideo(id: number): Promise<void> {
     // Delete flashcard sets and cards
@@ -492,6 +554,9 @@ export class DatabaseStorage implements IStorage {
     // Delete summaries and reports
     await db.delete(summaries).where(eq(summaries.videoId, id));
     await db.delete(reports).where(eq(reports.videoId, id));
+
+    // Delete additional texts
+    await db.delete(additionalTexts).where(eq(additionalTexts.videoId, id));
 
     // Finally delete the video record
     await db.delete(videos).where(eq(videos.id, id));

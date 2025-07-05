@@ -6,6 +6,7 @@ import * as openai from '../openai';
 import * as rateLimiter from '../rateLimiter';
 import { youtubeUrlSchema } from '@shared/schema';
 import { ZodError } from 'zod';
+import { getTranscriptForAI, DEFAULT_AI_CONFIG, type AIProcessingConfig } from '../transcriptEnhancement';
 
 // Helper function to validate and prepare video for content generation
 async function validateVideoForGeneration(videoIdParam: string, userId: string) {
@@ -39,6 +40,27 @@ async function validateVideoForGeneration(videoIdParam: string, userId: string) 
   const summaryText = summary?.summary || '';
 
   return { video, transcript, summaryText };
+}
+
+// Enhanced helper function that can use enhanced transcripts
+async function validateVideoForEnhancedGeneration(
+  videoIdParam: string, 
+  userId: string,
+  config: AIProcessingConfig = DEFAULT_AI_CONFIG
+) {
+  const { video, transcript: originalTranscript, summaryText } = await validateVideoForGeneration(videoIdParam, userId);
+  
+  // Get appropriate transcript based on configuration
+  const { transcript, isEnhanced } = await getTranscriptForAI(video.id, config.transcriptPreference);
+  
+  return { 
+    video, 
+    transcript: transcript || originalTranscript, 
+    originalTranscript,
+    summaryText, 
+    isEnhanced,
+    config 
+  };
 }
 
 const router = Router();
@@ -543,6 +565,156 @@ router.post('/:id/generate-report', isAuthenticated, async (req: any, res, next)
     });
 
     res.status(201).json({ success: true, data: saved });
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Invalid video ID format.') {
+        return res.status(400).json({ message: err.message });
+      }
+      if (err.message === 'Video not found') {
+        return res.status(404).json({ message: err.message });
+      }
+      if (err.message === 'Unauthorized') {
+        return res.status(403).json({ message: err.message });
+      }
+      if (err.message === 'Rate limit exceeded') {
+        return res.status(429).json({ message: err.message });
+      }
+    }
+    next(err);
+  }
+});
+
+// Generate enhanced reports using enhanced transcripts when available
+router.post('/:id/generate-enhanced-report', isAuthenticated, async (req: any, res, next) => {
+  try {
+    const type = req.query.type as string;
+    if (!['medium', 'linkedin'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid report type' });
+    }
+
+    // Parse AI configuration from request body
+    const aiConfig: AIProcessingConfig = {
+      transcriptPreference: req.body.transcriptPreference || 'auto',
+      includeProfessionalContext: req.body.includeProfessionalContext ?? true,
+      emphasizeAdditionalInsights: req.body.emphasizeAdditionalInsights ?? true,
+      enhanceCreativeOutput: req.body.enhanceCreativeOutput ?? false,
+    };
+
+    const { video, transcript, originalTranscript, summaryText, isEnhanced, config } = 
+      await validateVideoForEnhancedGeneration(req.params.id, req.user.claims.sub, aiConfig);
+
+    const options = {
+      useEnhanced: isEnhanced,
+      includeProfessionalContext: config.includeProfessionalContext,
+      emphasizeAdditionalInsights: config.emphasizeAdditionalInsights,
+    };
+
+    const result = type === 'medium'
+      ? await openai.generateMediumReportEnhanced(
+          originalTranscript, 
+          isEnhanced ? transcript : undefined, 
+          video.title, 
+          summaryText,
+          options
+        )
+      : await openai.generateLinkedInPostEnhanced(
+          originalTranscript, 
+          isEnhanced ? transcript : undefined, 
+          video.title, 
+          summaryText,
+          options
+        );
+
+    const saved = await storage.createReport({
+      videoId: video.id,
+      title: result.title,
+      content: result.content,
+      type: isEnhanced ? `${type}_enhanced` : type
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      data: saved,
+      meta: {
+        usedEnhancedTranscript: isEnhanced,
+        transcriptPreference: config.transcriptPreference
+      }
+    });
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Invalid video ID format.') {
+        return res.status(400).json({ message: err.message });
+      }
+      if (err.message === 'Video not found') {
+        return res.status(404).json({ message: err.message });
+      }
+      if (err.message === 'Unauthorized') {
+        return res.status(403).json({ message: err.message });
+      }
+      if (err.message === 'Rate limit exceeded') {
+        return res.status(429).json({ message: err.message });
+      }
+    }
+    next(err);
+  }
+});
+
+// Generate enhanced summary using enhanced transcripts when available
+router.post('/:id/generate-enhanced-summary', isAuthenticated, async (req: any, res, next) => {
+  try {
+    // Parse AI configuration from request body
+    const aiConfig: AIProcessingConfig = {
+      transcriptPreference: req.body.transcriptPreference || 'auto',
+      includeProfessionalContext: req.body.includeProfessionalContext ?? true,
+      emphasizeAdditionalInsights: req.body.emphasizeAdditionalInsights ?? true,
+    };
+
+    const { video, transcript, originalTranscript, isEnhanced, config } = 
+      await validateVideoForEnhancedGeneration(req.params.id, req.user.claims.sub, aiConfig);
+
+    const options = {
+      useEnhanced: isEnhanced,
+      includeProfessionalContext: config.includeProfessionalContext,
+      emphasizeAdditionalInsights: config.emphasizeAdditionalInsights,
+    };
+
+    const result = await openai.generateVideoSummaryEnhanced(
+      originalTranscript,
+      isEnhanced ? transcript : undefined,
+      video.title,
+      options
+    );
+
+    // Update or create summary
+    const existingSummary = await storage.getVideoSummary(video.id);
+    if (existingSummary) {
+      // For enhanced summaries, we might want to keep both versions
+      // For now, we'll replace the existing summary
+      await storage.createSummary({
+        videoId: video.id,
+        summary: result.summary,
+        keyTopics: result.keyTopics,
+      });
+    } else {
+      await storage.createSummary({
+        videoId: video.id,
+        summary: result.summary,
+        keyTopics: result.keyTopics,
+      });
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      data: {
+        summary: result.summary,
+        keyTopics: result.keyTopics,
+        videoId: video.id
+      },
+      meta: {
+        usedEnhancedTranscript: isEnhanced,
+        transcriptPreference: config.transcriptPreference
+      }
+    });
   } catch (err) {
     if (err instanceof Error) {
       if (err.message === 'Invalid video ID format.') {

@@ -436,3 +436,216 @@ export async function transcribeFromAudio(audioUrl: string): Promise<string> {
   // In a real implementation, this would use OpenAI's Whisper API
   throw new Error("Direct audio transcription not implemented");
 }
+
+// Enhanced AI functions that can work with both original and enhanced transcripts
+export interface TranscriptOptions {
+  useEnhanced?: boolean;
+  includeProfessionalContext?: boolean;
+  emphasizeAdditionalInsights?: boolean;
+}
+
+export async function generateVideoSummaryEnhanced(
+  transcript: string,
+  enhancedTranscript?: string,
+  title: string = "",
+  options: TranscriptOptions = {}
+): Promise<{ summary: string; keyTopics: string[] }> {
+  const { useEnhanced = false, includeProfessionalContext = true } = options;
+  
+  // Use enhanced transcript if available and requested
+  const targetTranscript = useEnhanced && enhancedTranscript ? enhancedTranscript : transcript;
+  
+  // Add context about enhanced content if using enhanced transcript
+  const contextNote = useEnhanced && enhancedTranscript
+    ? "\n\nNote: This transcript includes additional context, corrections, and insights provided by the content creator or reviewer."
+    : "";
+  
+  try {
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert content analyst with deep expertise in extracting insights from video content. Your summaries are known for their clarity, depth, and actionable insights.
+
+Key guidelines:
+- Create comprehensive yet digestible summaries
+- Identify core themes, key arguments, and practical takeaways
+- Structure content in logical, flowing paragraphs
+- Highlight unique insights and valuable information
+- Focus on what viewers would find most valuable and memorable
+${useEnhanced ? "- Pay special attention to additional context, corrections, and insights that enhance the original content" : ""}
+${includeProfessionalContext ? "- Include professional and business implications where relevant" : ""}`,
+        },
+        {
+          role: "user",
+          content: `Analyze this video transcript${title ? ` titled "${title}"` : ""} and create a comprehensive summary that captures the essential value and insights.
+
+Your response should include:
+1. A well-structured summary that flows naturally and highlights key insights
+2. A list of the main topics/themes discussed
+
+Format as JSON with 'summary' and 'keyTopics' fields.
+
+Transcript:
+${targetTranscript}${contextNote}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
+    return {
+      summary: result.summary,
+      keyTopics: Array.isArray(result.keyTopics) ? result.keyTopics as string[] : [],
+    };
+  } catch (error) {
+    console.error("Error generating enhanced summary:", error);
+    throw new Error("Failed to generate summary from transcript");
+  }
+}
+
+export async function generateMediumReportEnhanced(
+  transcript: string,
+  enhancedTranscript?: string,
+  title: string = "",
+  summary: string = "",
+  options: TranscriptOptions = {}
+): Promise<{ title: string; content: string }> {
+  const { useEnhanced = false, emphasizeAdditionalInsights = true } = options;
+  
+  const targetTranscript = useEnhanced && enhancedTranscript ? enhancedTranscript : transcript;
+  
+  const contextNote = useEnhanced && enhancedTranscript
+    ? "\n\nNote: This content includes enhanced insights, corrections, and additional context that enriches the original material."
+    : "";
+  
+  try {
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content: `You are a renowned Medium writer known for transforming complex ideas into engaging, accessible articles. Your writing style combines storytelling with insights, making content both informative and compelling.
+
+Writing guidelines:
+- Craft attention-grabbing titles that promise value
+- Use storytelling elements and personal insights
+- Break content into digestible sections with compelling subheadings
+- Include practical takeaways and actionable insights
+- Write with a conversational yet authoritative tone
+- Use formatting like bullet points and numbered lists for clarity
+- End with thought-provoking conclusions or calls to action
+${useEnhanced && emphasizeAdditionalInsights ? "- Highlight and integrate enhanced insights and corrections naturally into the narrative" : ""}`,
+        },
+        {
+          role: "user",
+          content: `Transform this video content into a compelling Medium article${title ? ` based on "${title}"` : ""}. ${summary ? `Key insights from summary: ${summary}` : ""}
+
+Create an article that:
+- Has a captivating title that draws readers in
+- Tells a story while delivering valuable insights
+- Uses clear structure with engaging subheadings
+- Includes practical takeaways readers can apply
+- Ends with a memorable conclusion
+${useEnhanced ? "- Seamlessly incorporates enhanced insights and additional context" : ""}
+
+Format as JSON with 'title' and 'content' fields.
+
+Source transcript:
+${targetTranscript}${contextNote}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.8,
+      max_tokens: 3000,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
+    return {
+      title: result.title,
+      content: result.content,
+    };
+  } catch (error) {
+    console.error("Error generating enhanced Medium report:", error);
+    throw new Error("Failed to generate Medium-style report");
+  }
+}
+
+export async function generateLinkedInPostEnhanced(
+  transcript: string,
+  enhancedTranscript?: string,
+  title: string = "",
+  summary: string = "",
+  options: TranscriptOptions = {}
+): Promise<{ title: string; content: string }> {
+  const { useEnhanced = false, includeProfessionalContext = true } = options;
+  
+  const targetTranscript = useEnhanced && enhancedTranscript ? enhancedTranscript : transcript;
+  
+  try {
+    const response = await openai.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: "system",
+          content: `You are a LinkedIn content strategist specializing in creating high-engagement professional posts. Your content consistently drives meaningful discussions and builds professional authority.
+
+LinkedIn best practices:
+- Start with an attention-grabbing hook in the first line
+- Use short paragraphs and white space for readability
+- Include 3-5 key insights or takeaways
+- Add personal perspective or industry context
+- End with an engaging question or call to action
+- Use relevant emojis sparingly for visual breaks
+- Keep posts scannable with bullet points or numbered lists
+- Maintain a professional yet approachable tone
+${useEnhanced && includeProfessionalContext ? "- Leverage enhanced insights to provide deeper professional value" : ""}`,
+        },
+        {
+          role: "user",
+          content: `Create a compelling LinkedIn post${title ? ` based on the video "${title}"` : ""} that will drive engagement and provide professional value. ${summary ? `Key insights: ${summary}` : ""}
+
+Structure the post to:
+- Hook readers in the opening line
+- Share 3-4 actionable insights or key points
+- Include your professional perspective
+- End with a question that encourages comments
+- Use formatting that's easy to scan on mobile
+${useEnhanced ? "- Incorporate enhanced insights to add professional depth" : ""}
+
+Format as JSON with 'title' and 'content' fields.
+
+Source content:
+${targetTranscript}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 1200,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
+    return {
+      title: result.title,
+      content: result.content,
+    };
+  } catch (error) {
+    console.error("Error generating enhanced LinkedIn post:", error);
+    throw new Error("Failed to generate LinkedIn-style post");
+  }
+}

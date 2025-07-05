@@ -13,8 +13,9 @@ import type {
   AdditionalTextCollection,
   CreateAdditionalTextInput 
 } from '@/types/transcript';
-import { Plus, FileText, NotebookText, Info } from 'lucide-react';
+import { Plus, FileText, NotebookText, Info, Edit, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import '@/styles/transcriptEnhancement.css';
 
 interface TranscriptEnhancementProps {
   originalTranscript: OriginalTranscript;
@@ -185,24 +186,28 @@ export function TranscriptEnhancement({
                 className="h-[400px] sm:h-[500px] lg:h-[600px] w-full rounded-md border p-3 sm:p-4"
                 aria-label="Original transcript content"
               >
-                <div className="space-y-4" role="article" aria-label="Original video transcript">
+                <div className="transcript-original space-y-4" role="article" aria-label="Original video transcript">
+                  <div className="transcript-section-label transcript-section-label-original">
+                    <div className="transcript-indicator-original"></div>
+                    <span>Original Transcript</span>
+                  </div>
                   {segments.map((segment, index) => (
                     <div 
                       key={segment.id || index} 
-                      className="prose prose-sm max-w-none"
+                      className="transcript-original-segment transcript-segment-focusable"
                       tabIndex={0}
                       role="region"
                       aria-label={`Transcript segment ${index + 1}${segment.startTime ? ` at ${formatTime(segment.startTime)}` : ''}`}
                     >
                       {segment.startTime !== undefined && (
                         <span 
-                          className="text-xs text-muted-foreground font-mono"
+                          className="transcript-original-timestamp"
                           aria-label={`Timestamp: ${formatTime(segment.startTime)}`}
                         >
-                          [{formatTime(segment.startTime)}]
+                          {formatTime(segment.startTime)}
                         </span>
                       )}
-                      <p className="mt-1">{segment.text}</p>
+                      <p className="transcript-original-text">{segment.text}</p>
                     </div>
                   ))}
                 </div>
@@ -219,71 +224,85 @@ export function TranscriptEnhancement({
                     </AlertDescription>
                   </Alert>
                 ) : (
-                  <div className="space-y-6">
+                  <div className="transcript-enhanced-container">
                     {/* Original transcript sections */}
-                    <div className="space-y-4">
-                      <div className="border-l-4 border-muted pl-4">
-                        <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                          Original Transcript
-                        </h4>
+                    <div className="transcript-enhanced-section">
+                      <div className="transcript-section-label transcript-section-label-original">
+                        <div className="transcript-indicator-original"></div>
+                        <span>Original Transcript</span>
+                      </div>
+                      <div className="space-y-4">
                         {segments.map((segment, index) => (
-                          <div key={segment.id || index} className="prose prose-sm max-w-none">
+                          <div 
+                            key={segment.id || index} 
+                            className="transcript-original-segment transcript-segment-focusable transcript-segment-hoverable"
+                          >
                             {segment.startTime !== undefined && (
-                              <span className="text-xs text-muted-foreground font-mono">
-                                [{formatTime(segment.startTime)}]
+                              <span className="transcript-original-timestamp">
+                                {formatTime(segment.startTime)}
                               </span>
                             )}
-                            <p className="mt-1">{segment.text}</p>
+                            <p className="transcript-original-text">{segment.text}</p>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Additional text entries */}
-                    {additionalEntries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="border-l-4 border-primary pl-4 bg-primary/5 rounded-r-lg p-4"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                              {entry.label}
-                            </span>
-                            {entry.timestamp !== undefined && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                at {formatTime(entry.timestamp)}
-                              </span>
-                            )}
-                          </div>
-                          {!readOnly && (
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(entry)}
-                                className="h-8 w-8 p-0"
-                              >
-                                <span className="sr-only">Edit</span>
-                                <FileText className="h-3 w-3" />
-                              </Button>
-                              {onDeleteAdditionalText && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(entry.id)}
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                >
-                                  <span className="sr-only">Delete</span>
-                                  <span className="text-sm">×</span>
-                                </Button>
+                    {additionalEntries.length > 0 && (
+                      <div className="transcript-enhanced-section">
+                        <div className="transcript-section-label transcript-section-label-additional">
+                          <div className="transcript-indicator-additional"></div>
+                          <span>Additional Notes ({additionalEntries.length})</span>
+                        </div>
+                        {additionalEntries.map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="transcript-additional group"
+                          >
+                            <div className="transcript-additional-header">
+                              <div className="flex items-center">
+                                <span className="transcript-additional-label">
+                                  {entry.label}
+                                </span>
+                                {entry.timestamp !== undefined && (
+                                  <span className="transcript-additional-timestamp">
+                                    at {formatTime(entry.timestamp)}
+                                  </span>
+                                )}
+                              </div>
+                              {!readOnly && (
+                                <div className="transcript-additional-actions">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEdit(entry)}
+                                    className="h-8 w-8 p-0"
+                                    title="Edit additional text"
+                                  >
+                                    <span className="sr-only">Edit</span>
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  {onDeleteAdditionalText && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDelete(entry.id)}
+                                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                      title="Delete additional text"
+                                    >
+                                      <span className="sr-only">Delete</span>
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                        <p className="text-sm whitespace-pre-wrap">{entry.content}</p>
+                            <div className="transcript-additional-content">{entry.content}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </ScrollArea>

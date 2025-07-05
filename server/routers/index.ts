@@ -2,6 +2,7 @@ import type { Express } from 'express';
 import { createServer, type Server } from "http";
 import authRouter from './auth.router';
 import videosRouter from './videos.router';
+import additionalTextRouter from './additionalText.router';
 import reportsRouter from './reports.router';
 import flashcardsRouter from './flashcards.router';
 import ideasRouter from './ideas.router';
@@ -17,6 +18,7 @@ export async function registerAppRoutes(app: Express): Promise<Server> {
   // Register domain-specific routers
   app.use('/api/auth', authRouter);
   app.use('/api/videos', videosRouter);
+  app.use('/api/videos', additionalTextRouter);
   app.use('/api/reports', reportsRouter);
   app.use('/api/flashcard-sets', flashcardsRouter);
   app.use('/api/idea-sets', ideasRouter);

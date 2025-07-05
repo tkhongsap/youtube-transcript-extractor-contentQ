@@ -60,6 +60,7 @@ export const videoRelations = relations(videos, ({ one, many }) => ({
   reports: many(reports),
   flashcardSets: many(flashcardSets),
   ideaSets: many(ideaSets),
+  additionalTexts: many(additionalTexts),
 }));
 
 // Summaries table
@@ -163,6 +164,26 @@ export const ideaRelations = relations(ideas, ({ one }) => ({
   }),
 }));
 
+// Additional text table for transcript enhancements
+export const additionalTexts = pgTable("additional_texts", {
+  id: varchar("id").primaryKey(),
+  videoId: integer("video_id").notNull().references(() => videos.id),
+  content: text("content").notNull(),
+  label: varchar("label").notNull(), // 'Context', 'Correction', 'Insight', 'Question', 'Note'
+  timestamp: integer("timestamp"), // timestamp in seconds (optional)
+  position: varchar("position"), // 'before', 'after', 'inline' (optional)
+  segmentId: varchar("segment_id"), // reference to transcript segment (optional)
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const additionalTextRelations = relations(additionalTexts, ({ one }) => ({
+  video: one(videos, {
+    fields: [additionalTexts.videoId],
+    references: [videos.id],
+  }),
+}));
+
 // Insert schemas for all tables
 export const insertVideoSchema = createInsertSchema(videos).omit({ id: true, createdAt: true });
 export const insertSummarySchema = createInsertSchema(summaries).omit({ id: true, createdAt: true });
@@ -171,6 +192,7 @@ export const insertFlashcardSetSchema = createInsertSchema(flashcardSets).omit({
 export const insertFlashcardSchema = createInsertSchema(flashcards).omit({ id: true, createdAt: true, lastModified: true });
 export const insertIdeaSetSchema = createInsertSchema(ideaSets).omit({ id: true, createdAt: true });
 export const insertIdeaSchema = createInsertSchema(ideas).omit({ id: true, createdAt: true, lastModified: true });
+export const insertAdditionalTextSchema = createInsertSchema(additionalTexts).omit({ createdAt: true, updatedAt: true });
 
 // Export types
 export type InsertVideo = z.infer<typeof insertVideoSchema>;
@@ -180,6 +202,7 @@ export type InsertFlashcardSet = z.infer<typeof insertFlashcardSetSchema>;
 export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
 export type InsertIdeaSet = z.infer<typeof insertIdeaSetSchema>;
 export type InsertIdea = z.infer<typeof insertIdeaSchema>;
+export type InsertAdditionalText = z.infer<typeof insertAdditionalTextSchema>;
 
 export type Video = typeof videos.$inferSelect;
 export type Summary = typeof summaries.$inferSelect;
@@ -188,6 +211,7 @@ export type FlashcardSet = typeof flashcardSets.$inferSelect;
 export type Flashcard = typeof flashcards.$inferSelect;
 export type IdeaSet = typeof ideaSets.$inferSelect;
 export type Idea = typeof ideas.$inferSelect;
+export type AdditionalText = typeof additionalTexts.$inferSelect;
 
 // YouTube URL validation schema
 export const youtubeUrlSchema = z.object({

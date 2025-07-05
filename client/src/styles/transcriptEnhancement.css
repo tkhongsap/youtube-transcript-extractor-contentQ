@@ -1,0 +1,227 @@
+/**
+ * Transcript Enhancement Styles
+ * Provides visual distinction between original transcript and additional text
+ */
+
+/* Original Transcript Styles */
+.transcript-original {
+  @apply bg-background text-foreground;
+}
+
+.transcript-original-segment {
+  @apply prose prose-sm max-w-none;
+  @apply border-l-4 border-l-muted pl-4 py-2;
+  @apply hover:bg-muted/30 transition-colors duration-200;
+  @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  @apply rounded-r-md;
+}
+
+.transcript-original-timestamp {
+  @apply text-xs text-muted-foreground font-mono;
+  @apply bg-muted/50 px-2 py-1 rounded-md;
+  @apply inline-block mb-2;
+}
+
+.transcript-original-text {
+  @apply text-foreground leading-relaxed;
+  @apply mt-1;
+}
+
+/* Additional Text Styles */
+.transcript-additional {
+  @apply bg-primary/5 border-l-4 border-l-primary;
+  @apply rounded-r-lg p-4 my-3;
+  @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+}
+
+.transcript-additional-header {
+  @apply flex items-start justify-between mb-3;
+  @apply border-b border-primary/20 pb-2;
+}
+
+.transcript-additional-label {
+  @apply inline-flex items-center rounded-md;
+  @apply bg-primary/10 text-primary;
+  @apply px-3 py-1 text-sm font-medium;
+  @apply border border-primary/20;
+}
+
+.transcript-additional-timestamp {
+  @apply text-xs text-muted-foreground;
+  @apply bg-background/80 px-2 py-1 rounded;
+  @apply ml-2 border border-border;
+}
+
+.transcript-additional-content {
+  @apply text-sm text-foreground;
+  @apply whitespace-pre-wrap leading-relaxed;
+  @apply prose prose-sm prose-neutral max-w-none;
+}
+
+.transcript-additional-actions {
+  @apply flex gap-1 opacity-0 group-hover:opacity-100;
+  @apply transition-opacity duration-200;
+}
+
+.transcript-additional:hover .transcript-additional-actions {
+  @apply opacity-100;
+}
+
+/* Enhanced Transcript Container */
+.transcript-enhanced-container {
+  @apply space-y-4;
+}
+
+.transcript-enhanced-section {
+  @apply group relative;
+}
+
+/* Section Labels */
+.transcript-section-label {
+  @apply text-sm font-medium text-muted-foreground;
+  @apply mb-2 flex items-center gap-2;
+  @apply sticky top-0 bg-background/80 backdrop-blur-sm;
+  @apply z-10 py-2 border-b border-border/50;
+}
+
+.transcript-section-label-original {
+  @apply text-blue-600 dark:text-blue-400;
+}
+
+.transcript-section-label-additional {
+  @apply text-green-600 dark:text-green-400;
+}
+
+/* Visual Indicators */
+.transcript-indicator-original {
+  @apply w-3 h-3 rounded-full bg-blue-500/20;
+  @apply border-2 border-blue-500;
+  @apply flex-shrink-0;
+}
+
+.transcript-indicator-additional {
+  @apply w-3 h-3 rounded-full bg-green-500/20;
+  @apply border-2 border-green-500;
+  @apply flex-shrink-0;
+}
+
+/* Hover Effects */
+.transcript-segment-hoverable {
+  @apply cursor-pointer transition-all duration-200;
+  @apply hover:scale-[1.01] hover:z-10;
+}
+
+/* Focus States */
+.transcript-segment-focusable:focus {
+  @apply outline-none ring-2 ring-ring ring-offset-2;
+  @apply bg-accent/50;
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+  .transcript-original-segment {
+    @apply hover:bg-muted/20;
+  }
+  
+  .transcript-additional {
+    @apply bg-primary/10 shadow-lg;
+  }
+  
+  .transcript-additional-label {
+    @apply bg-primary/20 border-primary/30;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .transcript-original-segment {
+    @apply border-l-foreground bg-background;
+    @apply border border-foreground/20;
+  }
+  
+  .transcript-additional {
+    @apply border-l-primary bg-primary/30;
+    @apply border-2 border-primary;
+  }
+  
+  .transcript-additional-label {
+    @apply bg-primary text-primary-foreground;
+    @apply border-2 border-foreground;
+  }
+  
+  .transcript-section-label-original {
+    @apply text-blue-800 dark:text-blue-200;
+    @apply font-bold;
+  }
+  
+  .transcript-section-label-additional {
+    @apply text-green-800 dark:text-green-200;
+    @apply font-bold;
+  }
+  
+  .transcript-indicator-original {
+    @apply bg-blue-600 border-blue-800;
+  }
+  
+  .transcript-indicator-additional {
+    @apply bg-green-600 border-green-800;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .transcript-original-segment,
+  .transcript-additional,
+  .transcript-segment-hoverable,
+  .transcript-additional-actions {
+    @apply transition-none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .transcript-additional-actions {
+    @apply hidden;
+  }
+  
+  .transcript-additional {
+    @apply border border-gray-400 bg-gray-50;
+  }
+  
+  .transcript-original-segment {
+    @apply border-l-gray-400;
+  }
+  
+  .transcript-section-label {
+    @apply text-black font-bold;
+  }
+}
+
+/* Focus-visible for keyboard navigation */
+.transcript-segment-focusable:focus-visible {
+  @apply outline-none ring-2 ring-offset-2;
+  @apply ring-blue-500 dark:ring-blue-400;
+  @apply bg-blue-50 dark:bg-blue-950/20;
+}
+
+/* Ensure minimum color contrast ratios */
+.transcript-section-label-original {
+  /* Ensures 4.5:1 contrast ratio */
+  color: oklch(from theme(colors.blue.600) calc(l * 0.8) c h);
+}
+
+.transcript-section-label-additional {
+  /* Ensures 4.5:1 contrast ratio */
+  color: oklch(from theme(colors.green.600) calc(l * 0.8) c h);
+}
+
+/* Fallback for browsers that don't support oklch */
+@supports not (color: oklch(0.5 0.1 180)) {
+  .transcript-section-label-original {
+    @apply text-blue-700 dark:text-blue-300;
+  }
+  
+  .transcript-section-label-additional {
+    @apply text-green-700 dark:text-green-300;
+  }
+}
