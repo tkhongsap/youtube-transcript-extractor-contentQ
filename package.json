@@ -78,6 +78,7 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "youtube-transcript": "^1.2.1",
+    "youtube-transcript-plus": "^1.0.4",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0"
   },
