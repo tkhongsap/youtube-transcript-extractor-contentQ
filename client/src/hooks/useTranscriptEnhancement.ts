@@ -103,23 +103,10 @@ export function useTranscriptEnhancement({
   const saveMutation = useMutation({
     mutationFn: (data: CreateAdditionalTextInput) => 
       TranscriptService.saveAdditionalText(videoId, data),
-    onSuccess: (entry) => {
-      // Update the cache
-      queryClient.setQueryData(['additionalText', videoId], (old: AdditionalTextCollection | undefined) => {
-        if (!old) {
-          return {
-            videoId,
-            entries: [entry],
-            totalCharacters: entry.content.length,
-            lastModified: new Date(),
-          };
-        }
-        return {
-          ...old,
-          entries: [...old.entries, entry],
-          totalCharacters: old.totalCharacters + entry.content.length,
-          lastModified: new Date(),
-        };
+    onSuccess: async (entry) => {
+      // Invalidate and refetch the cache instead of manual update
+      await queryClient.invalidateQueries({
+        queryKey: ['additionalText', videoId]
       });
       
       setSaveError(null);
@@ -137,17 +124,10 @@ export function useTranscriptEnhancement({
   const updateMutation = useMutation({
     mutationFn: ({ entryId, data }: { entryId: string; data: UpdateAdditionalTextInput }) =>
       TranscriptService.updateAdditionalText(videoId, entryId, data),
-    onSuccess: (updatedEntry) => {
-      // Update the cache
-      queryClient.setQueryData(['additionalText', videoId], (old: AdditionalTextCollection | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          entries: old.entries.map(entry => 
-            entry.id === updatedEntry.id ? updatedEntry : entry
-          ),
-          lastModified: new Date(),
-        };
+    onSuccess: async (updatedEntry) => {
+      // Invalidate and refetch the cache
+      await queryClient.invalidateQueries({
+        queryKey: ['additionalText', videoId]
       });
       
       setSaveError(null);
@@ -163,17 +143,10 @@ export function useTranscriptEnhancement({
   const deleteMutation = useMutation({
     mutationFn: (entryId: string) => 
       TranscriptService.deleteAdditionalText(videoId, entryId),
-    onSuccess: (_, entryId) => {
-      // Update the cache
-      queryClient.setQueryData(['additionalText', videoId], (old: AdditionalTextCollection | undefined) => {
-        if (!old) return old;
-        const filteredEntries = old.entries.filter(entry => entry.id !== entryId);
-        return {
-          ...old,
-          entries: filteredEntries,
-          totalCharacters: filteredEntries.reduce((sum, entry) => sum + entry.content.length, 0),
-          lastModified: new Date(),
-        };
+    onSuccess: async (_, entryId) => {
+      // Invalidate and refetch the cache
+      await queryClient.invalidateQueries({
+        queryKey: ['additionalText', videoId]
       });
       
       setDeleteError(null);
