@@ -113,11 +113,14 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
     
     // Create an AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // Extended to 30 second timeout for large transcripts
     
     // Get the detailed transcript using the proper class method
+    // The library handles the YouTube API call to get transcript data
     const transcriptResponse = await Promise.race([
-      YoutubeTranscript.fetchTranscript(videoId),
+      YoutubeTranscript.fetchTranscript(videoId, {
+        lang: 'en' // Specify English language to ensure we get the main transcript
+      }),
       new Promise((_, reject) => {
         controller.signal.addEventListener('abort', () => 
           reject(new TranscriptApiError('Transcript request timed out'))
@@ -129,16 +132,43 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
     
     // Process the transcript into readable text
     if (transcriptResponse && Array.isArray(transcriptResponse) && transcriptResponse.length > 0) {
-      // Map through transcript entries and combine them
+      console.log(`Retrieved ${transcriptResponse.length} transcript segments for video ID: ${videoId}`);
+      
+      // Map through transcript entries and combine them with spaces
       const fullTranscript = transcriptResponse.map(entry => entry.text).join(' ');
+      console.log(`Transcript length: ${fullTranscript.length} characters`);
+      
+      // If we have very little text, try another approach
+      if (fullTranscript.length < 50) {
+        console.log("Very short transcript detected, trying alternate format");
+        // Join with newlines for better separation
+        const rawTranscript = transcriptResponse.map(entry => entry.text).join('\n');
+        return `Full raw transcript (${transcriptResponse.length} segments):\n\n${rawTranscript}`;
+      }
       
       // Segment into paragraphs for readability (roughly every 5-6 sentences)
       const sentences = fullTranscript.match(/[^.!?]+[.!?]+/g) || [];
+      console.log(`Detected ${sentences.length} sentences in transcript`);
+      
+      // If too few sentences were detected, use a different approach
       let paragraphs = [];
       
-      for (let i = 0; i < sentences.length; i += 5) {
-        const paragraph = sentences.slice(i, i + 5).join(' ');
-        paragraphs.push(paragraph);
+      if (sentences.length < 10) {
+        // Use time-based chunking instead
+        console.log("Few sentences detected, using time-based chunking");
+        
+        // Group segments into paragraphs of roughly 10 segments each
+        for (let i = 0; i < transcriptResponse.length; i += 10) {
+          const chunk = transcriptResponse.slice(i, i + 10);
+          const paragraph = chunk.map(entry => entry.text).join(' ');
+          paragraphs.push(paragraph);
+        }
+      } else {
+        // Use sentence-based chunking (original approach)
+        for (let i = 0; i < sentences.length; i += 5) {
+          const paragraph = sentences.slice(i, i + 5).join(' ');
+          paragraphs.push(paragraph);
+        }
       }
       
       // Add video information at the beginning
@@ -217,7 +247,8 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
       return `Title: ${videoTitle}\n\nChannel: ${channelTitle}\n\n` +
         `Description:\n${description}\n\n` +
         `Note: Unable to retrieve the full transcript for this video. ` +
-        `This could be due to unavailable captions or regional restrictions.`;
+        `This could be due to unavailable captions or regional restrictions. ` +
+        `The video may not have auto-generated captions or manually uploaded subtitles.`;
     } catch (secondaryError) {
       if (secondaryError instanceof TranscriptError || secondaryError instanceof VideoNotFoundError) {
         throw secondaryError;
@@ -240,11 +271,13 @@ export async function getVideoTranscriptWithTimestamps(videoId: string): Promise
     
     // Create an AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // Extended to 30 second timeout for large transcripts
     
-    // Get the detailed transcript using the proper class method
+    // Get the detailed transcript using the proper class method with language specification
     const transcriptResponse = await Promise.race([
-      YoutubeTranscript.fetchTranscript(videoId),
+      YoutubeTranscript.fetchTranscript(videoId, {
+        lang: 'en' // Specify English language to ensure we get the main transcript
+      }),
       new Promise((_, reject) => {
         controller.signal.addEventListener('abort', () => 
           reject(new TranscriptApiError('Transcript request timed out'))
@@ -357,4 +390,83 @@ export function isValidYoutubeUrl(url: string): boolean {
   } catch (error) {
     return false;
   }
+}
+
+/**
+ * Try to get transcript with multiple fallback strategies
+ * This function attempts different approaches to get a transcript
+ */
+export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<string> {
+  const strategies = [
+    // Strategy 1: Try English captions
+    async () => {
+      const { YoutubeTranscript } = await import('youtube-transcript');
+      return await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+    },
+    // Strategy 2: Try auto-generated captions (any language)
+    async () => {
+      const { YoutubeTranscript } = await import('youtube-transcript');
+      return await YoutubeTranscript.fetchTranscript(videoId);
+    },
+    // Strategy 3: Try with different language codes
+    async () => {
+      const { YoutubeTranscript } = await import('youtube-transcript');
+      const languages = ['en-US', 'en-GB', 'auto'];
+      for (const lang of languages) {
+        try {
+          return await YoutubeTranscript.fetchTranscript(videoId, { lang });
+                 } catch (e: any) {
+           continue;
+         }
+      }
+      throw new Error('No transcript found in any language');
+    }
+  ];
+
+  for (let i = 0; i < strategies.length; i++) {
+    try {
+      console.log(`Trying transcript strategy ${i + 1} for video ${videoId}`);
+      const transcript = await strategies[i]();
+      
+      if (transcript && transcript.length > 0) {
+        console.log(`Strategy ${i + 1} succeeded: Retrieved ${transcript.length} segments`);
+        
+        // Process the transcript using the same logic as getVideoTranscript
+        const fullTranscript = transcript.map(entry => entry.text).join(' ');
+        
+        if (fullTranscript.length > 0) {
+          // Create paragraphs
+          const sentences = fullTranscript.match(/[^.!?]+[.!?]+/g) || [];
+          let paragraphs = [];
+          
+          if (sentences.length < 10) {
+            for (let j = 0; j < transcript.length; j += 10) {
+              const chunk = transcript.slice(j, j + 10);
+              const paragraph = chunk.map(entry => entry.text).join(' ');
+              paragraphs.push(paragraph);
+            }
+          } else {
+            for (let j = 0; j < sentences.length; j += 5) {
+              const paragraph = sentences.slice(j, j + 5).join(' ');
+              paragraphs.push(paragraph);
+            }
+          }
+          
+          // Get video metadata
+          try {
+            const videoDetails = await getVideoDetails(videoId);
+            return `Title: ${videoDetails.title}\nChannel: ${videoDetails.channelTitle}\n\nFull Transcript:\n\n${paragraphs.join('\n\n')}`;
+          } catch (metadataError) {
+            return `Full Transcript:\n\n${paragraphs.join('\n\n')}`;
+          }
+        }
+      }
+         } catch (error: any) {
+       console.log(`Strategy ${i + 1} failed:`, error.message);
+       continue;
+     }
+  }
+  
+  // If all strategies fail, throw an error
+  throw new TranscriptNotFoundError(videoId);
 }
