@@ -16,6 +16,7 @@ interface FlashcardSetCardProps {
     description?: string;
     createdAt: string;
     videoTitle?: string;
+    videoId?: number;
     cardCount?: number;
   };
 }
@@ -50,6 +51,30 @@ const FlashcardSetCard = ({ flashcardSet }: FlashcardSetCardProps) => {
       deleteFlashcardSetMutation.mutate(flashcardSet.id);
     }
   };
+
+  const handleDownload = async () => {
+    try {
+      const res = await apiRequest(
+        "GET",
+        `/api/flashcard-sets/${flashcardSet.id}/export?format=csv`
+      );
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${flashcardSet.title.replace(/\s+/g, "_")}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to download flashcards",
+        variant: "destructive",
+      });
+    }
+  };
   
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200">
@@ -80,7 +105,7 @@ const FlashcardSetCard = ({ flashcardSet }: FlashcardSetCardProps) => {
                   <span className="material-icons text-sm mr-2">edit</span>
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownload}>
                   <span className="material-icons text-sm mr-2">file_download</span>
                   Download
                 </DropdownMenuItem>

@@ -42,9 +42,10 @@ export interface IStorage {
   // Summary operations
   createSummary(summary: InsertSummary): Promise<Summary>;
   getVideoSummary(videoId: number): Promise<Summary | undefined>;
-  
+
   // Report operations
   createReport(report: InsertReport): Promise<Report>;
+  getReport(id: number): Promise<Report | undefined>;
   getVideoReports(videoId: number): Promise<Report[]>;
   getUserReports(userId: string, limit?: number): Promise<Report[]>;
   deleteReport(id: number): Promise<void>;
@@ -54,6 +55,7 @@ export interface IStorage {
   createFlashcard(card: InsertFlashcard): Promise<Flashcard>;
   getFlashcardSets(videoId: number): Promise<FlashcardSet[]>;
   getUserFlashcardSets(userId: string, limit?: number): Promise<FlashcardSet[]>;
+  getFlashcardSet(id: number): Promise<FlashcardSet | undefined>;
   getFlashcards(setId: number): Promise<Flashcard[]>;
   deleteFlashcardSet(id: number): Promise<void>;
   
@@ -156,6 +158,11 @@ export class DatabaseStorage implements IStorage {
     const [createdReport] = await db.insert(reports).values(report).returning();
     return createdReport;
   }
+
+  async getReport(id: number): Promise<Report | undefined> {
+    const [report] = await db.select().from(reports).where(eq(reports.id, id));
+    return report;
+  }
   
   async getVideoReports(videoId: number): Promise<Report[]> {
     return db
@@ -239,7 +246,12 @@ export class DatabaseStorage implements IStorage {
     
     return setsWithCounts;
   }
-  
+
+  async getFlashcardSet(id: number): Promise<FlashcardSet | undefined> {
+    const [set] = await db.select().from(flashcardSets).where(eq(flashcardSets.id, id));
+    return set;
+  }
+
   async getFlashcards(setId: number): Promise<Flashcard[]> {
     return db
       .select()
