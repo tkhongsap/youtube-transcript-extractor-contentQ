@@ -135,8 +135,33 @@ const VideoDetailPage = () => {
     },
   });
 
+  // Mutation for generating summary using enhanced transcripts
+  const generateSummaryMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/videos/${videoId}/generate-enhanced-summary`, {
+        transcriptPreference: 'auto', // Uses enhanced if available, original otherwise
+        includeProfessionalContext: true,
+        emphasizeAdditionalInsights: true,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Summary Generated",
+        description: "AI summary created using your enhanced transcript",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/summary`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate summary",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Query for additional text collection
-  const { data: additionalTextResponse } = useQuery({
+  const { data: additionalTextResponse } = useQuery<{success: boolean; data: any}>({
     queryKey: [`/api/videos/${videoId}/additional-text`],
     enabled: !!videoId,
   });
@@ -199,10 +224,10 @@ const VideoDetailPage = () => {
                   estimatedCost="$0.05-0.15"
                   estimatedTime="15-30s"
                   features={["Key Points", "Main Topics", "Actionable Insights", "Quick Overview"]}
-                  onGenerate={() => console.log("Generate summary")}
-                  isGenerating={false}
+                  onGenerate={() => generateSummaryMutation.mutate()}
+                  isGenerating={generateSummaryMutation.isPending}
                   generatedContent={summary?.summary}
-                  onRegenerate={() => console.log("Regenerate summary")}
+                  onRegenerate={() => generateSummaryMutation.mutate()}
                   lastGenerated={summary?.createdAt ? new Date(summary.createdAt) : undefined}
                 />
               )}
