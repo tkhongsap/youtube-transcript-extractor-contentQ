@@ -68,6 +68,30 @@ const ReportCard = ({ report }: ReportCardProps) => {
       }
     );
   };
+
+  const handleDownload = async () => {
+    try {
+      const res = await apiRequest(
+        "GET",
+        `/api/reports/${report.id}/export?format=markdown`
+      );
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${report.title.replace(/\s+/g, "_")}.md`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to download report",
+        variant: "destructive",
+      });
+    }
+  };
   
   return (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden border border-gray-200">
@@ -108,7 +132,7 @@ const ReportCard = ({ report }: ReportCardProps) => {
                   <span className="material-icons text-sm mr-2">edit</span>
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownload}>
                   <span className="material-icons text-sm mr-2">file_download</span>
                   Download
                 </DropdownMenuItem>
