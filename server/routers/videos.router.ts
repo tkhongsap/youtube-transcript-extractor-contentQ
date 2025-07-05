@@ -3,8 +3,43 @@ import { isAuthenticated } from '../replitAuth';
 import { storage } from '../storage';
 import * as youtube from '../youtube';
 import * as openai from '../openai';
+import * as rateLimiter from '../rateLimiter';
 import { youtubeUrlSchema } from '@shared/schema';
 import { ZodError } from 'zod';
+
+// Helper function to validate and prepare video for content generation
+async function validateVideoForGeneration(videoIdParam: string, userId: string) {
+  // Validate video ID parameter
+  if (!/^\d+$/.test(videoIdParam)) {
+    throw new Error("Invalid video ID format.");
+  }
+  const videoId = parseInt(videoIdParam, 10);
+  
+  const video = await storage.getVideo(videoId);
+  if (!video) {
+    throw new Error('Video not found');
+  }
+
+  if (video.userId !== userId) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!(await rateLimiter.consume(userId))) {
+    throw new Error('Rate limit exceeded');
+  }
+
+  // Ensure transcript is available
+  let transcript = video.transcript;
+  if (!transcript) {
+    transcript = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
+    await storage.updateVideo(video.id, { transcript });
+  }
+
+  const summary = await storage.getVideoSummary(video.id);
+  const summaryText = summary?.summary || '';
+
+  return { video, transcript, summaryText };
+}
 
 const router = Router();
 
@@ -32,7 +67,7 @@ router.post('/process', isAuthenticated, async (req: any, res, next) => {
     }
     
     // Get video metadata
-    const videoInfo = await youtube.getVideoInfo(videoId);
+    const videoInfo = await youtube.getVideoDetails(videoId);
     
     // Create video record
     const video = await storage.createVideo({
@@ -61,7 +96,7 @@ router.post('/process', isAuthenticated, async (req: any, res, next) => {
         await storage.updateVideo(video.id, { transcript });
         
         // Generate summary with key topics
-        const summaryData = await openai.generateSummary(transcript, video.title);
+        const summaryData = await openai.generateVideoSummary(transcript, video.title);
         console.log(`Generated summary with ${summaryData.keyTopics.length} key topics`);
         
         // Save summary
@@ -377,6 +412,139 @@ router.get('/:id/idea-sets', isAuthenticated, async (req: any, res, next) => {
     res.json(sets);
   } catch (error) {
     next(error);
+  }
+});
+
+// Generate individual reports (Medium or LinkedIn)
+router.post('/:id/generate-report', isAuthenticated, async (req: any, res, next) => {
+  try {
+    const type = req.query.type as string;
+    if (!['medium', 'linkedin'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid report type' });
+    }
+
+    const { video, transcript, summaryText } = await validateVideoForGeneration(
+      req.params.id, 
+      req.user.claims.sub
+    );
+
+    const result = type === 'medium'
+      ? await openai.generateMediumReport(transcript, video.title, summaryText)
+      : await openai.generateLinkedInPost(transcript, video.title, summaryText);
+
+    const saved = await storage.createReport({
+      videoId: video.id,
+      title: result.title,
+      content: result.content,
+      type
+    });
+
+    res.status(201).json({ success: true, data: saved });
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Invalid video ID format.') {
+        return res.status(400).json({ message: err.message });
+      }
+      if (err.message === 'Video not found') {
+        return res.status(404).json({ message: err.message });
+      }
+      if (err.message === 'Unauthorized') {
+        return res.status(403).json({ message: err.message });
+      }
+      if (err.message === 'Rate limit exceeded') {
+        return res.status(429).json({ message: err.message });
+      }
+    }
+    next(err);
+  }
+});
+
+// Generate flashcards
+router.post('/:id/generate-flashcards', isAuthenticated, async (req: any, res, next) => {
+  try {
+    const { video, transcript, summaryText } = await validateVideoForGeneration(
+      req.params.id, 
+      req.user.claims.sub
+    );
+
+    const generation = await openai.generateFlashcards(transcript, video.title, summaryText);
+    const set = await storage.createFlashcardSet({
+      videoId: video.id,
+      title: generation.title,
+      description: generation.description
+    });
+    for (const card of generation.flashcards) {
+      await storage.createFlashcard({
+        flashcardSetId: set.id,
+        question: card.question,
+        answer: card.answer
+      });
+    }
+
+    res.status(201).json({ success: true, data: set });
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Invalid video ID format.') {
+        return res.status(400).json({ message: err.message });
+      }
+      if (err.message === 'Video not found') {
+        return res.status(404).json({ message: err.message });
+      }
+      if (err.message === 'Unauthorized') {
+        return res.status(403).json({ message: err.message });
+      }
+      if (err.message === 'Rate limit exceeded') {
+        return res.status(429).json({ message: err.message });
+      }
+    }
+    next(err);
+  }
+});
+
+// Generate ideas (blog titles, social hooks, questions)
+router.post('/:id/generate-ideas', isAuthenticated, async (req: any, res, next) => {
+  try {
+    const type = req.query.type as string;
+    if (!['blog_titles', 'social_media_hooks', 'questions'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid ideas type' });
+    }
+
+    const { video, transcript, summaryText } = await validateVideoForGeneration(
+      req.params.id, 
+      req.user.claims.sub
+    );
+
+    let ideas: string[] = [];
+    if (type === 'blog_titles') {
+      ideas = await openai.generateBlogIdeas(transcript, video.title, summaryText);
+    } else if (type === 'social_media_hooks') {
+      ideas = await openai.generateSocialMediaHooks(transcript, video.title, summaryText);
+    } else {
+      ideas = await openai.generateFollowUpQuestions(transcript, video.title, summaryText);
+    }
+
+    const set = await storage.createIdeaSet({ videoId: video.id, type });
+    for (const idea of ideas) {
+      await storage.createIdea({ ideaSetId: set.id, content: idea });
+    }
+
+    res.status(201).json({ success: true, data: set });
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Invalid video ID format.') {
+        return res.status(400).json({ message: err.message });
+      }
+      if (err.message === 'Video not found') {
+        return res.status(404).json({ message: err.message });
+      }
+      if (err.message === 'Unauthorized') {
+        return res.status(403).json({ message: err.message });
+      }
+      if (err.message === 'Rate limit exceeded') {
+        return res.status(429).json({ message: err.message });
+      }
+    }
+    next(err);
   }
 });
 
