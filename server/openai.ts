@@ -500,9 +500,24 @@ ${targetTranscript}${contextNote}`,
     if (!content) {
       throw new Error('No content received from OpenAI');
     }
-    const result = JSON.parse(content);
+    
+    // Clean and validate JSON response
+    let result;
+    try {
+      // Remove trailing commas and fix common JSON issues
+      const cleanedContent = content
+        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+        .replace(/([}\]]),?(\s*)$/g, '$1$2'); // Clean end of JSON
+      
+      result = JSON.parse(cleanedContent);
+    } catch (parseError) {
+      console.error('JSON parsing failed, content:', content);
+      console.error('Parse error:', parseError);
+      throw new Error('Invalid JSON response from OpenAI');
+    }
+    
     return {
-      summary: result.summary,
+      summary: result.summary || '',
       keyTopics: Array.isArray(result.keyTopics) ? result.keyTopics as string[] : [],
     };
   } catch (error) {
