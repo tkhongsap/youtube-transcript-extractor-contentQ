@@ -13,7 +13,7 @@ interface AppLayoutProps {
 const AppLayout = ({ children }: AppLayoutProps) => {
   const { user, isLoading, isAuthenticated } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -83,21 +83,25 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
         {/* Mobile Bottom Navigation */}
         <nav className="md:hidden bg-white border-t border-gray-200 flex justify-around items-center py-3 px-4">
-          <a href="/" className="flex flex-col items-center text-primary">
+          <a href="/" className={`flex flex-col items-center ${location === '/' ? 'text-primary' : 'text-gray-500'}`}> 
             <span className="material-icons text-lg">dashboard</span>
             <span className="text-xs mt-1">Dashboard</span>
           </a>
-          <a href="#" className="flex flex-col items-center text-gray-500">
+          <a href="/videos" className={`flex flex-col items-center ${location.startsWith('/videos') ? 'text-primary' : 'text-gray-500'}`}> 
             <span className="material-icons text-lg">video_library</span>
             <span className="text-xs mt-1">Videos</span>
           </a>
-          <a href="#" className="flex flex-col items-center text-gray-500">
+          <a href="/reports" className={`flex flex-col items-center ${location.startsWith('/reports') ? 'text-primary' : 'text-gray-500'}`}> 
             <span className="material-icons text-lg">description</span>
             <span className="text-xs mt-1">Reports</span>
           </a>
-          <a href="#" className="flex flex-col items-center text-gray-500">
+          <a href="/flashcards" className={`flex flex-col items-center ${location.startsWith('/flashcards') ? 'text-primary' : 'text-gray-500'}`}> 
             <span className="material-icons text-lg">style</span>
             <span className="text-xs mt-1">Flashcards</span>
+          </a>
+          <a href="/ideas" className={`flex flex-col items-center ${location.startsWith('/ideas') ? 'text-primary' : 'text-gray-500'}`}> 
+            <span className="material-icons text-lg">lightbulb</span>
+            <span className="text-xs mt-1">Ideas</span>
           </a>
         </nav>
       </div>
