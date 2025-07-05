@@ -209,7 +209,9 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
         return formattedTranscript;
       }
     } else {
-      throw new TranscriptNotFoundError(videoId);
+      console.log(`No transcript segments found for video ${videoId}, trying fallback strategies`);
+      // Try fallback strategies before giving up
+      return await getVideoTranscriptWithFallbacks(videoId);
     }
   } catch (error) {
     console.error(`Error fetching video transcript for ${videoId}:`, error);
@@ -345,7 +347,11 @@ export async function getVideoTranscriptWithTimestamps(videoId: string): Promise
         }))
       };
     } else {
-      throw new TranscriptNotFoundError(videoId);
+      console.log(`No transcript segments found for video ${videoId} with timestamps`);
+      return {
+        success: false,
+        error: 'No transcript segments found for this video'
+      };
     }
   } catch (error) {
     console.error(`Error fetching video transcript with timestamps for ${videoId}:`, error);
@@ -397,6 +403,8 @@ export function isValidYoutubeUrl(url: string): boolean {
  * This function attempts different approaches to get a transcript
  */
 export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<string> {
+  console.log(`Attempting fallback strategies for video ${videoId}`);
+  
   const strategies = [
     // Strategy 1: Try English captions
     async () => {
@@ -414,10 +422,15 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
       const languages = ['en-US', 'en-GB', 'auto'];
       for (const lang of languages) {
         try {
-          return await YoutubeTranscript.fetchTranscript(videoId, { lang });
-                 } catch (e: any) {
-           continue;
-         }
+          const result = await YoutubeTranscript.fetchTranscript(videoId, { lang });
+          // Check if result has content
+          if (result && Array.isArray(result) && result.length > 0) {
+            return result;
+          }
+        } catch (e: any) {
+          console.log(`Language ${lang} failed:`, e.message);
+          continue;
+        }
       }
       throw new Error('No transcript found in any language');
     }
