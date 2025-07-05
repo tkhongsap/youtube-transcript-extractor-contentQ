@@ -410,38 +410,119 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
   console.log(`Attempting fallback strategies for video ${videoId}`);
   
   const strategies = [
-    // Strategy 1: Try English captions
+    // Strategy 1: Try youtube-transcript-plus library (advanced alternative)
     async () => {
-      const { YoutubeTranscript } = await import('youtube-transcript');
-      return await YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' });
+      console.log('Strategy 1: Trying youtube-transcript-plus library');
+      
+      try {
+        const ytpModule = await import('youtube-transcript-plus');
+        
+        // Try different ways to access the library
+        const YtpApi = (ytpModule as any).default || ytpModule || (ytpModule as any).YoutubeTranscriptPlus;
+        
+        if (!YtpApi || typeof YtpApi.fetchTranscript !== 'function') {
+          throw new Error('youtube-transcript-plus API not found');
+        }
+        
+        // Try different language options with the advanced library
+        const languageOptions = ['en', 'en-US', undefined]; // undefined for auto-detect
+        
+        for (const lang of languageOptions) {
+          try {
+            console.log(`Trying youtube-transcript-plus with language: ${lang || 'auto-detect'}`);
+            
+            const options = lang ? { lang } : {};
+            const result = await YtpApi.fetchTranscript(videoId, options);
+            
+            console.log(`youtube-transcript-plus result for ${lang || 'auto'}:`, result ? `${result.length} segments` : 'null/undefined');
+            
+            if (result && Array.isArray(result) && result.length > 0) {
+              console.log(`SUCCESS with youtube-transcript-plus (${lang || 'auto'}): Got ${result.length} segments`);
+              return result;
+            }
+          } catch (e: any) {
+            console.log(`youtube-transcript-plus failed for ${lang || 'auto'}:`, e?.message || 'Unknown error');
+          }
+        }
+      } catch (importError: any) {
+        console.log('Failed to import youtube-transcript-plus:', importError?.message || 'Import error');
+      }
+      
+      throw new Error('youtube-transcript-plus extraction failed');
     },
-    // Strategy 2: Try auto-generated captions (any language)
+    
+    // Strategy 2: Try the most common English variants with different syntax
+    async () => {
+      const youtubeTranscript = await import('youtube-transcript');
+      console.log('Strategy 2: Trying most common English variants with improved syntax');
+      
+      // Try different import syntaxes as some versions require .default
+      const transcriptApis = [
+        youtubeTranscript.YoutubeTranscript,
+        (youtubeTranscript as any).default?.YoutubeTranscript,
+        (youtubeTranscript as any).default
+      ].filter(Boolean);
+      
+      const commonLanguages = ['en', 'en-US'];
+      
+      for (const api of transcriptApis) {
+        if (!api || !api.fetchTranscript) continue;
+        
+        console.log('Trying with transcript API variant...');
+        
+        for (const lang of commonLanguages) {
+          try {
+            console.log(`Trying language: ${lang} with current API variant`);
+            const result = await api.fetchTranscript(videoId, { lang });
+            
+            console.log(`Result for ${lang}:`, result ? `${result.length} segments` : 'null/undefined');
+            
+            if (result && Array.isArray(result) && result.length > 0) {
+              console.log(`SUCCESS with language ${lang}: Got ${result.length} segments`);
+              return result;
+            }
+          } catch (e: any) {
+            console.log(`Language ${lang} with this API variant failed:`, e?.message || 'Unknown error');
+          }
+        }
+      }
+      throw new Error('No transcript found with common English variants');
+    },
+    
+    // Strategy 2: Try without language specification (auto-detect)
     async () => {
       const { YoutubeTranscript } = await import('youtube-transcript');
+      console.log('Strategy 2: Trying auto-detection without language specification');
       return await YoutubeTranscript.fetchTranscript(videoId);
     },
-    // Strategy 3: Try with different language codes
+    
+    // Strategy 3: Try with extended language list based on error messages
     async () => {
       const { YoutubeTranscript } = await import('youtube-transcript');
-      const languages = ['en-US', 'en-GB', 'auto'];
+      console.log('Strategy 3: Trying extended language list');
+      
+      // Extended list including other common variants
+      const languages = ['en-GB', 'en-CA', 'en-AU', 'auto'];
       for (const lang of languages) {
         try {
+          console.log(`Trying extended language: ${lang}`);
           const result = await YoutubeTranscript.fetchTranscript(videoId, { lang });
-          // Check if result has content
+          
           if (result && Array.isArray(result) && result.length > 0) {
+            console.log(`SUCCESS with extended language ${lang}: Got ${result.length} segments`);
             return result;
           }
         } catch (e: any) {
-          console.log(`Language ${lang} failed:`, e.message);
+          console.log(`Extended language ${lang} failed:`, e.message);
           continue;
         }
       }
-      throw new Error('No transcript found in any language');
+      throw new Error('No transcript found with extended language list');
     },
     // Strategy 4: Try direct fetch without any options - sometimes works when others fail
     async () => {
       const { YoutubeTranscript } = await import('youtube-transcript');
-      console.log('Trying direct fetch without language specification...');
+      console.log('Strategy 4: Trying direct fetch without language specification');
       
       // Sometimes the library works better without any configuration
       const result = await YoutubeTranscript.fetchTranscript(videoId, {});
@@ -470,7 +551,7 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
           const attempts = [
             () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' }),
             () => YoutubeTranscript.fetchTranscript(videoId),
-            () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en', country: 'US' })
+            () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en-US' })
           ];
           
           for (const attempt of attempts) {
@@ -482,8 +563,8 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
                 console.log('SUCCESS: Got transcript with retry mechanism');
                 return result;
               }
-            } catch (attemptError) {
-              console.log('Attempt failed:', attemptError.message);
+            } catch (attemptError: any) {
+              console.log('Attempt failed:', attemptError?.message || 'Unknown error');
               lastError = attemptError;
             }
           }
@@ -492,9 +573,9 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
           if (retry < maxRetries - 1) {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
-        } catch (error) {
+        } catch (error: any) {
           lastError = error;
-          console.log(`Retry ${retry + 1} failed:`, error.message);
+          console.log(`Retry ${retry + 1} failed:`, error?.message || 'Unknown error');
         }
       }
       
@@ -502,6 +583,9 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
     }
   ];
 
+  // Track which strategies detected transcripts but failed to extract them
+  let detectedAvailableLanguages: string[] = [];
+  
   for (let i = 0; i < strategies.length; i++) {
     try {
       console.log(`Trying transcript strategy ${i + 1} for video ${videoId}`);

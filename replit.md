@@ -121,8 +121,19 @@ Content Spark AI is a full-stack web application that transforms YouTube videos 
 - Request logging and performance monitoring
 - Session persistence across server restarts
 
+## Known Issues
+
+### Transcript Extraction Limitations
+**Issue**: Some YouTube videos fail transcript extraction despite having available transcripts
+- **Affected Videos**: Example - DKrBGOFs0GY (Anthropic's CPO interview)
+- **Symptoms**: Libraries detect available languages ('en', 'en-US') but return 0 segments
+- **Root Cause**: Limitations in youtube-transcript and youtube-transcript-plus libraries
+- **Status**: Investigating alternative solutions (Whisper API, browser automation)
+- **Workaround**: System falls back to video description/metadata for content generation
+
 ## Changelog
-- July 05, 2025. Initial setup
+- July 05, 2025: Initial setup
+- July 05, 2025: Identified and documented transcript extraction limitations for certain videos
 
 ## User Preferences
 
