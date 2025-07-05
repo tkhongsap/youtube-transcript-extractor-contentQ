@@ -41,22 +41,25 @@ const VideoDetailPage = () => {
   });
 
   // Fetch generated reports
-  const { data: reports = [] } = useQuery({
+  const { data: reportsData } = useQuery({
     queryKey: [`/api/videos/${videoId}/reports`],
     enabled: !!videoId,
   });
+  const reports = (reportsData as any[]) || [];
 
   // Fetch generated flashcard sets
-  const { data: flashcardSets = [] } = useQuery({
+  const { data: flashcardSetsData } = useQuery({
     queryKey: [`/api/videos/${videoId}/flashcard-sets`],
     enabled: !!videoId,
   });
+  const flashcardSets = (flashcardSetsData as any[]) || [];
 
   // Fetch generated idea sets
-  const { data: ideaSets = [] } = useQuery({
+  const { data: ideaSetsData } = useQuery({
     queryKey: [`/api/videos/${videoId}/idea-sets`],
     enabled: !!videoId,
   });
+  const ideaSets = (ideaSetsData as any[]) || [];
   
   // Reprocess video mutation
   const reprocessMutation = useMutation({
@@ -462,42 +465,97 @@ const VideoDetailPage = () => {
         );
       case "flashcards":
         return (
-          <div className="overflow-y-auto h-full pb-16">
-            <div className="max-w-6xl mx-auto p-4">
-              <ContentGenerationCard
-                title="Flashcard Set"
-                description="Create interactive Q&A flashcards for learning and retention of key concepts from the video."
-                estimatedCost="$0.08-0.20"
-                estimatedTime="15-30s"
-                features={["10-50 Cards", "Q&A Format", "Difficulty Levels", "Spaced Repetition Ready"]}
-                onGenerate={() => generateFlashcardsMutation.mutate()}
-                isGenerating={generateFlashcardsMutation.isPending}
-              />
+          <div className="overflow-y-auto h-full max-h-screen pb-16">
+            <div className="max-w-6xl mx-auto p-4 space-y-6">
+              {/* Show generated flashcard sets if they exist */}
+              {flashcardSets.length > 0 && (
+                <div className="space-y-6 mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Flashcard Sets</h3>
+                  {flashcardSets.map((set: any) => (
+                    <div key={set.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="text-md font-medium text-gray-900">{set.title}</h4>
+                        <span className="text-xs text-gray-500">
+                          {formatDistanceToNow(new Date(set.createdAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                      {set.description && (
+                        <p className="text-gray-600 mb-4">{set.description}</p>
+                      )}
+                      <div className="text-sm text-blue-600 mb-3">
+                        Click to view {set.flashcardCount || 'generated'} flashcards →
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Generation card */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {flashcardSets.length > 0 ? "Generate Additional Flashcards" : "Generate Flashcards"}
+                </h3>
+                <ContentGenerationCard
+                  title="Flashcard Set"
+                  description="Create interactive Q&A flashcards for learning and retention of key concepts from the video."
+                  estimatedCost="$0.08-0.20"
+                  estimatedTime="15-30s"
+                  features={["10-50 Cards", "Q&A Format", "Difficulty Levels", "Spaced Repetition Ready"]}
+                  onGenerate={() => generateFlashcardsMutation.mutate()}
+                  isGenerating={generateFlashcardsMutation.isPending}
+                />
+              </div>
             </div>
           </div>
         );
       case "ideas":
         return (
-          <div className="overflow-y-auto h-full pb-16">
+          <div className="overflow-y-auto h-full max-h-screen pb-16">
             <div className="max-w-6xl mx-auto p-4 space-y-6">
-              <ContentGenerationCard
-                title="Blog Title Ideas"
-                description="Generate compelling blog titles and article ideas based on the video content."
-                estimatedCost="$0.05-0.10"
-                estimatedTime="10-20s"
-                features={["15-25 Titles", "SEO-Focused", "Multiple Angles", "Engaging Headlines"]}
-                onGenerate={() => generateBlogIdeasMutation.mutate()}
-                isGenerating={generateBlogIdeasMutation.isPending}
-              />
-              <ContentGenerationCard
-                title="Social Media Hooks"
-                description="Create attention-grabbing social media hooks and content ideas for various platforms."
-                estimatedCost="$0.05-0.10"
-                estimatedTime="10-20s"
-                features={["Platform-Specific", "Engagement-Focused", "15-30 Hooks", "Trend-Aware"]}
-                onGenerate={() => generateSocialHooksMutation.mutate()}
-                isGenerating={generateSocialHooksMutation.isPending}
-              />
+              {/* Show generated idea sets if they exist */}
+              {ideaSets.length > 0 && (
+                <div className="space-y-6 mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Ideas</h3>
+                  {ideaSets.map((set: any) => (
+                    <div key={set.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="text-md font-medium text-gray-900 capitalize">{set.type.replace('_', ' ')}</h4>
+                        <span className="text-xs text-gray-500">
+                          {formatDistanceToNow(new Date(set.createdAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <div className="text-sm text-blue-600 mb-3">
+                        {set.ideaCount || 'Multiple'} ideas generated →
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Generation cards */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {ideaSets.length > 0 ? "Generate Additional Ideas" : "Generate Ideas"}
+                </h3>
+                <ContentGenerationCard
+                  title="Blog Title Ideas"
+                  description="Generate compelling blog titles and article ideas based on the video content."
+                  estimatedCost="$0.05-0.10"
+                  estimatedTime="10-20s"
+                  features={["15-25 Titles", "SEO-Focused", "Multiple Angles", "Engaging Headlines"]}
+                  onGenerate={() => generateBlogIdeasMutation.mutate()}
+                  isGenerating={generateBlogIdeasMutation.isPending}
+                />
+                <ContentGenerationCard
+                  title="Social Media Hooks"
+                  description="Create attention-grabbing social media hooks and content ideas for various platforms."
+                  estimatedCost="$0.05-0.10"
+                  estimatedTime="10-20s"
+                  features={["Platform-Specific", "Engagement-Focused", "15-30 Hooks", "Trend-Aware"]}
+                  onGenerate={() => generateSocialHooksMutation.mutate()}
+                  isGenerating={generateSocialHooksMutation.isPending}
+                />
+              </div>
             </div>
           </div>
         );
