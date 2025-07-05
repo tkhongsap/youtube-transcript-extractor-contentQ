@@ -16,6 +16,7 @@ const Sidebar = ({ user }: SidebarProps) => {
     { icon: "description", label: "My Reports", path: "/reports" },
     { icon: "style", label: "My Flashcards", path: "/flashcards" },
     { icon: "lightbulb", label: "Ideas", path: "/ideas" },
+    { icon: "settings", label: "Settings", path: "/settings" },
   ];
 
   return (

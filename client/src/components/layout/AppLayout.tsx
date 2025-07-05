@@ -5,6 +5,7 @@ import MobileNav from "./MobileNav";
 import MobileMenu from "./MobileMenu";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useTheme } from "@/hooks/useTheme";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   const { user, isLoading, isAuthenticated } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [, navigate] = useLocation();
+  useTheme();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
