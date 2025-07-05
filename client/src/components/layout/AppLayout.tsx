@@ -83,19 +83,19 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
         {/* Mobile Bottom Navigation */}
         <nav className="md:hidden bg-white border-t border-gray-200 flex justify-around items-center py-3 px-4">
-          <a href="/" className="flex flex-col items-center text-primary">
+          <a href="/" className="touch-target flex flex-col items-center text-primary">
             <span className="material-icons text-lg">dashboard</span>
             <span className="text-xs mt-1">Dashboard</span>
           </a>
-          <a href="#" className="flex flex-col items-center text-gray-500">
+          <a href="#" className="touch-target flex flex-col items-center text-gray-500">
             <span className="material-icons text-lg">video_library</span>
             <span className="text-xs mt-1">Videos</span>
           </a>
-          <a href="#" className="flex flex-col items-center text-gray-500">
+          <a href="#" className="touch-target flex flex-col items-center text-gray-500">
             <span className="material-icons text-lg">description</span>
             <span className="text-xs mt-1">Reports</span>
           </a>
-          <a href="#" className="flex flex-col items-center text-gray-500">
+          <a href="#" className="touch-target flex flex-col items-center text-gray-500">
             <span className="material-icons text-lg">style</span>
             <span className="text-xs mt-1">Flashcards</span>
           </a>

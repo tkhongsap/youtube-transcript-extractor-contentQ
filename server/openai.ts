@@ -43,10 +43,14 @@ export async function generateVideoSummary(
       max_tokens: 1500,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
     return {
       summary: result.summary,
-      keyTopics: result.keyTopics,
+      keyTopics: Array.isArray(result.keyTopics) ? result.keyTopics as string[] : [],
     };
   } catch (error) {
     console.error("Error generating summary:", error);
@@ -78,7 +82,11 @@ export async function generateMediumReport(
       max_tokens: 2000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
     return {
       title: result.title,
       content: result.content,
@@ -113,7 +121,11 @@ export async function generateLinkedInPost(
       max_tokens: 1000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
     return {
       title: result.title,
       content: result.content,
@@ -152,7 +164,11 @@ export async function generateFlashcards(
       max_tokens: 2000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
     return {
       title: result.title,
       description: result.description,
@@ -188,7 +204,11 @@ export async function generateBlogIdeas(
       max_tokens: 1000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
     return result.titles;
   } catch (error) {
     console.error("Error generating blog ideas:", error);
@@ -220,7 +240,11 @@ export async function generateSocialMediaHooks(
       max_tokens: 1000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
     return result.hooks;
   } catch (error) {
     console.error("Error generating social media hooks:", error);
@@ -252,7 +276,11 @@ export async function generateFollowUpQuestions(
       max_tokens: 1000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('No content received from OpenAI');
+    }
+    const result = JSON.parse(content);
     return result.questions;
   } catch (error) {
     console.error("Error generating follow-up questions:", error);

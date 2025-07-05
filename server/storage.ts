@@ -1,14 +1,14 @@
-import { 
-  users, 
-  videos, 
-  summaries, 
-  reports, 
-  flashcardSets, 
-  flashcards, 
-  ideaSets, 
-  ideas, 
-  type User, 
+import {
   type UpsertUser,
+  type User,
+  users,
+  videos,
+  summaries,
+  reports,
+  flashcardSets,
+  flashcards,
+  ideaSets,
+  ideas,
   type Video,
   type InsertVideo,
   type Summary,
@@ -25,7 +25,7 @@ import {
   type InsertIdea
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -45,6 +45,8 @@ export interface IStorage {
   
   // Report operations
   createReport(report: InsertReport): Promise<Report>;
+  getReport(id: number): Promise<(Report & { userId: string }) | undefined>;
+  updateReport(id: number, data: Partial<InsertReport>): Promise<Report | null>;
   getVideoReports(videoId: number): Promise<Report[]>;
   getUserReports(userId: string, limit?: number): Promise<Report[]>;
   deleteReport(id: number): Promise<void>;
@@ -52,6 +54,11 @@ export interface IStorage {
   // Flashcard operations
   createFlashcardSet(set: InsertFlashcardSet): Promise<FlashcardSet>;
   createFlashcard(card: InsertFlashcard): Promise<Flashcard>;
+  getFlashcardSet(id: number): Promise<(FlashcardSet & { userId: string }) | undefined>;
+  updateFlashcardSet(id: number, data: Partial<InsertFlashcardSet>): Promise<FlashcardSet | null>;
+  getFlashcard(id: number): Promise<(Flashcard & { userId: string }) | undefined>;
+  updateFlashcard(id: number, data: Partial<InsertFlashcard>): Promise<Flashcard | null>;
+  deleteFlashcard(id: number): Promise<void>;
   getFlashcardSets(videoId: number): Promise<FlashcardSet[]>;
   getUserFlashcardSets(userId: string, limit?: number): Promise<FlashcardSet[]>;
   getFlashcards(setId: number): Promise<Flashcard[]>;
@@ -60,10 +67,19 @@ export interface IStorage {
   // Idea operations
   createIdeaSet(set: InsertIdeaSet): Promise<IdeaSet>;
   createIdea(idea: InsertIdea): Promise<Idea>;
+  getIdeaSet(id: number): Promise<(IdeaSet & { userId: string }) | undefined>;
+  updateIdeaSet(id: number, data: Partial<InsertIdeaSet>): Promise<IdeaSet | null>;
+  getIdea(id: number): Promise<(Idea & { userId: string }) | undefined>;
+  updateIdea(id: number, data: Partial<InsertIdea>): Promise<Idea | null>;
+  deleteIdea(id: number): Promise<void>;
   getIdeaSets(videoId: number): Promise<IdeaSet[]>;
   getUserIdeaSets(userId: string, type?: string, limit?: number): Promise<IdeaSet[]>;
   getIdeas(setId: number): Promise<Idea[]>;
   deleteIdeaSet(id: number): Promise<void>;
+
+  // Deletion helpers
+  deleteVideo(id: number): Promise<void>;
+  deleteUser(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -108,19 +124,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateVideo(id: number, data: Partial<InsertVideo>): Promise<Video | null> {
-    const [updatedVideo] = await db
+    const [updated] = await db
       .update(videos)
-      .set({
-        ...data,
-        // Don't update these fields
-        userId: undefined,
-        youtubeId: undefined,
-      })
+      .set(data)
       .where(eq(videos.id, id))
       .returning();
-    return updatedVideo || null;
+    return updated || null;
   }
-  
+
   async getUserVideos(userId: string, limit: number = 10): Promise<Video[]> {
     return db
       .select()
@@ -132,12 +143,11 @@ export class DatabaseStorage implements IStorage {
   
   // Summary operations
   async createSummary(summary: InsertSummary): Promise<Summary> {
-    // Ensure keyTopics is an array
-    const formattedSummary = {
-      ...summary,
-      keyTopics: Array.isArray(summary.keyTopics) ? summary.keyTopics : []
-    };
-    const [createdSummary] = await db.insert(summaries).values(formattedSummary).returning();
+    const [createdSummary] = await db.insert(summaries).values({
+      videoId: summary.videoId,
+      summary: summary.summary,
+      keyTopics: Array.isArray(summary.keyTopics) ? summary.keyTopics as string[] : []
+    }).returning();
     return createdSummary;
   }
   
@@ -156,6 +166,39 @@ export class DatabaseStorage implements IStorage {
     const [createdReport] = await db.insert(reports).values(report).returning();
     return createdReport;
   }
+
+  async getReport(id: number): Promise<(Report & { userId: string }) | undefined> {
+    const [report] = await db
+      .select({
+        id: reports.id,
+        videoId: reports.videoId,
+        title: reports.title,
+        content: reports.content,
+        type: reports.type,
+        editCount: reports.editCount,
+        lastModified: reports.lastModified,
+        createdAt: reports.createdAt,
+        userId: videos.userId
+      })
+      .from(reports)
+      .innerJoin(videos, eq(reports.videoId, videos.id))
+      .where(eq(reports.id, id));
+    return report;
+  }
+
+  async updateReport(id: number, data: Partial<InsertReport>): Promise<Report | null> {
+    const [updated] = await db
+      .update(reports)
+      .set({
+        ...data,
+        editCount: sql`${reports.editCount} + 1`,
+        lastModified: new Date(),
+        videoId: undefined
+      })
+      .where(eq(reports.id, id))
+      .returning();
+    return updated || null;
+  }
   
   async getVideoReports(videoId: number): Promise<Report[]> {
     return db
@@ -173,6 +216,8 @@ export class DatabaseStorage implements IStorage {
         title: reports.title,
         content: reports.content,
         type: reports.type,
+        editCount: reports.editCount,
+        lastModified: reports.lastModified,
         createdAt: reports.createdAt,
         videoTitle: videos.title
       })
@@ -205,6 +250,69 @@ export class DatabaseStorage implements IStorage {
       .where(eq(flashcardSets.videoId, videoId))
       .orderBy(desc(flashcardSets.createdAt));
   }
+
+  async getFlashcardSet(id: number): Promise<(FlashcardSet & { userId: string }) | undefined> {
+    const [set] = await db
+      .select({
+        id: flashcardSets.id,
+        videoId: flashcardSets.videoId,
+        title: flashcardSets.title,
+        description: flashcardSets.description,
+        createdAt: flashcardSets.createdAt,
+        userId: videos.userId
+      })
+      .from(flashcardSets)
+      .innerJoin(videos, eq(flashcardSets.videoId, videos.id))
+      .where(eq(flashcardSets.id, id));
+    return set;
+  }
+
+  async updateFlashcardSet(id: number, data: Partial<InsertFlashcardSet>): Promise<FlashcardSet | null> {
+    const [updated] = await db
+      .update(flashcardSets)
+      .set({
+        ...data,
+        videoId: undefined
+      })
+      .where(eq(flashcardSets.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async getFlashcard(id: number): Promise<(Flashcard & { userId: string }) | undefined> {
+    const [card] = await db
+      .select({
+        id: flashcards.id,
+        flashcardSetId: flashcards.flashcardSetId,
+        question: flashcards.question,
+        answer: flashcards.answer,
+        lastModified: flashcards.lastModified,
+        createdAt: flashcards.createdAt,
+        userId: videos.userId
+      })
+      .from(flashcards)
+      .innerJoin(flashcardSets, eq(flashcards.flashcardSetId, flashcardSets.id))
+      .innerJoin(videos, eq(flashcardSets.videoId, videos.id))
+      .where(eq(flashcards.id, id));
+    return card;
+  }
+
+  async updateFlashcard(id: number, data: Partial<InsertFlashcard>): Promise<Flashcard | null> {
+    const [updated] = await db
+      .update(flashcards)
+      .set({
+        ...data,
+        lastModified: new Date(),
+        flashcardSetId: undefined
+      })
+      .where(eq(flashcards.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteFlashcard(id: number): Promise<void> {
+    await db.delete(flashcards).where(eq(flashcards.id, id));
+  }
   
   async getUserFlashcardSets(userId: string, limit: number = 10): Promise<FlashcardSet[]> {
     const sets = await db
@@ -221,19 +329,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(videos.userId, userId))
       .orderBy(desc(flashcardSets.createdAt))
       .limit(limit);
-      
-    // Get card count for each set
+    
+    // Get card counts for each set
     const setsWithCounts = await Promise.all(
       sets.map(async (set) => {
-        const cards = await db
-          .select({ count: flashcards.id })
-          .from(flashcards)
-          .where(eq(flashcards.flashcardSetId, set.id));
-          
-        return {
-          ...set,
-          cardCount: cards.length
-        };
+        const cards = await this.getFlashcards(set.id);
+        return { ...set, cardCount: cards.length };
       })
     );
     
@@ -272,9 +373,40 @@ export class DatabaseStorage implements IStorage {
       .where(eq(ideaSets.videoId, videoId))
       .orderBy(desc(ideaSets.createdAt));
   }
+
+  async getIdeaSet(id: number): Promise<(IdeaSet & { userId: string }) | undefined> {
+    const [set] = await db
+      .select({
+        id: ideaSets.id,
+        videoId: ideaSets.videoId,
+        type: ideaSets.type,
+        createdAt: ideaSets.createdAt,
+        userId: videos.userId
+      })
+      .from(ideaSets)
+      .innerJoin(videos, eq(ideaSets.videoId, videos.id))
+      .where(eq(ideaSets.id, id));
+    return set;
+  }
+
+  async updateIdeaSet(id: number, data: Partial<InsertIdeaSet>): Promise<IdeaSet | null> {
+    const [updated] = await db
+      .update(ideaSets)
+      .set({
+        ...data,
+        videoId: undefined
+      })
+      .where(eq(ideaSets.id, id))
+      .returning();
+    return updated || null;
+  }
   
   async getUserIdeaSets(userId: string, type?: string, limit: number = 10): Promise<IdeaSet[]> {
-    let query = db
+    const condition = type
+      ? and(eq(videos.userId, userId), eq(ideaSets.type, type))
+      : eq(videos.userId, userId);
+
+    return db
       .select({
         id: ideaSets.id,
         videoId: ideaSets.videoId,
@@ -284,13 +416,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(ideaSets)
       .innerJoin(videos, eq(ideaSets.videoId, videos.id))
-      .where(eq(videos.userId, userId));
-      
-    if (type) {
-      query = query.where(eq(ideaSets.type, type));
-    }
-      
-    return query
+      .where(condition)
       .orderBy(desc(ideaSets.createdAt))
       .limit(limit);
   }
@@ -301,12 +427,83 @@ export class DatabaseStorage implements IStorage {
       .from(ideas)
       .where(eq(ideas.ideaSetId, setId));
   }
+
+  async getIdea(id: number): Promise<(Idea & { userId: string }) | undefined> {
+    const [idea] = await db
+      .select({
+        id: ideas.id,
+        ideaSetId: ideas.ideaSetId,
+        content: ideas.content,
+        lastModified: ideas.lastModified,
+        createdAt: ideas.createdAt,
+        userId: videos.userId
+      })
+      .from(ideas)
+      .innerJoin(ideaSets, eq(ideas.ideaSetId, ideaSets.id))
+      .innerJoin(videos, eq(ideaSets.videoId, videos.id))
+      .where(eq(ideas.id, id));
+    return idea;
+  }
+
+  async updateIdea(id: number, data: Partial<InsertIdea>): Promise<Idea | null> {
+    const [updated] = await db
+      .update(ideas)
+      .set({
+        ...data,
+        lastModified: new Date(),
+        ideaSetId: undefined
+      })
+      .where(eq(ideas.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteIdea(id: number): Promise<void> {
+    await db.delete(ideas).where(eq(ideas.id, id));
+  }
   
   async deleteIdeaSet(id: number): Promise<void> {
     // First delete all ideas in the set
     await db.delete(ideas).where(eq(ideas.ideaSetId, id));
     // Then delete the set
     await db.delete(ideaSets).where(eq(ideaSets.id, id));
+  }
+
+  // Delete a video and all related data
+  async deleteVideo(id: number): Promise<void> {
+    // Delete flashcard sets and cards
+    const fSets = await db
+      .select({ id: flashcardSets.id })
+      .from(flashcardSets)
+      .where(eq(flashcardSets.videoId, id));
+    for (const set of fSets) {
+      await this.deleteFlashcardSet(set.id);
+    }
+
+    // Delete idea sets and ideas
+    const iSets = await db
+      .select({ id: ideaSets.id })
+      .from(ideaSets)
+      .where(eq(ideaSets.videoId, id));
+    for (const set of iSets) {
+      await this.deleteIdeaSet(set.id);
+    }
+
+    // Delete summaries and reports
+    await db.delete(summaries).where(eq(summaries.videoId, id));
+    await db.delete(reports).where(eq(reports.videoId, id));
+
+    // Finally delete the video record
+    await db.delete(videos).where(eq(videos.id, id));
+  }
+
+  // Delete user and all associated data
+  async deleteUser(id: string): Promise<void> {
+    const vids = await this.getUserVideos(id, 1000);
+    for (const vid of vids) {
+      await this.deleteVideo(vid.id);
+    }
+    await db.delete(users).where(eq(users.id, id));
   }
 }
 
