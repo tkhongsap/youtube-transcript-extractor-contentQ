@@ -7,7 +7,10 @@
       "Bash(git push:*)",
       "Bash(node:*)",
       "Bash(npm show:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(curl:*)",
+      "Bash(chmod:*)",
+      "Bash(./create-github-issues.sh:*)"
     ],
     "deny": []
   }
