@@ -153,7 +153,7 @@ export class DatabaseStorage implements IStorage {
   
   // Summary operations
   async createSummary(summary: InsertSummary): Promise<Summary> {
-    // Ensure keyTopics is a clean string array with proper character escaping
+    // Ensure keyTopics is a clean string array with proper character normalization
     const cleanKeyTopics = Array.isArray(summary.keyTopics) 
       ? summary.keyTopics
           .filter(topic => typeof topic === 'string' && topic.trim().length > 0)
@@ -161,24 +161,23 @@ export class DatabaseStorage implements IStorage {
             .replace(/['']/g, "'")  // Replace smart quotes with regular quotes
             .replace(/[""]/g, '"')  // Replace smart double quotes
             .replace(/[–—]/g, '-')  // Replace em/en dashes with hyphens
-            .replace(/\\/g, '\\\\')  // Escape backslashes
-            .replace(/'/g, "''")     // Escape single quotes for PostgreSQL
             .trim()
           )
       : [];
     
-    // Use raw SQL to properly handle PostgreSQL text array
-    const pgArrayLiteral = '{' + cleanKeyTopics.map(topic => `"${topic.replace(/"/g, '\\"')}"`) .join(',') + '}';
+    console.log('Inserting key topics:', cleanKeyTopics);
     
-    console.log('Using PostgreSQL array literal:', pgArrayLiteral);
+    // Use Drizzle's built-in array support
+    const [createdSummary] = await db
+      .insert(summaries)
+      .values({
+        videoId: summary.videoId,
+        summary: summary.summary,
+        keyTopics: cleanKeyTopics
+      })
+      .returning();
     
-    const [createdSummary] = await db.execute(sql`
-      INSERT INTO summaries (video_id, summary, key_topics)
-      VALUES (${summary.videoId}, ${summary.summary}, ${pgArrayLiteral}::text[])
-      RETURNING *
-    `);
-    
-    return createdSummary.rows[0] as Summary;
+    return createdSummary;
   }
   
   async getVideoSummary(videoId: number): Promise<Summary | undefined> {
