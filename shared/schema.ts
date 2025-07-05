@@ -8,6 +8,7 @@ import {
   jsonb,
   varchar,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -160,6 +161,30 @@ export const ideaRelations = relations(ideas, ({ one }) => ({
   }),
 }));
 
+// Tags table
+export const tags = pgTable("tags", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: varchar("name", { length: 50 }).notNull(),
+  color: varchar("color", { length: 7 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const videoTags = pgTable(
+  "video_tags",
+  {
+    videoId: integer("video_id")
+      .notNull()
+      .references(() => videos.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (t) => ({
+    pk: primaryKey(t.videoId, t.tagId),
+  })
+);
+
 // Insert schemas for all tables
 export const insertVideoSchema = createInsertSchema(videos).omit({ id: true, createdAt: true });
 export const insertSummarySchema = createInsertSchema(summaries).omit({ id: true, createdAt: true });
@@ -168,6 +193,7 @@ export const insertFlashcardSetSchema = createInsertSchema(flashcardSets).omit({
 export const insertFlashcardSchema = createInsertSchema(flashcards).omit({ id: true, createdAt: true });
 export const insertIdeaSetSchema = createInsertSchema(ideaSets).omit({ id: true, createdAt: true });
 export const insertIdeaSchema = createInsertSchema(ideas).omit({ id: true, createdAt: true });
+export const insertTagSchema = createInsertSchema(tags).omit({ id: true, createdAt: true });
 
 // Export types
 export type InsertVideo = z.infer<typeof insertVideoSchema>;
@@ -177,6 +203,7 @@ export type InsertFlashcardSet = z.infer<typeof insertFlashcardSetSchema>;
 export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
 export type InsertIdeaSet = z.infer<typeof insertIdeaSetSchema>;
 export type InsertIdea = z.infer<typeof insertIdeaSchema>;
+export type InsertTag = z.infer<typeof insertTagSchema>;
 
 export type Video = typeof videos.$inferSelect;
 export type Summary = typeof summaries.$inferSelect;
@@ -185,6 +212,7 @@ export type FlashcardSet = typeof flashcardSets.$inferSelect;
 export type Flashcard = typeof flashcards.$inferSelect;
 export type IdeaSet = typeof ideaSets.$inferSelect;
 export type Idea = typeof ideas.$inferSelect;
+export type Tag = typeof tags.$inferSelect;
 
 // YouTube URL validation schema
 export const youtubeUrlSchema = z.object({

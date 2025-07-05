@@ -5,9 +5,11 @@ import {
   reports, 
   flashcardSets, 
   flashcards, 
-  ideaSets, 
-  ideas, 
-  type User, 
+  ideaSets,
+  ideas,
+  tags,
+  videoTags,
+  type User,
   type UpsertUser,
   type Video,
   type InsertVideo,
@@ -22,7 +24,9 @@ import {
   type IdeaSet,
   type InsertIdeaSet,
   type Idea,
-  type InsertIdea
+  type InsertIdea,
+  type InsertTag,
+  type Tag
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -64,6 +68,15 @@ export interface IStorage {
   getUserIdeaSets(userId: string, type?: string, limit?: number): Promise<IdeaSet[]>;
   getIdeas(setId: number): Promise<Idea[]>;
   deleteIdeaSet(id: number): Promise<void>;
+
+  // Tag operations
+  createTag(tag: InsertTag): Promise<Tag>;
+  getUserTags(userId: string): Promise<Tag[]>;
+  updateTag(id: number, data: Partial<InsertTag>): Promise<Tag | null>;
+  deleteTag(id: number): Promise<void>;
+  addTagToVideo(videoId: number, tagId: number): Promise<void>;
+  removeTagFromVideo(videoId: number, tagId: number): Promise<void>;
+  getVideoTags(videoId: number): Promise<Tag[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -307,6 +320,50 @@ export class DatabaseStorage implements IStorage {
     await db.delete(ideas).where(eq(ideas.ideaSetId, id));
     // Then delete the set
     await db.delete(ideaSets).where(eq(ideaSets.id, id));
+  }
+
+  // Tag operations
+  async createTag(tag: InsertTag): Promise<Tag> {
+    const [created] = await db.insert(tags).values(tag).returning();
+    return created;
+  }
+
+  async getUserTags(userId: string): Promise<Tag[]> {
+    return db.select().from(tags).where(eq(tags.userId, userId));
+  }
+
+  async updateTag(id: number, data: Partial<InsertTag>): Promise<Tag | null> {
+    const [updated] = await db
+      .update(tags)
+      .set(data)
+      .where(eq(tags.id, id))
+      .returning();
+    return updated || null;
+  }
+
+  async deleteTag(id: number): Promise<void> {
+    await db.delete(tags).where(eq(tags.id, id));
+  }
+
+  async addTagToVideo(videoId: number, tagId: number): Promise<void> {
+    await db
+      .insert(videoTags)
+      .values({ videoId, tagId })
+      .onConflictDoNothing();
+  }
+
+  async removeTagFromVideo(videoId: number, tagId: number): Promise<void> {
+    await db
+      .delete(videoTags)
+      .where(and(eq(videoTags.videoId, videoId), eq(videoTags.tagId, tagId)));
+  }
+
+  async getVideoTags(videoId: number): Promise<Tag[]> {
+    return db
+      .select({ id: tags.id, userId: tags.userId, name: tags.name, color: tags.color, createdAt: tags.createdAt })
+      .from(videoTags)
+      .innerJoin(tags, eq(videoTags.tagId, tags.id))
+      .where(eq(videoTags.videoId, videoId));
   }
 }
 

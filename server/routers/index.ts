@@ -5,6 +5,7 @@ import videosRouter from './videos.router';
 import reportsRouter from './reports.router';
 import flashcardsRouter from './flashcards.router';
 import ideasRouter from './ideas.router';
+import tagsRouter from './tags.router';
 import devRouter from './dev.router';
 import { setupAuth } from '../replitAuth';
 import { errorHandler } from './middleware';
@@ -19,6 +20,7 @@ export async function registerAppRoutes(app: Express): Promise<Server> {
   app.use('/api/reports', reportsRouter);
   app.use('/api/flashcard-sets', flashcardsRouter);
   app.use('/api/idea-sets', ideasRouter);
+  app.use('/api/tags', tagsRouter);
   app.use('/api/dev', devRouter);
 
   // Apply global error handling middleware
