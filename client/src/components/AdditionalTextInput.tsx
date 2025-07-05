@@ -39,7 +39,7 @@ export function AdditionalTextInput({
   placeholder = 'Add your notes, context, or corrections here...',
   className,
   id = 'additional-text-input',
-  maxLength = 5000,
+  maxLength,
   disabled = false,
   onSave,
   onCancel,
@@ -151,9 +151,9 @@ export function AdditionalTextInput({
           </Label>
           <span 
             className="text-xs text-muted-foreground"
-            aria-label={`Character count: ${value.length} of ${maxLength} maximum`}
+            aria-label={maxLength ? `Character count: ${value.length} of ${maxLength} maximum` : `Character count: ${value.length}`}
           >
-            {value.length}/{maxLength}
+            {maxLength ? `${value.length}/${maxLength}` : `${value.length} characters`}
           </span>
         </div>
         <Textarea
@@ -166,7 +166,7 @@ export function AdditionalTextInput({
           className="min-h-[120px] resize-y"
           aria-label="Additional text content"
           aria-describedby={`${textareaId}-description`}
-          aria-invalid={value.length > maxLength}
+          aria-invalid={maxLength ? value.length > maxLength : false}
           role="textbox"
           aria-multiline="true"
         />

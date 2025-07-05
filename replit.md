@@ -134,6 +134,11 @@ Content Spark AI is a full-stack web application that transforms YouTube videos 
 ## Changelog
 - July 05, 2025: Initial setup
 - July 05, 2025: Identified and documented transcript extraction limitations for certain videos
+- January 05, 2025: Added comprehensive transcript enhancement feature with unlimited character input
+  - Implemented additional text input system for supplementing video transcripts
+  - Removed all character limits to support full conversation transcripts (3-4 hour videos)
+  - Added tabbed interface with Original and Enhanced transcript views
+  - Created database integration for persistent additional text storage
 
 ## User Preferences
 

@@ -138,8 +138,7 @@ export type AdditionalTextLabel = typeof ADDITIONAL_TEXT_LABELS[number];
 // Validation schema for additional text entry input
 export const additionalTextEntrySchema = z.object({
   content: z.string()
-    .min(1, 'Content cannot be empty')
-    .max(5000, 'Content cannot exceed 5000 characters'),
+    .min(1, 'Content cannot be empty'),
   timestamp: z.number()
     .min(0, 'Timestamp must be positive')
     .optional(),

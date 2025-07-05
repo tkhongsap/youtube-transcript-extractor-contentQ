@@ -7,7 +7,7 @@ const router = Router();
 
 // Validation schemas - matching frontend labels
 const CreateAdditionalTextSchema = z.object({
-  content: z.string().min(1, 'Content cannot be empty').max(5000, 'Content too long'),
+  content: z.string().min(1, 'Content cannot be empty'),
   label: z.enum(['Additional Notes', 'Context', 'Correction', 'Clarification', 'Speaker Note', 'Technical Detail', 'Reference', 'Summary']),
   timestamp: z.number().optional(),
   position: z.enum(['before', 'after', 'inline']).optional(),
@@ -15,7 +15,7 @@ const CreateAdditionalTextSchema = z.object({
 });
 
 const UpdateAdditionalTextSchema = z.object({
-  content: z.string().min(1, 'Content cannot be empty').max(5000, 'Content too long').optional(),
+  content: z.string().min(1, 'Content cannot be empty').optional(),
   label: z.enum(['Additional Notes', 'Context', 'Correction', 'Clarification', 'Speaker Note', 'Technical Detail', 'Reference', 'Summary']).optional(),
   timestamp: z.number().optional(),
   position: z.enum(['before', 'after', 'inline']).optional(),
