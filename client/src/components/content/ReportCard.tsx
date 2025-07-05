@@ -12,10 +12,11 @@ import { apiRequest } from "@/lib/queryClient";
 interface ReportCardProps {
   report: {
     id: number;
+    videoId: number;
     title: string;
     content: string;
     type: string;
-    createdAt: string;
+    createdAt: Date | null;
     videoTitle?: string;
   };
 }
@@ -83,7 +84,7 @@ const ReportCard = ({ report }: ReportCardProps) => {
             {report.type === "medium" ? "Medium" : "LinkedIn"}
           </span>
           <span className="text-xs text-gray-500">
-            {formatDistanceToNow(new Date(report.createdAt), { addSuffix: true })}
+            {report.createdAt ? formatDistanceToNow(new Date(report.createdAt), { addSuffix: true }) : 'Unknown date'}
           </span>
         </div>
         <h3 className="text-gray-900 font-medium text-md mb-2">{report.title}</h3>
