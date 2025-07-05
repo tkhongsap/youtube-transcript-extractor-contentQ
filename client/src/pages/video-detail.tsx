@@ -39,6 +39,24 @@ const VideoDetailPage = () => {
     queryKey: [`/api/videos/${videoId}/transcript`],
     enabled: !!videoId,
   });
+
+  // Fetch generated reports
+  const { data: reports = [] } = useQuery({
+    queryKey: [`/api/videos/${videoId}/reports`],
+    enabled: !!videoId,
+  });
+
+  // Fetch generated flashcard sets
+  const { data: flashcardSets = [] } = useQuery({
+    queryKey: [`/api/videos/${videoId}/flashcard-sets`],
+    enabled: !!videoId,
+  });
+
+  // Fetch generated idea sets
+  const { data: ideaSets = [] } = useQuery({
+    queryKey: [`/api/videos/${videoId}/idea-sets`],
+    enabled: !!videoId,
+  });
   
   // Reprocess video mutation
   const reprocessMutation = useMutation({
@@ -381,26 +399,64 @@ const VideoDetailPage = () => {
         );
       case "reports":
         return (
-          <div className="overflow-y-auto h-full pb-16">
+          <div className="overflow-y-auto h-full max-h-screen pb-16">
             <div className="max-w-6xl mx-auto p-4 space-y-6">
-              <ContentGenerationCard
-                title="Medium-Style Article"
-                description="Create a comprehensive, publication-ready article suitable for Medium, LinkedIn, or your blog."
-                estimatedCost="$0.15-0.25"
-                estimatedTime="20-40s"
-                features={["Professional Formatting", "Engaging Headlines", "800-2000 words", "SEO-Optimized"]}
-                onGenerate={() => generateMediumReportMutation.mutate()}
-                isGenerating={generateMediumReportMutation.isPending}
-              />
-              <ContentGenerationCard
-                title="LinkedIn Post"
-                description="Generate an engaging LinkedIn post with professional tone and call-to-action."
-                estimatedCost="$0.08-0.15"
-                estimatedTime="10-20s"
-                features={["Professional Tone", "Call-to-Action", "150-300 words", "Hashtag Suggestions"]}
-                onGenerate={() => generateLinkedInPostMutation.mutate()}
-                isGenerating={generateLinkedInPostMutation.isPending}
-              />
+              {/* Show generated reports if they exist */}
+              {reports.length > 0 && (
+                <div className="space-y-6 mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Reports</h3>
+                  {reports.map((report: any) => (
+                    <div key={report.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="text-md font-medium text-gray-900 capitalize">{report.type} Report</h4>
+                        <span className="text-xs text-gray-500">
+                          {formatDistanceToNow(new Date(report.createdAt), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <h5 className="text-lg font-semibold text-gray-800 mb-3">{report.title}</h5>
+                      <div className="prose max-w-none text-gray-700">
+                        <div className="whitespace-pre-wrap max-h-96 overflow-y-auto">
+                          {report.content}
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigator.clipboard.writeText(report.content)}
+                        >
+                          Copy Content
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Generation cards */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {reports.length > 0 ? "Generate Additional Reports" : "Generate Reports"}
+                </h3>
+                <ContentGenerationCard
+                  title="Medium-Style Article"
+                  description="Create a comprehensive, publication-ready article suitable for Medium, LinkedIn, or your blog."
+                  estimatedCost="$0.15-0.25"
+                  estimatedTime="20-40s"
+                  features={["Professional Formatting", "Engaging Headlines", "800-2000 words", "SEO-Optimized"]}
+                  onGenerate={() => generateMediumReportMutation.mutate()}
+                  isGenerating={generateMediumReportMutation.isPending}
+                />
+                <ContentGenerationCard
+                  title="LinkedIn Post"
+                  description="Generate an engaging LinkedIn post with professional tone and call-to-action."
+                  estimatedCost="$0.08-0.15"
+                  estimatedTime="10-20s"
+                  features={["Professional Tone", "Call-to-Action", "150-300 words", "Hashtag Suggestions"]}
+                  onGenerate={() => generateLinkedInPostMutation.mutate()}
+                  isGenerating={generateLinkedInPostMutation.isPending}
+                />
+              </div>
             </div>
           </div>
         );
