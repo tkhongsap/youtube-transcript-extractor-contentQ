@@ -64,6 +64,10 @@ export interface IStorage {
   getUserIdeaSets(userId: string, type?: string, limit?: number): Promise<IdeaSet[]>;
   getIdeas(setId: number): Promise<Idea[]>;
   deleteIdeaSet(id: number): Promise<void>;
+
+  // Deletion helpers
+  deleteVideo(id: number): Promise<void>;
+  deleteUser(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -307,6 +311,43 @@ export class DatabaseStorage implements IStorage {
     await db.delete(ideas).where(eq(ideas.ideaSetId, id));
     // Then delete the set
     await db.delete(ideaSets).where(eq(ideaSets.id, id));
+  }
+
+  // Delete a video and all related data
+  async deleteVideo(id: number): Promise<void> {
+    // Delete flashcard sets and cards
+    const fSets = await db
+      .select({ id: flashcardSets.id })
+      .from(flashcardSets)
+      .where(eq(flashcardSets.videoId, id));
+    for (const set of fSets) {
+      await this.deleteFlashcardSet(set.id);
+    }
+
+    // Delete idea sets and ideas
+    const iSets = await db
+      .select({ id: ideaSets.id })
+      .from(ideaSets)
+      .where(eq(ideaSets.videoId, id));
+    for (const set of iSets) {
+      await this.deleteIdeaSet(set.id);
+    }
+
+    // Delete summaries and reports
+    await db.delete(summaries).where(eq(summaries.videoId, id));
+    await db.delete(reports).where(eq(reports.videoId, id));
+
+    // Finally delete the video record
+    await db.delete(videos).where(eq(videos.id, id));
+  }
+
+  // Delete user and all associated data
+  async deleteUser(id: string): Promise<void> {
+    const vids = await this.getUserVideos(id, 1000);
+    for (const vid of vids) {
+      await this.deleteVideo(vid.id);
+    }
+    await db.delete(users).where(eq(users.id, id));
   }
 }
 

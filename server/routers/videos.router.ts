@@ -596,4 +596,42 @@ router.post('/:id/reprocess', isAuthenticated, async (req: any, res) => {
   }
 });
 
+// Update video metadata
+router.put('/:id', isAuthenticated, async (req: any, res) => {
+  try {
+    const videoId = parseInt(req.params.id, 10);
+    const video = await storage.getVideo(videoId);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+    if (video.userId !== req.user.claims.sub) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    const updated = await storage.updateVideo(videoId, req.body);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating video:', error);
+    res.status(500).json({ message: 'Failed to update video' });
+  }
+});
+
+// Delete video and all related data
+router.delete('/:id', isAuthenticated, async (req: any, res) => {
+  try {
+    const videoId = parseInt(req.params.id, 10);
+    const video = await storage.getVideo(videoId);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+    if (video.userId !== req.user.claims.sub) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    await storage.deleteVideo(videoId);
+    res.json({ message: 'Video deleted' });
+  } catch (error) {
+    console.error('Error deleting video:', error);
+    res.status(500).json({ message: 'Failed to delete video' });
+  }
+});
+
 export default router;
