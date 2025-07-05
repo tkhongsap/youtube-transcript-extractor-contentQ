@@ -6,7 +6,12 @@
       "Bash(git config:*)",
       "Bash(git push:*)",
       "Bash(node:*)",
-      "Bash(npm show:*)"
+      "Bash(npm show:*)",
+      "Bash(mkdir:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:run:*)"
     ],
     "deny": []
   }
