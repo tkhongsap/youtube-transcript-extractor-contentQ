@@ -43,7 +43,7 @@ export async function generateVideoSummary(
       max_tokens: 1500,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.choices[0].message.content || '{}');
     return {
       summary: result.summary,
       keyTopics: result.keyTopics,
@@ -78,7 +78,7 @@ export async function generateMediumReport(
       max_tokens: 2000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.choices[0].message.content || '{}');
     return {
       title: result.title,
       content: result.content,
@@ -113,7 +113,7 @@ export async function generateLinkedInPost(
       max_tokens: 1000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.choices[0].message.content || '{}');
     return {
       title: result.title,
       content: result.content,
@@ -152,7 +152,7 @@ export async function generateFlashcards(
       max_tokens: 2000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.choices[0].message.content || '{}');
     return {
       title: result.title,
       description: result.description,
@@ -188,7 +188,7 @@ export async function generateBlogIdeas(
       max_tokens: 1000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.choices[0].message.content || '{}');
     return result.titles;
   } catch (error) {
     console.error("Error generating blog ideas:", error);
@@ -220,7 +220,7 @@ export async function generateSocialMediaHooks(
       max_tokens: 1000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.choices[0].message.content || '{}');
     return result.hooks;
   } catch (error) {
     console.error("Error generating social media hooks:", error);
@@ -252,7 +252,7 @@ export async function generateFollowUpQuestions(
       max_tokens: 1000,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.choices[0].message.content || '{}');
     return result.questions;
   } catch (error) {
     console.error("Error generating follow-up questions:", error);

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
+import { type Idea } from "@shared/schema";
 
 interface IdeaListProps {
   title: string;
@@ -15,7 +16,7 @@ const IdeaList = ({ title, ideaSetId, source, date }: IdeaListProps) => {
   const { toast } = useToast();
   
   // Fetch ideas for this set
-  const { data: ideas, isLoading } = useQuery({
+  const { data: ideas, isLoading } = useQuery<Idea[]>({
     queryKey: [`/api/idea-sets/${ideaSetId}/ideas`],
   });
   
@@ -59,8 +60,8 @@ const IdeaList = ({ title, ideaSetId, source, date }: IdeaListProps) => {
         </ul>
       ) : (
         <ul className="divide-y divide-gray-200">
-          {ideas?.length > 0 ? (
-            ideas.map((idea: any) => (
+          {ideas && ideas.length > 0 ? (
+            ideas.map((idea) => (
               <li key={idea.id} className="px-4 py-3 hover:bg-gray-50">
                 <p className="text-gray-800">{idea.content}</p>
                 <div className="mt-1 flex justify-between items-center">

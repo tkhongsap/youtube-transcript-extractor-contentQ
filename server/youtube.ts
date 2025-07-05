@@ -468,9 +468,9 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
           
           // Try both with and without language specification
           const attempts = [
-            () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' }),
+            () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' } as any),
             () => YoutubeTranscript.fetchTranscript(videoId),
-            () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en', country: 'US' })
+            () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' } as any)
           ];
           
           for (const attempt of attempts) {
@@ -483,7 +483,7 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
                 return result;
               }
             } catch (attemptError) {
-              console.log('Attempt failed:', attemptError.message);
+              console.log('Attempt failed:', attemptError instanceof Error ? attemptError.message : String(attemptError));
               lastError = attemptError;
             }
           }
@@ -494,11 +494,11 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
           }
         } catch (error) {
           lastError = error;
-          console.log(`Retry ${retry + 1} failed:`, error.message);
+          console.log(`Retry ${retry + 1} failed:`, error instanceof Error ? error.message : String(error));
         }
       }
       
-      throw new Error(`All retry attempts failed. Last error: ${lastError?.message || 'Unknown error'}`);
+      throw new Error(`All retry attempts failed. Last error: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
     }
   ];
 

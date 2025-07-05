@@ -53,7 +53,7 @@ interface TimestampedTranscript {
 const router = Router();
 
 // Video processing endpoint
-router.post('/process', isAuthenticated, async (req: any, res) => {
+router.post('/process', isAuthenticated, async (req: any, res, next) => {
   try {
     const userId = req.user.claims.sub;
     const validatedData = youtubeUrlSchema.parse(req.body);
@@ -198,23 +198,12 @@ router.post('/process', isAuthenticated, async (req: any, res) => {
     
   } catch (error) {
     console.error("Error processing video:", error);
-    
-    if (error instanceof ZodError) {
-      return res.status(400).json({ 
-        message: "Invalid YouTube URL", 
-        errors: error.errors 
-      });
-    }
-    
-    res.status(500).json({ 
-      message: "Failed to process video", 
-      error: error instanceof Error ? error.message : String(error)
-    });
+    next(error);
   }
 });
 
 // Get user's videos
-router.get('/', isAuthenticated, async (req: any, res) => {
+router.get('/', isAuthenticated, async (req: any, res, next) => {
   try {
     const userId = req.user.claims.sub;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
@@ -223,12 +212,12 @@ router.get('/', isAuthenticated, async (req: any, res) => {
     res.json(videos);
   } catch (error) {
     console.error("Error fetching videos:", error);
-    res.status(500).json({ message: "Failed to fetch videos" });
+    next(error);
   }
 });
 
 // Get video details
-router.get('/:id', isAuthenticated, async (req: any, res) => {
+router.get('/:id', isAuthenticated, async (req: any, res, next) => {
   try {
     const videoId = parseInt(req.params.id, 10);
     const video = await storage.getVideo(videoId);
@@ -245,12 +234,12 @@ router.get('/:id', isAuthenticated, async (req: any, res) => {
     res.json(video);
   } catch (error) {
     console.error("Error fetching video:", error);
-    res.status(500).json({ message: "Failed to fetch video" });
+    next(error);
   }
 });
 
 // Get video transcript
-router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
+router.get('/:id/transcript', isAuthenticated, async (req: any, res, next) => {
   try {
     const videoIdParam = req.params.id;
     // Validate videoIdParam is a number string before parsing
@@ -337,12 +326,12 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res) => {
     }
   } catch (error) {
     console.error(`General error in /:id/transcript for DB video ID ${req.params.id}:`, error);
-    res.status(500).json({ message: "Failed to fetch transcript due to a server error." });
+    next(error);
   }
 });
 
 // Get video summary
-router.get('/:id/summary', isAuthenticated, async (req: any, res) => {
+router.get('/:id/summary', isAuthenticated, async (req: any, res, next) => {
   try {
     const videoId = parseInt(req.params.id, 10);
     const video = await storage.getVideo(videoId);
@@ -365,12 +354,12 @@ router.get('/:id/summary', isAuthenticated, async (req: any, res) => {
     res.json(summary);
   } catch (error) {
     console.error("Error fetching summary:", error);
-    res.status(500).json({ message: "Failed to fetch summary" });
+    next(error);
   }
 });
 
 // Get video reports
-router.get('/:id/reports', isAuthenticated, async (req: any, res) => {
+router.get('/:id/reports', isAuthenticated, async (req: any, res, next) => {
   try {
     const videoId = parseInt(req.params.id, 10);
     const video = await storage.getVideo(videoId);
@@ -388,12 +377,12 @@ router.get('/:id/reports', isAuthenticated, async (req: any, res) => {
     res.json(reports);
   } catch (error) {
     console.error("Error fetching reports:", error);
-    res.status(500).json({ message: "Failed to fetch reports" });
+    next(error);
   }
 });
 
 // Get video flashcard sets
-router.get('/:id/flashcard-sets', isAuthenticated, async (req: any, res) => {
+router.get('/:id/flashcard-sets', isAuthenticated, async (req: any, res, next) => {
   try {
     const videoId = parseInt(req.params.id, 10);
     const video = await storage.getVideo(videoId);
@@ -411,12 +400,12 @@ router.get('/:id/flashcard-sets', isAuthenticated, async (req: any, res) => {
     res.json(sets);
   } catch (error) {
     console.error("Error fetching flashcard sets:", error);
-    res.status(500).json({ message: "Failed to fetch flashcard sets" });
+    next(error);
   }
 });
 
 // Get video idea sets
-router.get('/:id/idea-sets', isAuthenticated, async (req: any, res) => {
+router.get('/:id/idea-sets', isAuthenticated, async (req: any, res, next) => {
   try {
     const videoId = parseInt(req.params.id, 10);
     const video = await storage.getVideo(videoId);
@@ -434,7 +423,7 @@ router.get('/:id/idea-sets', isAuthenticated, async (req: any, res) => {
     res.json(sets);
   } catch (error) {
     console.error("Error fetching idea sets:", error);
-    res.status(500).json({ message: "Failed to fetch idea sets" });
+    next(error);
   }
 });
 
@@ -456,7 +445,7 @@ router.post('/:id/generate-report', isAuthenticated, async (req: any, res, next)
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    if (!rateLimiter.consume(req.user.claims.sub)) {
+    if (!(await rateLimiter.consume(req.user.claims.sub))) {
       return res.status(429).json({ message: 'Rate limit exceeded' });
     }
 
@@ -499,7 +488,7 @@ router.post('/:id/generate-flashcards', isAuthenticated, async (req: any, res, n
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    if (!rateLimiter.consume(req.user.claims.sub)) {
+    if (!(await rateLimiter.consume(req.user.claims.sub))) {
       return res.status(429).json({ message: 'Rate limit exceeded' });
     }
 
@@ -549,7 +538,7 @@ router.post('/:id/generate-ideas', isAuthenticated, async (req: any, res, next) 
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    if (!rateLimiter.consume(req.user.claims.sub)) {
+    if (!(await rateLimiter.consume(req.user.claims.sub))) {
       return res.status(429).json({ message: 'Rate limit exceeded' });
     }
 
@@ -582,7 +571,7 @@ router.post('/:id/generate-ideas', isAuthenticated, async (req: any, res, next) 
 });
 
 // Reprocess video to get fresh transcript and derived content
-router.post('/:id/reprocess', isAuthenticated, async (req: any, res) => {
+router.post('/:id/reprocess', isAuthenticated, async (req: any, res, next) => {
   try {
     const videoIdParam = req.params.id;
     // Validate videoIdParam is a number string before parsing
@@ -732,11 +721,7 @@ router.post('/:id/reprocess', isAuthenticated, async (req: any, res) => {
     
   } catch (error) {
     console.error("Error reprocessing video:", error);
-    
-    res.status(500).json({ 
-      message: "Failed to reprocess video", 
-      error: error instanceof Error ? error.message : String(error)
-    });
+    next(error);
   }
 });
 

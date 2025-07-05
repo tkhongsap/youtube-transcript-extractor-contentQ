@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
-import { type Video, type Report, type FlashcardSet } from "@shared/schema";
+import { type Video, type Report, type FlashcardSet, type IdeaSet } from "@shared/schema";
 import VideoUrlInput from "@/components/video/VideoUrlInput";
 import VideoCard from "@/components/video/VideoCard";
 import ContentTypeTabs from "@/components/content/ContentTypeTabs";
@@ -8,6 +8,8 @@ import ReportCard from "@/components/content/ReportCard";
 import FlashcardSetCard from "@/components/content/FlashcardSetCard";
 import IdeaList from "@/components/content/IdeaList";
 import { Skeleton } from "@/components/ui/skeleton";
+
+type IdeaSetWithVideo = IdeaSet & { videoTitle?: string };
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -32,13 +34,13 @@ const Dashboard = () => {
   });
 
   // Fetch recent blog idea sets
-  const { data: recentBlogIdeas, isLoading: isLoadingBlogIdeas } = useQuery({
+  const { data: recentBlogIdeas, isLoading: isLoadingBlogIdeas } = useQuery<IdeaSetWithVideo[]>({
     queryKey: ["/api/idea-sets?type=blog_titles&limit=1"],
     refetchInterval: false,
   });
 
   // Fetch recent social media hook sets
-  const { data: recentSocialHooks, isLoading: isLoadingSocialHooks } = useQuery({
+  const { data: recentSocialHooks, isLoading: isLoadingSocialHooks } = useQuery<IdeaSetWithVideo[]>({
     queryKey: ["/api/idea-sets?type=social_media_hooks&limit=1"],
     refetchInterval: false,
   });
@@ -198,22 +200,22 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="space-y-4 mb-8">
-                {recentBlogIdeas?.length || recentSocialHooks?.length ? (
+                {(recentBlogIdeas && recentBlogIdeas.length > 0) || (recentSocialHooks && recentSocialHooks.length > 0) ? (
                   <>
-                    {recentBlogIdeas?.length > 0 && (
+                    {recentBlogIdeas && recentBlogIdeas.length > 0 && (
                       <IdeaList
                         title="Blog Title Ideas"
                         ideaSetId={recentBlogIdeas[0].id}
                         source={recentBlogIdeas[0].videoTitle}
-                        date={new Date(recentBlogIdeas[0].createdAt)}
+                        date={recentBlogIdeas[0].createdAt ? new Date(recentBlogIdeas[0].createdAt) : new Date()}
                       />
                     )}
-                    {recentSocialHooks?.length > 0 && (
+                    {recentSocialHooks && recentSocialHooks.length > 0 && (
                       <IdeaList
                         title="Social Media Hooks"
                         ideaSetId={recentSocialHooks[0].id}
                         source={recentSocialHooks[0].videoTitle}
-                        date={new Date(recentSocialHooks[0].createdAt)}
+                        date={recentSocialHooks[0].createdAt ? new Date(recentSocialHooks[0].createdAt) : new Date()}
                       />
                     )}
                   </>

@@ -186,6 +186,13 @@ export type Flashcard = typeof flashcards.$inferSelect;
 export type IdeaSet = typeof ideaSets.$inferSelect;
 export type Idea = typeof ideas.$inferSelect;
 
+// Rate limits table
+export const rateLimits = pgTable('rate_limits', {
+  userId: varchar('user_id').primaryKey(),
+  requestCount: integer('request_count').notNull().default(0),
+  windowStart: timestamp('window_start').notNull().defaultNow(),
+});
+
 // YouTube URL validation schema
 export const youtubeUrlSchema = z.object({
   url: z.string().url().refine(

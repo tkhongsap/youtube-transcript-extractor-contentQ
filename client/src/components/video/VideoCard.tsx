@@ -35,7 +35,7 @@ const VideoCard = ({ video }: VideoCardProps) => {
         </p>
         <div className="flex justify-between items-center">
           <span className="text-xs text-gray-500">
-            {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}
+            {video.createdAt ? formatDistanceToNow(new Date(video.createdAt), { addSuffix: true }) : 'Unknown date'}
           </span>
           <Button
             variant="ghost"
