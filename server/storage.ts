@@ -153,15 +153,6 @@ export class DatabaseStorage implements IStorage {
   
   // Summary operations
   async createSummary(summary: InsertSummary): Promise<Summary> {
-    // Debug logging to identify the issue
-    console.log('Creating summary with data:', {
-      videoId: summary.videoId,
-      summaryLength: summary.summary?.length,
-      keyTopics: summary.keyTopics,
-      keyTopicsType: typeof summary.keyTopics,
-      keyTopicsIsArray: Array.isArray(summary.keyTopics)
-    });
-    
     // Ensure keyTopics is a clean string array with proper character escaping
     const cleanKeyTopics = Array.isArray(summary.keyTopics) 
       ? summary.keyTopics
@@ -170,18 +161,24 @@ export class DatabaseStorage implements IStorage {
             .replace(/['']/g, "'")  // Replace smart quotes with regular quotes
             .replace(/[""]/g, '"')  // Replace smart double quotes
             .replace(/[–—]/g, '-')  // Replace em/en dashes with hyphens
+            .replace(/\\/g, '\\\\')  // Escape backslashes
+            .replace(/'/g, "''")     // Escape single quotes for PostgreSQL
             .trim()
           )
       : [];
-      
-    console.log('Cleaned keyTopics:', cleanKeyTopics);
     
-    const [createdSummary] = await db.insert(summaries).values({
-      videoId: summary.videoId,
-      summary: summary.summary,
-      keyTopics: cleanKeyTopics
-    }).returning();
-    return createdSummary;
+    // Use raw SQL to properly handle PostgreSQL text array
+    const pgArrayLiteral = '{' + cleanKeyTopics.map(topic => `"${topic.replace(/"/g, '\\"')}"`) .join(',') + '}';
+    
+    console.log('Using PostgreSQL array literal:', pgArrayLiteral);
+    
+    const [createdSummary] = await db.execute(sql`
+      INSERT INTO summaries (video_id, summary, key_topics)
+      VALUES (${summary.videoId}, ${summary.summary}, ${pgArrayLiteral}::text[])
+      RETURNING *
+    `);
+    
+    return createdSummary.rows[0] as Summary;
   }
   
   async getVideoSummary(videoId: number): Promise<Summary | undefined> {

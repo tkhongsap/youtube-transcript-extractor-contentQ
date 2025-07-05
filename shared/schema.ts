@@ -7,6 +7,7 @@ import {
   timestamp,
   serial,
   index,
+  json,
   jsonb
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
