@@ -133,6 +133,13 @@ const VideoDetailPage = () => {
       });
     },
   });
+
+  // Query for additional text collection
+  const { data: additionalTextCollection } = useQuery({
+    queryKey: [`/api/videos/${videoId}/additional-text`],
+    queryFn: () => apiRequest('GET', `/api/videos/${videoId}/additional-text`),
+    enabled: !!videoId,
+  });
   
   const handleReprocess = () => {
     reprocessMutation.mutate();
@@ -252,6 +259,7 @@ const VideoDetailPage = () => {
             <div className="max-w-6xl mx-auto p-4">
               <TranscriptEnhancement
                 originalTranscript={originalTranscript}
+                additionalTextCollection={additionalTextCollection?.data}
                 onSaveAdditionalText={async (data) => {
                   await saveAdditionalTextMutation.mutateAsync(data);
                 }}
