@@ -3,6 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type Video, type Summary } from "@shared/schema";
 import GenerateContentGrid from "@/components/content/GenerateContentGrid";
+import { ContentGenerationCard } from "@/components/content/ContentGenerationCard";
 import { TranscriptEnhancement } from "@/components/TranscriptEnhancement";
 import type { OriginalTranscript, CreateAdditionalTextInput } from "@/types/transcript";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +19,7 @@ const VideoDetailPage = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const [activeTab, setActiveTab] = useState("summary");
+  const [activeTab, setActiveTab] = useState("transcript");
   const [isReprocessing, setIsReprocessing] = useState(false);
   
   // Fetch video details
@@ -181,57 +182,30 @@ const VideoDetailPage = () => {
         return (
           <div className="overflow-y-auto h-full pb-16">
             <div className="max-w-6xl mx-auto p-4">
-              {/* Summary Tab Content */}
-              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Key Summary</h3>
-                {isLoadingSummary ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <div className="pt-3"></div>
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-1/2" />
+              {isLoadingSummary ? (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
                   </div>
-                ) : (
-                  <div className="prose max-w-none text-gray-700">
-                    {summary ? (
-                      <p className="whitespace-pre-line">{summary.summary}</p>
-                    ) : (
-                      <p className="text-gray-500 italic">No summary available for this video.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Key Topics */}
-              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Key Topics</h3>
-                <div className="flex flex-wrap gap-2">
-                  {isLoadingSummary ? (
-                    Array(8).fill(0).map((_, index) => (
-                      <Skeleton key={index} className="h-6 w-24 rounded-full" />
-                    ))
-                  ) : (
-                    summary?.keyTopics?.length ? (
-                      summary.keyTopics.map((topic, index) => (
-                        <span key={index} className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                          {topic}
-                        </span>
-                      ))
-                    ) : (
-                      <p className="text-gray-500 italic">No topics available.</p>
-                    )
-                  )}
                 </div>
-              </div>
-
-              {/* Action Items */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Generate Content</h3>
-                <GenerateContentGrid videoId={videoId || 0} />
-              </div>
+              ) : (
+                <ContentGenerationCard
+                  title="Summary"
+                  description="Get a comprehensive overview with key points, main topics, and actionable insights from the video transcript."
+                  estimatedCost="$0.05-0.15"
+                  estimatedTime="15-30s"
+                  features={["Key Points", "Main Topics", "Actionable Insights", "Quick Overview"]}
+                  onGenerate={() => console.log("Generate summary")}
+                  isGenerating={false}
+                  generatedContent={summary?.summary}
+                  onRegenerate={() => console.log("Regenerate summary")}
+                  lastGenerated={summary?.createdAt ? new Date(summary.createdAt) : undefined}
+                />
+              )}
             </div>
           </div>
         );
@@ -276,20 +250,68 @@ const VideoDetailPage = () => {
         );
       case "reports":
         return (
-          <div className="max-w-6xl mx-auto p-4">
-            <p className="text-center py-10 text-gray-500">Reports view will be implemented soon.</p>
+          <div className="overflow-y-auto h-full pb-16">
+            <div className="max-w-6xl mx-auto p-4 space-y-6">
+              <ContentGenerationCard
+                title="Medium-Style Article"
+                description="Create a comprehensive, publication-ready article suitable for Medium, LinkedIn, or your blog."
+                estimatedCost="$0.15-0.25"
+                estimatedTime="20-40s"
+                features={["Professional Formatting", "Engaging Headlines", "800-2000 words", "SEO-Optimized"]}
+                onGenerate={() => console.log("Generate Medium report")}
+                isGenerating={false}
+              />
+              <ContentGenerationCard
+                title="LinkedIn Post"
+                description="Generate an engaging LinkedIn post with professional tone and call-to-action."
+                estimatedCost="$0.08-0.15"
+                estimatedTime="10-20s"
+                features={["Professional Tone", "Call-to-Action", "150-300 words", "Hashtag Suggestions"]}
+                onGenerate={() => console.log("Generate LinkedIn post")}
+                isGenerating={false}
+              />
+            </div>
           </div>
         );
       case "flashcards":
         return (
-          <div className="max-w-6xl mx-auto p-4">
-            <p className="text-center py-10 text-gray-500">Flashcards view will be implemented soon.</p>
+          <div className="overflow-y-auto h-full pb-16">
+            <div className="max-w-6xl mx-auto p-4">
+              <ContentGenerationCard
+                title="Flashcard Set"
+                description="Create interactive Q&A flashcards for learning and retention of key concepts from the video."
+                estimatedCost="$0.08-0.20"
+                estimatedTime="15-30s"
+                features={["10-50 Cards", "Q&A Format", "Difficulty Levels", "Spaced Repetition Ready"]}
+                onGenerate={() => console.log("Generate flashcards")}
+                isGenerating={false}
+              />
+            </div>
           </div>
         );
       case "ideas":
         return (
-          <div className="max-w-6xl mx-auto p-4">
-            <p className="text-center py-10 text-gray-500">Ideas view will be implemented soon.</p>
+          <div className="overflow-y-auto h-full pb-16">
+            <div className="max-w-6xl mx-auto p-4 space-y-6">
+              <ContentGenerationCard
+                title="Blog Title Ideas"
+                description="Generate compelling blog titles and article ideas based on the video content."
+                estimatedCost="$0.05-0.10"
+                estimatedTime="10-20s"
+                features={["15-25 Titles", "SEO-Focused", "Multiple Angles", "Engaging Headlines"]}
+                onGenerate={() => console.log("Generate blog ideas")}
+                isGenerating={false}
+              />
+              <ContentGenerationCard
+                title="Social Media Hooks"
+                description="Create attention-grabbing social media hooks and content ideas for various platforms."
+                estimatedCost="$0.05-0.10"
+                estimatedTime="10-20s"
+                features={["Platform-Specific", "Engagement-Focused", "15-30 Hooks", "Trend-Aware"]}
+                onGenerate={() => console.log("Generate social hooks")}
+                isGenerating={false}
+              />
+            </div>
           </div>
         );
       default:
@@ -393,16 +415,6 @@ const VideoDetailPage = () => {
             <nav className="flex -mb-px whitespace-nowrap">
               <button 
                 className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === "summary" 
-                    ? "text-primary-600 border-primary-500" 
-                    : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
-                }`}
-                onClick={() => setActiveTab("summary")}
-              >
-                Summary
-              </button>
-              <button 
-                className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm ${
                   activeTab === "transcript" 
                     ? "text-primary-600 border-primary-500" 
                     : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
@@ -410,6 +422,16 @@ const VideoDetailPage = () => {
                 onClick={() => setActiveTab("transcript")}
               >
                 Transcript
+              </button>
+              <button 
+                className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm ${
+                  activeTab === "summary" 
+                    ? "text-primary-600 border-primary-500" 
+                    : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+                }`}
+                onClick={() => setActiveTab("summary")}
+              >
+                Summary
               </button>
               <button 
                 className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm ${
