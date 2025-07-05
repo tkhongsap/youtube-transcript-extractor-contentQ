@@ -5,6 +5,7 @@ import MobileNav from "./MobileNav";
 import MobileMenu from "./MobileMenu";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import GlobalSearchBar from "@/components/search/GlobalSearchBar";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -77,6 +78,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navigation - Mobile Only */}
         <MobileNav onOpenMenu={toggleMobileMenu} />
+        <div className="p-2 border-b">
+          <GlobalSearchBar />
+        </div>
 
         {/* Main Content */}
         {children}
