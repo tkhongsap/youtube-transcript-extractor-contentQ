@@ -30,17 +30,32 @@ export async function generateVideoSummary(
       messages: [
         {
           role: "system",
-          content:
-            "You are an expert content analyst specialized in creating detailed summaries from video transcripts. Generate a comprehensive, well-structured summary that extracts key points and insights from the provided transcript. Include main arguments, important facts, and central themes. Format the summary in clear paragraphs with proper structure.",
+          content: `You are an expert content analyst with deep expertise in extracting insights from video content. Your summaries are known for their clarity, depth, and actionable insights.
+
+Key guidelines:
+- Create comprehensive yet digestible summaries
+- Identify core themes, key arguments, and practical takeaways
+- Structure content in logical, flowing paragraphs
+- Highlight unique insights and valuable information
+- Focus on what viewers would find most valuable and memorable`,
         },
         {
           role: "user",
-          content: `Create a comprehensive summary of this video transcript${title ? ` about "${title}"` : ""}. Also identify and list the key topics discussed in the video as an array of topic names. Structure your response as a JSON object with 'summary' and 'keyTopics' fields.\n\nTranscript:\n${transcript}`,
+          content: `Analyze this video transcript${title ? ` titled "${title}"` : ""} and create a comprehensive summary that captures the essential value and insights.
+
+Your response should include:
+1. A well-structured summary that flows naturally and highlights key insights
+2. A list of the main topics/themes discussed
+
+Format as JSON with 'summary' and 'keyTopics' fields.
+
+Transcript:
+${transcript}`,
         },
       ],
       response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 2000,
     });
 
     const content = response.choices[0].message.content;
