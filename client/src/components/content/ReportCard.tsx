@@ -8,10 +8,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import ReportEditor from "@/components/content/ReportEditor";
 
 interface ReportCardProps {
   report: {
     id: number;
+    videoId: number;
     title: string;
     content: string;
     type: string;
@@ -104,10 +106,12 @@ const ReportCard = ({ report }: ReportCardProps) => {
                   <span className="material-icons text-sm mr-2">content_copy</span>
                   Copy
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <span className="material-icons text-sm mr-2">edit</span>
-                  Edit
-                </DropdownMenuItem>
+                <ReportEditor report={report}>
+                  <DropdownMenuItem>
+                    <span className="material-icons text-sm mr-2">edit</span>
+                    Edit
+                  </DropdownMenuItem>
+                </ReportEditor>
                 <DropdownMenuItem>
                   <span className="material-icons text-sm mr-2">file_download</span>
                   Download
