@@ -59,7 +59,7 @@
 }
 
 .transcript-additional-actions {
-  @apply flex gap-1 opacity-0 group-hover:opacity-100;
+  @apply flex gap-1 opacity-0;
   @apply transition-opacity duration-200;
 }
 
@@ -73,7 +73,7 @@
 }
 
 .transcript-enhanced-section {
-  @apply group relative;
+  @apply relative;
 }
 
 /* Section Labels */
@@ -207,21 +207,19 @@
 /* Ensure minimum color contrast ratios */
 .transcript-section-label-original {
   /* Ensures 4.5:1 contrast ratio */
-  color: oklch(from theme(colors.blue.600) calc(l * 0.8) c h);
+  @apply text-blue-700;
 }
 
 .transcript-section-label-additional {
   /* Ensures 4.5:1 contrast ratio */
-  color: oklch(from theme(colors.green.600) calc(l * 0.8) c h);
+  @apply text-green-700;
 }
 
-/* Fallback for browsers that don't support oklch */
-@supports not (color: oklch(0.5 0.1 180)) {
-  .transcript-section-label-original {
-    @apply text-blue-700 dark:text-blue-300;
-  }
-  
-  .transcript-section-label-additional {
-    @apply text-green-700 dark:text-green-300;
-  }
+/* Dark mode styles */
+.dark .transcript-section-label-original {
+  @apply text-blue-300;
+}
+
+.dark .transcript-section-label-additional {
+  @apply text-green-300;
 }

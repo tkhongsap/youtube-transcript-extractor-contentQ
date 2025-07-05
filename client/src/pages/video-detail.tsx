@@ -3,7 +3,8 @@ import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type Video, type Summary } from "@shared/schema";
 import GenerateContentGrid from "@/components/content/GenerateContentGrid";
-import TranscriptView from "@/components/video/TranscriptView";
+import { TranscriptEnhancement } from "@/components/TranscriptEnhancement";
+import type { OriginalTranscript, CreateAdditionalTextInput } from "@/types/transcript";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,12 @@ const VideoDetailPage = () => {
   // Fetch video summary
   const { data: summary, isLoading: isLoadingSummary } = useQuery<Summary>({
     queryKey: [`/api/videos/${videoId}/summary`],
+    enabled: !!videoId,
+  });
+
+  // Fetch transcript data for enhancement
+  const { data: transcriptData } = useQuery<{ format: string; data: { transcript: string } }>({
+    queryKey: [`/api/videos/${videoId}/transcript`],
     enabled: !!videoId,
   });
   
@@ -63,6 +70,69 @@ const VideoDetailPage = () => {
       setIsReprocessing(false);
     },
   });
+
+  // Mutation for saving additional text
+  const saveAdditionalTextMutation = useMutation({
+    mutationFn: async (data: CreateAdditionalTextInput) => {
+      return apiRequest('POST', `/api/videos/${videoId}/additional-text`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Additional text saved successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/additional-text`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save additional text",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for updating additional text
+  const updateAdditionalTextMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: CreateAdditionalTextInput }) => {
+      return apiRequest('PUT', `/api/videos/${videoId}/additional-text/${id}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Additional text updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/additional-text`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update additional text",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for deleting additional text
+  const deleteAdditionalTextMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest('DELETE', `/api/videos/${videoId}/additional-text/${id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Additional text deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/additional-text`] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete additional text",
+        variant: "destructive",
+      });
+    },
+  });
   
   const handleReprocess = () => {
     reprocessMutation.mutate();
@@ -70,6 +140,31 @@ const VideoDetailPage = () => {
   
   const handleBackClick = () => {
     navigate("/");
+  };
+
+  // Transform transcript data to OriginalTranscript format
+  const createOriginalTranscript = (): OriginalTranscript | null => {
+    if (!video || !transcriptData?.data?.transcript) return null;
+    
+    return {
+      videoId: video.id,
+      rawText: transcriptData.data.transcript || video.transcript || '',
+      source: 'youtube',
+      generatedAt: video.createdAt ? new Date(video.createdAt) : new Date(),
+      language: 'en', // Default to English for now
+      duration: video.duration ? parseDuration(video.duration) : undefined,
+    };
+  };
+
+  // Helper function to parse duration string to seconds
+  const parseDuration = (duration: string): number => {
+    const parts = duration.split(':');
+    if (parts.length === 2) {
+      return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    } else if (parts.length === 3) {
+      return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+    }
+    return 0;
   };
   
   const renderTabContent = () => {
@@ -133,8 +228,42 @@ const VideoDetailPage = () => {
           </div>
         );
       case "transcript":
+        const originalTranscript = createOriginalTranscript();
+        
+        if (!originalTranscript) {
+          return (
+            <div className="overflow-y-auto h-full pb-16">
+              <div className="max-w-6xl mx-auto p-4">
+                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Transcript</h3>
+                  <div className="space-y-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        
         return (
-          <TranscriptView videoId={videoId || 0} transcript="" />
+          <div className="overflow-y-auto h-full pb-16">
+            <div className="max-w-6xl mx-auto p-4">
+              <TranscriptEnhancement
+                originalTranscript={originalTranscript}
+                onSaveAdditionalText={async (data) => {
+                  await saveAdditionalTextMutation.mutateAsync(data);
+                }}
+                onUpdateAdditionalText={async (id, data) => {
+                  await updateAdditionalTextMutation.mutateAsync({ id, data });
+                }}
+                onDeleteAdditionalText={async (id) => {
+                  await deleteAdditionalTextMutation.mutateAsync(id);
+                }}
+              />
+            </div>
+          </div>
         );
       case "reports":
         return (
