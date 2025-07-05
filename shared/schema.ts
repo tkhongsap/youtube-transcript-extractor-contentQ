@@ -86,6 +86,8 @@ export const reports = pgTable("reports", {
   title: text("title").notNull(),
   content: text("content").notNull(),
   type: text("type").notNull(), // "medium" or "linkedin"
+  editCount: integer("edit_count").default(0).notNull(),
+  lastModified: timestamp("last_modified").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -119,6 +121,7 @@ export const flashcards = pgTable("flashcards", {
   flashcardSetId: integer("flashcard_set_id").notNull().references(() => flashcardSets.id),
   question: text("question").notNull(),
   answer: text("answer").notNull(),
+  lastModified: timestamp("last_modified").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -150,6 +153,7 @@ export const ideas = pgTable("ideas", {
   id: serial("id").primaryKey(),
   ideaSetId: integer("idea_set_id").notNull().references(() => ideaSets.id),
   content: text("content").notNull(),
+  lastModified: timestamp("last_modified").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -163,11 +167,11 @@ export const ideaRelations = relations(ideas, ({ one }) => ({
 // Insert schemas for all tables
 export const insertVideoSchema = createInsertSchema(videos).omit({ id: true, createdAt: true });
 export const insertSummarySchema = createInsertSchema(summaries).omit({ id: true, createdAt: true });
-export const insertReportSchema = createInsertSchema(reports).omit({ id: true, createdAt: true });
+export const insertReportSchema = createInsertSchema(reports).omit({ id: true, createdAt: true, editCount: true, lastModified: true });
 export const insertFlashcardSetSchema = createInsertSchema(flashcardSets).omit({ id: true, createdAt: true });
-export const insertFlashcardSchema = createInsertSchema(flashcards).omit({ id: true, createdAt: true });
+export const insertFlashcardSchema = createInsertSchema(flashcards).omit({ id: true, createdAt: true, lastModified: true });
 export const insertIdeaSetSchema = createInsertSchema(ideaSets).omit({ id: true, createdAt: true });
-export const insertIdeaSchema = createInsertSchema(ideas).omit({ id: true, createdAt: true });
+export const insertIdeaSchema = createInsertSchema(ideas).omit({ id: true, createdAt: true, lastModified: true });
 
 // Export types
 export type InsertVideo = z.infer<typeof insertVideoSchema>;
