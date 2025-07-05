@@ -471,22 +471,26 @@ const VideoDetailPage = () => {
               {flashcardSets.length > 0 && (
                 <div className="space-y-6 mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Flashcard Sets</h3>
-                  {flashcardSets.map((set: any) => (
-                    <div key={set.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                      <div className="flex justify-between items-start mb-3">
-                        <h4 className="text-md font-medium text-gray-900">{set.title}</h4>
-                        <span className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(set.createdAt), { addSuffix: true })}
-                        </span>
+                  <div className="max-h-[70vh] overflow-y-auto space-y-4 pr-2">
+                    {flashcardSets.map((set: any) => (
+                      <div key={set.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="text-md font-medium text-gray-900">{set.title}</h4>
+                          <span className="text-xs text-gray-500">
+                            {formatDistanceToNow(new Date(set.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                        {set.description && (
+                          <div className="text-gray-600 mb-4 max-h-32 overflow-y-auto">
+                            <p>{set.description}</p>
+                          </div>
+                        )}
+                        <div className="text-sm text-blue-600 mb-3">
+                          Click to view {set.flashcardCount || 'generated'} flashcards →
+                        </div>
                       </div>
-                      {set.description && (
-                        <p className="text-gray-600 mb-4">{set.description}</p>
-                      )}
-                      <div className="text-sm text-blue-600 mb-3">
-                        Click to view {set.flashcardCount || 'generated'} flashcards →
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
               
@@ -516,19 +520,21 @@ const VideoDetailPage = () => {
               {ideaSets.length > 0 && (
                 <div className="space-y-6 mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Ideas</h3>
-                  {ideaSets.map((set: any) => (
-                    <div key={set.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                      <div className="flex justify-between items-start mb-3">
-                        <h4 className="text-md font-medium text-gray-900 capitalize">{set.type.replace('_', ' ')}</h4>
-                        <span className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(set.createdAt), { addSuffix: true })}
-                        </span>
+                  <div className="max-h-[70vh] overflow-y-auto space-y-4 pr-2">
+                    {ideaSets.map((set: any) => (
+                      <div key={set.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                        <div className="flex justify-between items-start mb-3">
+                          <h4 className="text-md font-medium text-gray-900 capitalize">{set.type.replace('_', ' ')}</h4>
+                          <span className="text-xs text-gray-500">
+                            {formatDistanceToNow(new Date(set.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <div className="text-sm text-blue-600 mb-3">
+                          {set.ideaCount || 'Multiple'} ideas generated →
+                        </div>
                       </div>
-                      <div className="text-sm text-blue-600 mb-3">
-                        {set.ideaCount || 'Multiple'} ideas generated →
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
               
