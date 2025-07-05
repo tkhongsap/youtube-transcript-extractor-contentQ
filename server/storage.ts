@@ -153,10 +153,24 @@ export class DatabaseStorage implements IStorage {
   
   // Summary operations
   async createSummary(summary: InsertSummary): Promise<Summary> {
+    // Debug logging to identify the issue
+    console.log('Creating summary with data:', {
+      videoId: summary.videoId,
+      summaryLength: summary.summary?.length,
+      keyTopics: summary.keyTopics,
+      keyTopicsType: typeof summary.keyTopics,
+      keyTopicsIsArray: Array.isArray(summary.keyTopics)
+    });
+    
+    // Ensure keyTopics is a clean string array
+    const cleanKeyTopics = Array.isArray(summary.keyTopics) 
+      ? summary.keyTopics.filter(topic => typeof topic === 'string' && topic.trim().length > 0)
+      : [];
+    
     const [createdSummary] = await db.insert(summaries).values({
       videoId: summary.videoId,
       summary: summary.summary,
-      keyTopics: Array.isArray(summary.keyTopics) ? summary.keyTopics as string[] : []
+      keyTopics: cleanKeyTopics
     }).returning();
     return createdSummary;
   }
