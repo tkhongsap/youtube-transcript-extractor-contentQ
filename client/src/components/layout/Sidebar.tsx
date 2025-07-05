@@ -34,13 +34,13 @@ const Sidebar = ({ user }: SidebarProps) => {
             key={item.path}
             href={item.path}
             className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-              location === item.path
+              location.startsWith(item.path)
                 ? "bg-primary-50 text-primary-700"
                 : "text-gray-700 hover:bg-gray-50"
             }`}
           >
             <span className={`material-icons mr-3 ${
-              location === item.path ? "text-primary-500" : "text-gray-400"
+              location.startsWith(item.path) ? "text-primary-500" : "text-gray-400"
             }`}>
               {item.icon}
             </span>
