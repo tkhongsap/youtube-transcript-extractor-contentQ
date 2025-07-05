@@ -54,7 +54,7 @@ router.post('/process', isAuthenticated, async (req: any, res, next) => {
     const videoId = youtube.extractVideoId(youtubeUrl);
     
     if (!videoId) {
-      const error = new Error('Invalid YouTube URL format');
+      const error = new Error('Invalid YouTube URL format. Please provide a valid YouTube video URL.');
       (error as any).statusCode = 400;
       return next(error);
     }
@@ -63,128 +63,231 @@ router.post('/process', isAuthenticated, async (req: any, res, next) => {
     const existingVideo = await storage.getVideoByYoutubeId(videoId, userId);
     
     if (existingVideo) {
-      return res.json(existingVideo);
+      // Return existing video with current processing status
+      return res.json({
+        ...existingVideo,
+        status: 'processed',
+        message: 'Video already processed and available'
+      });
     }
     
-    // Get video metadata
-    const videoInfo = await youtube.getVideoDetails(videoId);
-    
-    // Create video record
-    const video = await storage.createVideo({
-      userId,
-      youtubeId: videoId,
-      title: videoInfo.title,
-      channelTitle: videoInfo.channelTitle,
-      description: videoInfo.description,
-      thumbnailUrl: videoInfo.thumbnailUrl,
-      duration: videoInfo.duration,
-    });
-    
-    // Return immediately with the video record
-    res.status(201).json(video);
-    
-    // Process transcript and generate content in the background
-    (async () => {
-      try {
-        console.log(`Starting background processing for video ${video.id}`);
-        
-        // Get transcript
-        const transcript = await youtube.getVideoTranscript(videoId);
-        console.log(`Got transcript with ${transcript.length} characters`);
-        
-        // Update video with transcript
-        await storage.updateVideo(video.id, { transcript });
-        
-        // Generate summary with key topics
-        const summaryData = await openai.generateVideoSummary(transcript, video.title);
-        console.log(`Generated summary with ${summaryData.keyTopics.length} key topics`);
-        
-        // Save summary
-        await storage.createSummary({
-          videoId: video.id,
-          summary: summaryData.summary,
-          keyTopics: summaryData.keyTopics,
-        });
-        
-        // Generate Medium and LinkedIn reports
-        const mediumReport = await openai.generateMediumReport(transcript, video.title, summaryData.summary);
-        const linkedinReport = await openai.generateLinkedInPost(transcript, video.title, summaryData.summary);
-        
-        // Save reports
-        await storage.createReport({
-          videoId: video.id,
-          title: mediumReport.title,
-          content: mediumReport.content,
-          type: "medium",
-        });
-        
-        await storage.createReport({
-          videoId: video.id,
-          title: linkedinReport.title,
-          content: linkedinReport.content,
-          type: "linkedin",
-        });
-        
-        // Generate flashcards
-        const flashcardData = await openai.generateFlashcards(transcript, video.title, summaryData.summary);
-        const flashcardSet = await storage.createFlashcardSet({
-          videoId: video.id,
-          title: flashcardData.title,
-          description: flashcardData.description,
-        });
-        
-        // Save individual flashcards
-        for (const card of flashcardData.flashcards) {
-          await storage.createFlashcard({
-            flashcardSetId: flashcardSet.id,
-            question: card.question,
-            answer: card.answer,
-          });
-        }
-        
-        // Generate different types of ideas
-        const ideaTypes = [
-          { type: 'blog_titles', generator: openai.generateBlogIdeas },
-          { type: 'social_media_hooks', generator: openai.generateSocialMediaHooks },
-          { type: 'questions', generator: openai.generateFollowUpQuestions },
-        ];
-        
-        for (const { type, generator } of ideaTypes) {
-          const ideas = await generator(transcript, video.title, summaryData.summary);
-          const ideaSet = await storage.createIdeaSet({
-            videoId: video.id,
-            type,
-          });
-          
-          // Save individual ideas
-          for (const idea of ideas) {
-            await storage.createIdea({
-              ideaSetId: ideaSet.id,
-              content: idea,
-            });
-          }
-        }
-        
-        console.log(`Completed background processing for video ${video.id}`);
-        
-      } catch (error) {
-        console.error(`Error in background processing for video ${video.id}:`, error);
-      }
-    })();
+    try {
+      // Get video metadata
+      const videoInfo = await youtube.getVideoDetails(videoId);
+      
+      // Create video record
+      const video = await storage.createVideo({
+        userId,
+        youtubeId: videoId,
+        title: videoInfo.title,
+        channelTitle: videoInfo.channelTitle,
+        description: videoInfo.description,
+        thumbnailUrl: videoInfo.thumbnailUrl,
+        duration: videoInfo.duration,
+      });
+      
+      // Return immediately with the video record and processing status
+      res.status(201).json({
+        ...video,
+        status: 'processing',
+        message: 'Video added successfully. AI content generation is in progress.'
+      });
+      
+      // Process transcript and generate content in the background
+      processVideoInBackground(video, videoId);
+      
+    } catch (videoError) {
+      console.error(`Error getting video details for ${videoId}:`, videoError);
+      const error = new Error('Unable to access this video. It may be private, deleted, or restricted.');
+      (error as any).statusCode = 404;
+      return next(error);
+    }
     
   } catch (error) {
     console.error("Error processing video:", error);
     
     if (error instanceof ZodError) {
-      const validationError = new Error('Invalid YouTube URL');
+      const validationError = new Error('Invalid YouTube URL format');
       (validationError as any).statusCode = 400;
-      (validationError as any).details = error.errors;
       return next(validationError);
     }
     
     next(error);
   }
 });
+
+// Background processing function with enhanced error handling
+async function processVideoInBackground(video: any, videoId: string) {
+  const maxRetries = 3;
+  const retryDelay = 5000; // 5 seconds
+  
+  // Helper function for retrying operations
+  async function retryOperation<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    retries = maxRetries
+  ): Promise<T | null> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        console.error(`${operationName} failed (attempt ${attempt}/${retries}):`, error);
+        
+        if (attempt === retries) {
+          console.error(`${operationName} failed after ${retries} attempts, skipping.`);
+          return null;
+        }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
+    return null;
+  }
+  
+  try {
+    console.log(`Starting background processing for video ${video.id} - "${video.title}"`);
+    
+    // Step 1: Get transcript with fallback strategies
+    const transcript = await retryOperation(
+      () => youtube.getVideoTranscriptWithFallbacks(videoId),
+      'Transcript extraction'
+    );
+    
+    if (!transcript) {
+      console.log(`Transcript extraction failed for video ${video.id}, using description as fallback`);
+      // Use video description as fallback content for AI processing
+      const fallbackContent = video.description || `Video titled: ${video.title}`;
+      
+      // Generate content using description
+      const summaryData = await retryOperation(
+        () => openai.generateVideoSummary(fallbackContent, video.title),
+        'Summary generation (fallback)'
+      );
+      
+      if (summaryData) {
+        await storage.createSummary({
+          videoId: video.id,
+          summary: summaryData.summary + '\n\n*Note: Generated from video description as transcript was unavailable.*',
+          keyTopics: summaryData.keyTopics,
+        });
+      }
+      return;
+    }
+    
+    console.log(`Successfully extracted transcript: ${transcript.length} characters`);
+    
+    // Update video with transcript
+    await storage.updateVideo(video.id, { transcript });
+    
+    // Step 2: Generate summary with key topics
+    const summaryData = await retryOperation(
+      () => openai.generateVideoSummary(transcript, video.title),
+      'Summary generation'
+    );
+    
+    if (!summaryData) {
+      console.error(`Summary generation failed for video ${video.id}`);
+      return;
+    }
+    
+    console.log(`Generated summary with ${summaryData.keyTopics.length} key topics`);
+    
+    // Save summary
+    await storage.createSummary({
+      videoId: video.id,
+      summary: summaryData.summary,
+      keyTopics: summaryData.keyTopics,
+    });
+    
+    // Step 3: Generate reports
+    const reportTasks = [
+      {
+        name: 'Medium report',
+        type: 'medium',
+        generator: () => openai.generateMediumReport(transcript, video.title, summaryData.summary)
+      },
+      {
+        name: 'LinkedIn post',
+        type: 'linkedin',
+        generator: () => openai.generateLinkedInPost(transcript, video.title, summaryData.summary)
+      }
+    ];
+    
+    for (const task of reportTasks) {
+      const report = await retryOperation(task.generator, task.name);
+      if (report) {
+        await storage.createReport({
+          videoId: video.id,
+          title: report.title,
+          content: report.content,
+          type: task.type,
+        });
+        console.log(`Generated ${task.name}`);
+      }
+    }
+    
+    // Step 4: Generate flashcards
+    const flashcardData = await retryOperation(
+      () => openai.generateFlashcards(transcript, video.title, summaryData.summary),
+      'Flashcard generation'
+    );
+    
+    if (flashcardData) {
+      const flashcardSet = await storage.createFlashcardSet({
+        videoId: video.id,
+        title: flashcardData.title,
+        description: flashcardData.description,
+      });
+      
+      // Save individual flashcards
+      for (const card of flashcardData.flashcards) {
+        await storage.createFlashcard({
+          flashcardSetId: flashcardSet.id,
+          question: card.question,
+          answer: card.answer,
+        });
+      }
+      console.log(`Generated ${flashcardData.flashcards.length} flashcards`);
+    }
+    
+    // Step 5: Generate different types of ideas
+    const ideaTypes = [
+      { type: 'blog_titles', name: 'Blog titles', generator: openai.generateBlogIdeas },
+      { type: 'social_media_hooks', name: 'Social media hooks', generator: openai.generateSocialMediaHooks },
+      { type: 'questions', name: 'Follow-up questions', generator: openai.generateFollowUpQuestions },
+    ];
+    
+    for (const { type, name, generator } of ideaTypes) {
+      const ideas = await retryOperation(
+        () => generator(transcript, video.title, summaryData.summary),
+        name
+      );
+      
+      if (ideas && ideas.length > 0) {
+        const ideaSet = await storage.createIdeaSet({
+          videoId: video.id,
+          type,
+        });
+        
+        // Save individual ideas
+        for (const idea of ideas) {
+          await storage.createIdea({
+            ideaSetId: ideaSet.id,
+            content: idea,
+          });
+        }
+        console.log(`Generated ${ideas.length} ${name.toLowerCase()}`);
+      }
+    }
+    
+    console.log(`✅ Completed background processing for video ${video.id} - "${video.title}"`);
+    
+  } catch (error) {
+    console.error(`❌ Critical error in background processing for video ${video.id}:`, error);
+    // Consider updating video record with error status if needed
+  }
+}
 
 // Get user's videos
 router.get('/', isAuthenticated, async (req: any, res, next) => {
