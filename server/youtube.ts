@@ -209,7 +209,9 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
         return formattedTranscript;
       }
     } else {
-      throw new TranscriptNotFoundError(videoId);
+      console.log(`No transcript segments found for video ${videoId}, trying fallback strategies`);
+      // Try fallback strategies before giving up
+      return await getVideoTranscriptWithFallbacks(videoId);
     }
   } catch (error) {
     console.error(`Error fetching video transcript for ${videoId}:`, error);
@@ -247,8 +249,12 @@ export async function getVideoTranscript(videoId: string): Promise<string> {
       return `Title: ${videoTitle}\n\nChannel: ${channelTitle}\n\n` +
         `Description:\n${description}\n\n` +
         `Note: Unable to retrieve the full transcript for this video. ` +
-        `This could be due to unavailable captions or regional restrictions. ` +
-        `The video may not have auto-generated captions or manually uploaded subtitles.`;
+        `This could be due to:\n` +
+        `• Captions are disabled by the video owner\n` +
+        `• Regional restrictions prevent access to transcripts\n` +
+        `• The video may not have auto-generated captions or manually uploaded subtitles\n` +
+        `• Technical issues with the YouTube transcript service\n\n` +
+        `Please try again later or contact the video owner about enabling captions.`;
     } catch (secondaryError) {
       if (secondaryError instanceof TranscriptError || secondaryError instanceof VideoNotFoundError) {
         throw secondaryError;
@@ -345,7 +351,11 @@ export async function getVideoTranscriptWithTimestamps(videoId: string): Promise
         }))
       };
     } else {
-      throw new TranscriptNotFoundError(videoId);
+      console.log(`No transcript segments found for video ${videoId} with timestamps`);
+      return {
+        success: false,
+        error: 'No transcript segments found for this video'
+      };
     }
   } catch (error) {
     console.error(`Error fetching video transcript with timestamps for ${videoId}:`, error);
@@ -397,6 +407,8 @@ export function isValidYoutubeUrl(url: string): boolean {
  * This function attempts different approaches to get a transcript
  */
 export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<string> {
+  console.log(`Attempting fallback strategies for video ${videoId}`);
+  
   const strategies = [
     // Strategy 1: Try English captions
     async () => {
@@ -414,12 +426,79 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
       const languages = ['en-US', 'en-GB', 'auto'];
       for (const lang of languages) {
         try {
-          return await YoutubeTranscript.fetchTranscript(videoId, { lang });
-                 } catch (e: any) {
-           continue;
-         }
+          const result = await YoutubeTranscript.fetchTranscript(videoId, { lang });
+          // Check if result has content
+          if (result && Array.isArray(result) && result.length > 0) {
+            return result;
+          }
+        } catch (e: any) {
+          console.log(`Language ${lang} failed:`, e.message);
+          continue;
+        }
       }
       throw new Error('No transcript found in any language');
+    },
+    // Strategy 4: Try direct fetch without any options - sometimes works when others fail
+    async () => {
+      const { YoutubeTranscript } = await import('youtube-transcript');
+      console.log('Trying direct fetch without language specification...');
+      
+      // Sometimes the library works better without any configuration
+      const result = await YoutubeTranscript.fetchTranscript(videoId, {});
+      console.log('Direct fetch result length:', result?.length || 0);
+      
+      if (result && Array.isArray(result) && result.length > 0) {
+        return result;
+      }
+      
+      throw new Error('Direct fetch returned empty result');
+    },
+    // Strategy 5: Try with a retry mechanism and timeout
+    async () => {
+      const { YoutubeTranscript } = await import('youtube-transcript');
+      console.log('Trying with retry mechanism...');
+      
+      // Sometimes the first call fails but a second call works
+      let lastError;
+      const maxRetries = 3;
+      
+      for (let retry = 0; retry < maxRetries; retry++) {
+        try {
+          console.log(`Retry attempt ${retry + 1}/${maxRetries}`);
+          
+          // Try both with and without language specification
+          const attempts = [
+            () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en' }),
+            () => YoutubeTranscript.fetchTranscript(videoId),
+            () => YoutubeTranscript.fetchTranscript(videoId, { lang: 'en', country: 'US' })
+          ];
+          
+          for (const attempt of attempts) {
+            try {
+              const result = await attempt();
+              console.log(`Attempt result length: ${result?.length || 0}`);
+              
+              if (result && Array.isArray(result) && result.length > 0) {
+                console.log('SUCCESS: Got transcript with retry mechanism');
+                return result;
+              }
+            } catch (attemptError) {
+              console.log('Attempt failed:', attemptError.message);
+              lastError = attemptError;
+            }
+          }
+          
+          // Wait before next retry
+          if (retry < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        } catch (error) {
+          lastError = error;
+          console.log(`Retry ${retry + 1} failed:`, error.message);
+        }
+      }
+      
+      throw new Error(`All retry attempts failed. Last error: ${lastError?.message || 'Unknown error'}`);
     }
   ];
 
@@ -467,6 +546,7 @@ export async function getVideoTranscriptWithFallbacks(videoId: string): Promise<
      }
   }
   
-  // If all strategies fail, throw an error
+  // If all strategies fail, provide a helpful error message
+  console.error(`All transcript extraction strategies failed for video ${videoId}`);
   throw new TranscriptNotFoundError(videoId);
 }
