@@ -1,21 +1,20 @@
+import { createInsertSchema } from "drizzle-zod";
 import {
   pgTable,
-  text,
-  serial,
-  integer,
-  boolean,
-  timestamp,
-  jsonb,
   varchar,
+  text,
+  integer,
+  timestamp,
+  serial,
   index,
+  jsonb
 } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
 import { relations } from "drizzle-orm";
+import { z } from "zod";
 
-// Session storage table for auth
+// Session table for express-session
 export const sessions = pgTable(
-  "sessions",
+  "session",
   {
     sid: varchar("sid").primaryKey(),
     sess: jsonb("sess").notNull(),
@@ -42,12 +41,12 @@ export type User = typeof users.$inferSelect;
 export const videos = pgTable("videos", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
-  youtubeId: text("youtube_id").notNull(),
+  youtubeId: varchar("youtube_id").notNull(),
   title: text("title").notNull(),
-  channelTitle: text("channel_title"),
+  channelTitle: varchar("channel_title"),
   description: text("description"),
   thumbnailUrl: text("thumbnail_url"),
-  duration: text("duration"),
+  duration: varchar("duration"),
   transcript: text("transcript"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -63,12 +62,12 @@ export const videoRelations = relations(videos, ({ one, many }) => ({
   ideaSets: many(ideaSets),
 }));
 
-// Video summaries table
+// Summaries table
 export const summaries = pgTable("summaries", {
   id: serial("id").primaryKey(),
   videoId: integer("video_id").notNull().references(() => videos.id),
   summary: text("summary").notNull(),
-  keyTopics: jsonb("key_topics").notNull().$type<string[]>(),
+  keyTopics: text("key_topics").array().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -196,9 +195,9 @@ export const youtubeUrlSchema = z.object({
     (url) => {
       const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
       return youtubeRegex.test(url);
-    }, 
-    { message: "Must be a valid YouTube URL" }
-  )
+    },
+    {
+      message: "Must be a valid YouTube URL",
+    }
+  ),
 });
-
-export type YoutubeUrlInput = z.infer<typeof youtubeUrlSchema>;

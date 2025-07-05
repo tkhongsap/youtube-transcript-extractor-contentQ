@@ -5,7 +5,7 @@ import * as youtube from '../youtube';
 const router = Router();
 
 // Development route for updating transcript
-router.get('/update-transcript/:videoId', async (req, res) => {
+router.get('/update-transcript/:videoId', async (req, res, next) => {
   try {
     const videoId = req.params.videoId;
     console.log(`Attempting to update transcript for YouTube video ID: ${videoId}`);
@@ -15,23 +15,23 @@ router.get('/update-transcript/:videoId', async (req, res) => {
     const dbVideo = await storage.getVideo(dbVideoId);
     
     if (!dbVideo) {
-      return res.status(404).json({ message: "Video not found in database" });
+      const error = new Error("Video not found in database");
+      (error as any).statusCode = 404;
+      return next(error);
     }
     
     try {
-      // Get new transcript with fallback strategies
-      console.log("Fetching transcript...");
-      const transcript = await youtube.getVideoTranscriptWithFallbacks(videoId);
-      console.log("Transcript fetched successfully");
+      console.log(`Fetching transcript for YouTube video ID: ${videoId}`);
+      const transcript = await youtube.getVideoTranscript(videoId);
+      console.log(`Successfully fetched transcript. Length: ${transcript.length} characters`);
       
       // Update the video with the new transcript
-      console.log("Updating video in database...");
       await storage.updateVideo(dbVideoId, { transcript });
-      console.log("Database updated successfully");
       
       res.json({ 
-        message: "Transcript updated successfully", 
-        transcript_preview: transcript.substring(0, 300) + "..." 
+        message: "Transcript updated successfully",
+        transcriptLength: transcript.length,
+        videoId: dbVideoId
       });
     } catch (transcriptError) {
       console.error("Transcript error:", transcriptError);
@@ -40,17 +40,13 @@ router.get('/update-transcript/:videoId', async (req, res) => {
       const fallbackTranscript = "We were unable to retrieve the full transcript for this video due to technical limitations. Please try again later or check if the video has captions available.";
       await storage.updateVideo(dbVideoId, { transcript: fallbackTranscript });
       
-      res.status(500).json({ 
-        message: "Failed to update transcript with error",
-        error: transcriptError instanceof Error ? transcriptError.message : String(transcriptError)
-      });
+      const error = new Error("Failed to update transcript with error");
+      (error as any).statusCode = 500;
+      (error as any).details = transcriptError instanceof Error ? transcriptError.message : String(transcriptError);
+      next(error);
     }
   } catch (error) {
-    console.error("Error in transcript update route:", error);
-    res.status(500).json({ 
-      message: "Failed to update transcript",
-      error: error instanceof Error ? error.message : String(error)
-    });
+    next(error);
   }
 });
 

@@ -1,14 +1,14 @@
-import { 
-  users, 
-  videos, 
-  summaries, 
-  reports, 
-  flashcardSets, 
-  flashcards, 
-  ideaSets, 
-  ideas, 
-  type User, 
+import {
   type UpsertUser,
+  type User,
+  users,
+  videos,
+  summaries,
+  reports,
+  flashcardSets,
+  flashcards,
+  ideaSets,
+  ideas,
   type Video,
   type InsertVideo,
   type Summary,
@@ -120,19 +120,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateVideo(id: number, data: Partial<InsertVideo>): Promise<Video | null> {
-    const [updatedVideo] = await db
+    const [updated] = await db
       .update(videos)
-      .set({
-        ...data,
-        // Don't update these fields
-        userId: undefined,
-        youtubeId: undefined,
-      })
+      .set(data)
       .where(eq(videos.id, id))
       .returning();
-    return updatedVideo || null;
+    return updated || null;
   }
-  
+
   async getUserVideos(userId: string, limit: number = 10): Promise<Video[]> {
     return db
       .select()
@@ -144,12 +139,11 @@ export class DatabaseStorage implements IStorage {
   
   // Summary operations
   async createSummary(summary: InsertSummary): Promise<Summary> {
-    // Ensure keyTopics is an array
-    const formattedSummary = {
-      ...summary,
-      keyTopics: Array.isArray(summary.keyTopics) ? summary.keyTopics : []
-    };
-    const [createdSummary] = await db.insert(summaries).values(formattedSummary).returning();
+    const [createdSummary] = await db.insert(summaries).values({
+      videoId: summary.videoId,
+      summary: summary.summary,
+      keyTopics: Array.isArray(summary.keyTopics) ? summary.keyTopics as string[] : []
+    }).returning();
     return createdSummary;
   }
   
@@ -331,19 +325,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(videos.userId, userId))
       .orderBy(desc(flashcardSets.createdAt))
       .limit(limit);
-      
-    // Get card count for each set
+    
+    // Get card counts for each set
     const setsWithCounts = await Promise.all(
       sets.map(async (set) => {
-        const cards = await db
-          .select({ count: flashcards.id })
-          .from(flashcards)
-          .where(eq(flashcards.flashcardSetId, set.id));
-          
-        return {
-          ...set,
-          cardCount: cards.length
-        };
+        const cards = await this.getFlashcards(set.id);
+        return { ...set, cardCount: cards.length };
       })
     );
     

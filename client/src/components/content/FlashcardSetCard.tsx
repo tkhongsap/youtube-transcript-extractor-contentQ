@@ -12,9 +12,10 @@ import { apiRequest } from "@/lib/queryClient";
 interface FlashcardSetCardProps {
   flashcardSet: {
     id: number;
+    videoId: number;
     title: string;
-    description?: string;
-    createdAt: string;
+    description?: string | null;
+    createdAt: Date | null;
     videoTitle?: string;
     cardCount?: number;
   };
@@ -59,7 +60,7 @@ const FlashcardSetCard = ({ flashcardSet }: FlashcardSetCardProps) => {
             {flashcardSet.cardCount || "?"} cards
           </span>
           <span className="text-xs text-gray-500">
-            {formatDistanceToNow(new Date(flashcardSet.createdAt), { addSuffix: true })}
+            {flashcardSet.createdAt ? formatDistanceToNow(new Date(flashcardSet.createdAt), { addSuffix: true }) : 'Unknown date'}
           </span>
         </div>
         <h3 className="text-gray-900 font-medium text-md mb-2">{flashcardSet.title}</h3>
