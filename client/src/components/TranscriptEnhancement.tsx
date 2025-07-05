@@ -197,9 +197,9 @@ export function TranscriptEnhancement({
                       className="transcript-original-segment transcript-segment-focusable"
                       tabIndex={0}
                       role="region"
-                      aria-label={`Transcript segment ${index + 1}${segment.startTime ? ` at ${formatTime(segment.startTime)}` : ''}`}
+                      aria-label={`Transcript segment ${index + 1}${'startTime' in segment && typeof segment.startTime === 'number' ? ` at ${formatTime(segment.startTime)}` : ''}`}
                     >
-                      {segment.startTime !== undefined && (
+                      {'startTime' in segment && typeof segment.startTime === 'number' && (
                         <span 
                           className="transcript-original-timestamp"
                           aria-label={`Timestamp: ${formatTime(segment.startTime)}`}
@@ -237,7 +237,7 @@ export function TranscriptEnhancement({
                             key={segment.id || index} 
                             className="transcript-original-segment transcript-segment-focusable transcript-segment-hoverable"
                           >
-                            {segment.startTime !== undefined && (
+                            {'startTime' in segment && typeof segment.startTime === 'number' && (
                               <span className="transcript-original-timestamp">
                                 {formatTime(segment.startTime)}
                               </span>
