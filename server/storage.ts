@@ -162,10 +162,19 @@ export class DatabaseStorage implements IStorage {
       keyTopicsIsArray: Array.isArray(summary.keyTopics)
     });
     
-    // Ensure keyTopics is a clean string array
+    // Ensure keyTopics is a clean string array with proper character escaping
     const cleanKeyTopics = Array.isArray(summary.keyTopics) 
-      ? summary.keyTopics.filter(topic => typeof topic === 'string' && topic.trim().length > 0)
+      ? summary.keyTopics
+          .filter(topic => typeof topic === 'string' && topic.trim().length > 0)
+          .map(topic => topic
+            .replace(/['']/g, "'")  // Replace smart quotes with regular quotes
+            .replace(/[""]/g, '"')  // Replace smart double quotes
+            .replace(/[–—]/g, '-')  // Replace em/en dashes with hyphens
+            .trim()
+          )
       : [];
+      
+    console.log('Cleaned keyTopics:', cleanKeyTopics);
     
     const [createdSummary] = await db.insert(summaries).values({
       videoId: summary.videoId,
