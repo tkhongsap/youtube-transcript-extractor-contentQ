@@ -5,10 +5,10 @@ import { z } from 'zod';
 
 const router = Router();
 
-// Validation schemas
+// Validation schemas - matching frontend labels
 const CreateAdditionalTextSchema = z.object({
   content: z.string().min(1, 'Content cannot be empty').max(5000, 'Content too long'),
-  label: z.enum(['Context', 'Correction', 'Insight', 'Question', 'Note']),
+  label: z.enum(['Additional Notes', 'Context', 'Correction', 'Clarification', 'Speaker Note', 'Technical Detail', 'Reference', 'Summary']),
   timestamp: z.number().optional(),
   position: z.enum(['before', 'after', 'inline']).optional(),
   segmentId: z.string().optional(),
@@ -16,7 +16,7 @@ const CreateAdditionalTextSchema = z.object({
 
 const UpdateAdditionalTextSchema = z.object({
   content: z.string().min(1, 'Content cannot be empty').max(5000, 'Content too long').optional(),
-  label: z.enum(['Context', 'Correction', 'Insight', 'Question', 'Note']).optional(),
+  label: z.enum(['Additional Notes', 'Context', 'Correction', 'Clarification', 'Speaker Note', 'Technical Detail', 'Reference', 'Summary']).optional(),
   timestamp: z.number().optional(),
   position: z.enum(['before', 'after', 'inline']).optional(),
   segmentId: z.string().optional(),
