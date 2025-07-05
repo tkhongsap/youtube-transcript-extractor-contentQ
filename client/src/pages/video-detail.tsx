@@ -160,6 +160,112 @@ const VideoDetailPage = () => {
     },
   });
 
+  // Mutations for content generation
+  const generateMediumReportMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/videos/${videoId}/generate-report?type=medium`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Medium Article Generated",
+        description: "AI-generated Medium-style article created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/reports`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate Medium article",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateLinkedInPostMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/videos/${videoId}/generate-report?type=linkedin`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "LinkedIn Post Generated",
+        description: "AI-generated LinkedIn post created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/reports`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate LinkedIn post",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateFlashcardsMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/videos/${videoId}/generate-flashcards`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Flashcards Generated",
+        description: "AI-generated flashcard set created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/flashcard-sets`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/flashcard-sets"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate flashcards",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateBlogIdeasMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/videos/${videoId}/generate-ideas?type=blog_titles`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Blog Ideas Generated",
+        description: "AI-generated blog title ideas created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/idea-sets`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/idea-sets"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate blog ideas",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateSocialHooksMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', `/api/videos/${videoId}/generate-ideas?type=social_media_hooks`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Social Hooks Generated",
+        description: "AI-generated social media hooks created successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/idea-sets`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/idea-sets"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate social hooks",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Query for additional text collection
   const { data: additionalTextResponse } = useQuery<{success: boolean; data: any}>({
     queryKey: [`/api/videos/${videoId}/additional-text`],
@@ -283,8 +389,8 @@ const VideoDetailPage = () => {
                 estimatedCost="$0.15-0.25"
                 estimatedTime="20-40s"
                 features={["Professional Formatting", "Engaging Headlines", "800-2000 words", "SEO-Optimized"]}
-                onGenerate={() => console.log("Generate Medium report")}
-                isGenerating={false}
+                onGenerate={() => generateMediumReportMutation.mutate()}
+                isGenerating={generateMediumReportMutation.isPending}
               />
               <ContentGenerationCard
                 title="LinkedIn Post"
@@ -292,8 +398,8 @@ const VideoDetailPage = () => {
                 estimatedCost="$0.08-0.15"
                 estimatedTime="10-20s"
                 features={["Professional Tone", "Call-to-Action", "150-300 words", "Hashtag Suggestions"]}
-                onGenerate={() => console.log("Generate LinkedIn post")}
-                isGenerating={false}
+                onGenerate={() => generateLinkedInPostMutation.mutate()}
+                isGenerating={generateLinkedInPostMutation.isPending}
               />
             </div>
           </div>
@@ -308,8 +414,8 @@ const VideoDetailPage = () => {
                 estimatedCost="$0.08-0.20"
                 estimatedTime="15-30s"
                 features={["10-50 Cards", "Q&A Format", "Difficulty Levels", "Spaced Repetition Ready"]}
-                onGenerate={() => console.log("Generate flashcards")}
-                isGenerating={false}
+                onGenerate={() => generateFlashcardsMutation.mutate()}
+                isGenerating={generateFlashcardsMutation.isPending}
               />
             </div>
           </div>
@@ -324,8 +430,8 @@ const VideoDetailPage = () => {
                 estimatedCost="$0.05-0.10"
                 estimatedTime="10-20s"
                 features={["15-25 Titles", "SEO-Focused", "Multiple Angles", "Engaging Headlines"]}
-                onGenerate={() => console.log("Generate blog ideas")}
-                isGenerating={false}
+                onGenerate={() => generateBlogIdeasMutation.mutate()}
+                isGenerating={generateBlogIdeasMutation.isPending}
               />
               <ContentGenerationCard
                 title="Social Media Hooks"
@@ -333,8 +439,8 @@ const VideoDetailPage = () => {
                 estimatedCost="$0.05-0.10"
                 estimatedTime="10-20s"
                 features={["Platform-Specific", "Engagement-Focused", "15-30 Hooks", "Trend-Aware"]}
-                onGenerate={() => console.log("Generate social hooks")}
-                isGenerating={false}
+                onGenerate={() => generateSocialHooksMutation.mutate()}
+                isGenerating={generateSocialHooksMutation.isPending}
               />
             </div>
           </div>
