@@ -1,0 +1,6 @@
+client/src/components/content/FlashcardSetCard.tsx
+client/src/components/content/GenerateContentGrid.tsx
+client/src/components/content/ReportCard.tsx
+server/openai.ts
+server/routers/videos.router.ts
+server/storage.ts
