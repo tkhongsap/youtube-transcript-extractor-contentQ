@@ -512,71 +512,44 @@ What are your thoughts on this? Share your experience in the comments! 👇
         );
       case "reports":
         return (
-          <div className="flex-1 overflow-hidden">
-            <div className="h-full flex flex-col lg:flex-row gap-6 p-4">
-              {/* Left Panel: Generation Actions (Always Visible) */}
-              <div className="lg:w-2/5 flex-shrink-0">
-                <div className="bg-white rounded-lg border border-gray-200 p-6 h-full">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6">
-                    {reports.length > 0 ? "Generate Additional Reports" : "Generate Reports"}
-                  </h3>
-                  <div className="space-y-4">
-                    <ContentGenerationCard
-                      title="Medium-Style Article"
-                      description="Create a comprehensive, publication-ready article suitable for Medium, LinkedIn, or your blog."
-                      estimatedCost="$0.15-0.25"
-                      estimatedTime="20-40s"
-                      features={["Professional Formatting", "Engaging Headlines", "800-2000 words", "SEO-Optimized"]}
-                      onGenerate={() => generateMediumReportMutation.mutate()}
-                      isGenerating={generateMediumReportMutation.isPending}
-                    />
-                    <ContentGenerationCard
-                      title="LinkedIn Post"
-                      description="Generate an engaging LinkedIn post with professional tone and call-to-action."
-                      estimatedCost="$0.08-0.15"
-                      estimatedTime="10-20s"
-                      features={["Professional Tone", "Call-to-Action", "150-300 words", "Hashtag Suggestions"]}
-                      onGenerate={() => generateLinkedInPostMutation.mutate()}
-                      isGenerating={generateLinkedInPostMutation.isPending}
-                    />
-                  </div>
-                </div>
+          <div className="overflow-y-auto h-full pb-24">
+            <div className="max-w-6xl mx-auto p-4 space-y-6">
+              {/* Generation cards */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {reports.length > 0 ? "Generate Additional Reports" : "Generate Reports"}
+                </h3>
+                <ContentGenerationCard
+                  title="Medium-Style Article"
+                  description="Create a comprehensive, publication-ready article suitable for Medium, LinkedIn, or your blog."
+                  estimatedCost="$0.15-0.25"
+                  estimatedTime="20-40s"
+                  features={["Professional Formatting", "Engaging Headlines", "800-2000 words", "SEO-Optimized"]}
+                  onGenerate={() => generateMediumReportMutation.mutate()}
+                  isGenerating={generateMediumReportMutation.isPending}
+                />
+                <ContentGenerationCard
+                  title="LinkedIn Post"
+                  description="Generate an engaging LinkedIn post with professional tone and call-to-action."
+                  estimatedCost="$0.08-0.15"
+                  estimatedTime="10-20s"
+                  features={["Professional Tone", "Call-to-Action", "150-300 words", "Hashtag Suggestions"]}
+                  onGenerate={() => generateLinkedInPostMutation.mutate()}
+                  isGenerating={generateLinkedInPostMutation.isPending}
+                />
               </div>
 
-              {/* Right Panel: Existing Reports (Scrollable) */}
-              <div className="lg:w-3/5 flex-1 min-h-0">
-                <div className="bg-white rounded-lg border border-gray-200 h-full flex flex-col">
-                  <div className="p-6 border-b border-gray-200 flex-shrink-0">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {reports.length > 0 ? `Generated Reports (${reports.length})` : "No Reports Yet"}
-                    </h3>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto p-6">
-                    {reports.length > 0 ? (
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        {reports.map((report: any) => (
-                          <ReportCard key={report.id} report={report} />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                          <span className="material-icons text-2xl text-gray-400">description</span>
-                        </div>
-                        <h4 className="text-lg font-medium text-gray-900 mb-2">No reports generated yet</h4>
-                        <p className="text-gray-500 mb-4 max-w-sm">
-                          Use the generation options on the left to create your first AI-powered report from this video.
-                        </p>
-                        <div className="flex items-center text-sm text-blue-600">
-                          <span className="material-icons text-sm mr-1">arrow_back</span>
-                          Start with Medium or LinkedIn generation
-                        </div>
-                      </div>
-                    )}
+              {/* Show generated reports if they exist */}
+              {reports.length > 0 && (
+                <div className="space-y-6 mt-8">
+                  <h3 className="text-lg font-semibold text-gray-900">Generated Reports ({reports.length})</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {reports.map((report: any) => (
+                      <ReportCard key={report.id} report={report} />
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         );
