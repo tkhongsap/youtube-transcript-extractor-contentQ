@@ -15,7 +15,8 @@
       "Bash(npm run:*)",
       "Bash(pkill:*)",
       "Bash(true)",
-      "Bash(printenv)"
+      "Bash(printenv)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

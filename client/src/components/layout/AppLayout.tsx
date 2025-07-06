@@ -64,7 +64,6 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           {/* Main heading */}
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 bg-clip-text text-transparent mb-4 leading-tight">
             Content Spark
-            <span className="block text-transparent bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text">AI</span>
           </h1>
 
           {/* Punchy tagline */}
@@ -79,7 +78,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm md:text-base">
             <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
               <Zap className="w-4 h-4 text-yellow-500" />
-              <span className="text-gray-700 font-medium">AI Summaries</span>
+              <span className="text-gray-700 font-medium">Summaries</span>
             </div>
             <div className="flex items-center gap-2 bg-white/50 backdrop-blur-sm rounded-full px-4 py-2 border border-white/20">
               <FileText className="w-4 h-4 text-blue-500" />
@@ -103,7 +102,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
           {/* Subtle description */}
           <p className="text-gray-500 text-sm mt-6 max-w-md mx-auto">
-            Extract transcripts, generate summaries, create flashcards, and mine content ideas from any YouTube video with the power of AI.
+            Extract transcripts, generate summaries, create flashcards, and mine content ideas from any YouTube video automatically.
           </p>
         </div>
       </div>

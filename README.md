@@ -1,16 +1,16 @@
 # Content Spark
 
-Transform YouTube videos into valuable educational content with AI-powered analysis and generation.
+Transform YouTube videos into valuable educational content with automated analysis and generation.
 
 ## Overview
 
-Content Spark is a full-stack platform that processes YouTube video transcripts and generates various types of educational content using AI. Users can enhance transcripts with additional context, corrections, and insights to improve AI output quality.
+Content Spark is a full-stack platform that processes YouTube video transcripts and generates various types of educational content. Users can enhance transcripts with additional context, corrections, and insights to improve output quality.
 
 ### Key Features
 
 - 📹 **YouTube Video Processing** - Extract transcripts with robust fallback strategies
 - ✏️ **Transcript Enhancement** - Add context, corrections, insights, and notes
-- 🤖 **AI Content Generation** - Create summaries, reports, flashcards, and content ideas
+- 🤖 **Content Generation** - Create summaries, reports, flashcards, and content ideas
 - 📚 **Content Organization** - Manage all generated content in a persistent database
 - 📱 **Mobile-First Design** - Touch-friendly interface with responsive layouts
 - 🔐 **Secure Authentication** - OpenID Connect with automatic token refresh
@@ -46,7 +46,7 @@ Content Spark is a full-stack platform that processes YouTube video transcripts 
 1. Clone the repository
 ```bash
 git clone <repository-url>
-cd content-spark-ai
+cd content-spark
 ```
 
 2. Install dependencies

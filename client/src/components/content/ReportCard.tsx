@@ -105,7 +105,7 @@ ${keyPoints.map((point: string, index: number) => `${index + 1}. ${point}`).join
 
 What are your thoughts on this? Share your experience in the comments! 👇
 
-#AI #Technology #Innovation #LinkedIn #ContentCreation`;
+#Technology #Innovation #LinkedIn #ContentCreation`;
 
     navigator.clipboard.writeText(linkedinPost).then(
       () => {

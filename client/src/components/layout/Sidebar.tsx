@@ -25,7 +25,7 @@ const Sidebar = ({ user }: SidebarProps) => {
           <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary text-white mr-3">
             <span className="material-icons text-lg">auto_awesome</span>
           </div>
-          <h1 className="text-xl font-semibold text-gray-900">Content Spark AI</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Content Spark</h1>
         </div>
       </div>
       <nav className="flex-1 px-2 py-4 space-y-1">

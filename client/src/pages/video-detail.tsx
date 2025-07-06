@@ -180,7 +180,7 @@ const VideoDetailPage = () => {
     onSuccess: () => {
       toast({
         title: "Summary Generated",
-        description: "AI summary created using your enhanced transcript",
+        description: "Summary created using your enhanced transcript",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/summary`] });
     },
@@ -206,7 +206,7 @@ const VideoDetailPage = () => {
     onSuccess: () => {
       toast({
         title: "Medium Article Generated",
-        description: "AI-generated Medium-style article created successfully",
+        description: "Medium-style article generated successfully",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/reports`] });
       queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
@@ -224,14 +224,14 @@ const VideoDetailPage = () => {
         
         // Provide specific guidance based on error type
         if (errorData.error === 'AI_GENERATION_FAILED') {
-          title = "AI Service Temporarily Unavailable";
-          description = "The AI service is currently busy. Please wait a moment and try again.";
+          title = "Service Temporarily Unavailable";
+          description = "The service is currently busy. Please wait a moment and try again.";
         } else if (errorData.error === 'TIMEOUT_ERROR') {
           title = "Request Timed Out";
           description = "The generation is taking longer than usual. Please try again.";
         } else if (errorData.error === 'JSON_PARSE_ERROR') {
-          title = "AI Response Error";
-          description = "The AI service returned an unexpected response. Please try again.";
+          title = "Response Error";
+          description = "The service returned an unexpected response. Please try again.";
         } else if (errorData.error === 'INCOMPLETE_GENERATION') {
           title = "Incomplete Generation";
           description = "The article generation was incomplete. Please try again.";
@@ -260,7 +260,7 @@ const VideoDetailPage = () => {
     onSuccess: () => {
       toast({
         title: "LinkedIn Post Generated",
-        description: "AI-generated LinkedIn post created successfully",
+        description: "LinkedIn post generated successfully",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/reports`] });
       queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
@@ -278,14 +278,14 @@ const VideoDetailPage = () => {
         
         // Provide specific guidance based on error type
         if (errorData.error === 'AI_GENERATION_FAILED') {
-          title = "AI Service Temporarily Unavailable";
-          description = "The AI service is currently busy. Please wait a moment and try again.";
+          title = "Service Temporarily Unavailable";
+          description = "The service is currently busy. Please wait a moment and try again.";
         } else if (errorData.error === 'TIMEOUT_ERROR') {
           title = "Request Timed Out";
           description = "The generation is taking longer than usual. Please try again.";
         } else if (errorData.error === 'JSON_PARSE_ERROR') {
-          title = "AI Response Error";
-          description = "The AI service returned an unexpected response. Please try again.";
+          title = "Response Error";
+          description = "The service returned an unexpected response. Please try again.";
         } else if (errorData.error === 'INCOMPLETE_GENERATION') {
           title = "Incomplete Generation";
           description = "The post generation was incomplete. Please try again.";
@@ -309,7 +309,7 @@ const VideoDetailPage = () => {
     onSuccess: () => {
       toast({
         title: "Flashcards Generated",
-        description: "AI-generated flashcard set created successfully",
+        description: "Flashcard set generated successfully",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/flashcard-sets`] });
       queryClient.invalidateQueries({ queryKey: ["/api/flashcard-sets"] });
@@ -330,7 +330,7 @@ const VideoDetailPage = () => {
     onSuccess: () => {
       toast({
         title: "Blog Ideas Generated",
-        description: "AI-generated blog title ideas created successfully",
+        description: "Blog title ideas generated successfully",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/idea-sets`] });
       queryClient.invalidateQueries({ queryKey: ["/api/idea-sets"] });
@@ -351,7 +351,7 @@ const VideoDetailPage = () => {
     onSuccess: () => {
       toast({
         title: "Social Hooks Generated",
-        description: "AI-generated social media hooks created successfully",
+        description: "Social media hooks generated successfully",
       });
       queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/idea-sets`] });
       queryClient.invalidateQueries({ queryKey: ["/api/idea-sets"] });
@@ -438,7 +438,7 @@ ${keyPoints.map((point: string, index: number) => `${index + 1}. ${point}`).join
 
 What are your thoughts on this? Share your experience in the comments! 👇
 
-#AI #Technology #Innovation #LinkedIn #ContentCreation`;
+#Technology #Innovation #LinkedIn #ContentCreation`;
 
     return linkedinPost;
   };
