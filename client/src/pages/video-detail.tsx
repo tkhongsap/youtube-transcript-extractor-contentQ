@@ -510,12 +510,14 @@ const VideoDetailPage = () => {
                           {report.content}
                         </div>
                       </div>
-                      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end space-x-2">
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigator.clipboard.writeText(report.content)}
+                          className="flex items-center gap-1"
                         >
+                          <span className="material-icons text-sm">content_copy</span>
                           Copy Content
                         </Button>
                         <Button
@@ -527,8 +529,11 @@ const VideoDetailPage = () => {
                             }
                           }}
                           disabled={deleteReportMutation.isPending}
-                          className="text-red-600 hover:text-red-700 hover:border-red-300"
+                          className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:border-red-300 border-red-200"
                         >
+                          <span className="material-icons text-sm">
+                            {deleteReportMutation.isPending ? "hourglass_empty" : "delete"}
+                          </span>
                           {deleteReportMutation.isPending ? "Deleting..." : "Delete"}
                         </Button>
                       </div>
