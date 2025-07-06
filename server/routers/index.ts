@@ -23,7 +23,11 @@ export async function registerAppRoutes(app: Express): Promise<Server> {
   app.use('/api/flashcard-sets', flashcardsRouter);
   app.use('/api/idea-sets', ideasRouter);
   app.use('/api/users', usersRouter);
-  app.use('/api/dev', devRouter);
+  
+  // Only register dev router in development
+  if (process.env.NODE_ENV === 'development') {
+    app.use('/api/dev', devRouter);
+  }
 
   // Apply global error handling middleware
   app.use(errorHandler);

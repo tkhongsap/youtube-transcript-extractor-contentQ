@@ -13,12 +13,12 @@ if (!process.env.OPENAI_MODEL) {
 }
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-development",
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// The model to use for OpenAI API calls, read from environment variable with fallback to "gpt-4o"
+// The model to use for OpenAI API calls, read from environment variable with fallback to "gpt-4o-mini"
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
 export async function generateVideoSummary(
   transcript: string,
