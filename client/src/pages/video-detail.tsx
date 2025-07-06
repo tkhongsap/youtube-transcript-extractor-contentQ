@@ -511,13 +511,13 @@ What are your thoughts on this? Share your experience in the comments! 👇
         );
       case "reports":
         return (
-          <div className="flex-1 overflow-y-auto pb-16">
+          <div className="overflow-y-auto h-full max-h-screen pb-16">
             <div className="max-w-6xl mx-auto p-4 space-y-6">
               {/* Show generated reports if they exist */}
               {reports.length > 0 && (
                 <div className="space-y-6 mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Reports</h3>
-                  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                  <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
                     {reports.map((report: any) => (
                       <div key={report.id} className="bg-white border border-gray-200 rounded-lg shadow-sm">
                         <div className="p-6">
@@ -547,7 +547,7 @@ What are your thoughts on this? Share your experience in the comments! 👇
                           </div>
                           <h5 className="text-lg font-semibold text-gray-800 mb-3">{report.title}</h5>
                           <div className="prose max-w-none text-gray-700">
-                            <div className="whitespace-pre-wrap max-h-64 overflow-y-auto border border-gray-100 rounded p-3 bg-gray-50">
+                            <div className="whitespace-pre-wrap max-h-48 overflow-y-auto border border-gray-100 rounded p-3 bg-gray-50">
                               {report.content}
                             </div>
                           </div>
