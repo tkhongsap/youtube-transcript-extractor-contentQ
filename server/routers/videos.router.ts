@@ -29,11 +29,17 @@ async function validateVideoForGeneration(videoIdParam: string, userId: string) 
     throw new Error('Rate limit exceeded');
   }
 
-  // Ensure transcript is available
+  // Get transcript (don't fail if YouTube transcript unavailable)
   let transcript = video.transcript;
   if (!transcript) {
-    transcript = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
-    await storage.updateVideo(video.id, { transcript });
+    try {
+      transcript = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
+      await storage.updateVideo(video.id, { transcript });
+    } catch (error) {
+      // Don't fail here - enhanced validation will handle transcript retrieval
+      console.log(`YouTube transcript unavailable for video ${video.youtubeId}, will check for enhanced transcript`);
+      transcript = '';
+    }
   }
 
   const summary = await storage.getVideoSummary(video.id);
@@ -53,9 +59,16 @@ async function validateVideoForEnhancedGeneration(
   // Get appropriate transcript based on configuration
   const { transcript, isEnhanced } = await getTranscriptForAI(video.id, config.transcriptPreference);
   
+  const finalTranscript = transcript || originalTranscript;
+  
+  // Ensure we have some transcript available
+  if (!finalTranscript || finalTranscript.trim().length === 0) {
+    throw new Error('No transcript available. Please add transcript content using the Enhanced Transcript feature or try refreshing the YouTube transcript.');
+  }
+  
   return { 
     video, 
-    transcript: transcript || originalTranscript, 
+    transcript: finalTranscript, 
     originalTranscript,
     summaryText, 
     isEnhanced,
