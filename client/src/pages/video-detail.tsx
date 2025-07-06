@@ -511,13 +511,13 @@ What are your thoughts on this? Share your experience in the comments! 👇
         );
       case "reports":
         return (
-          <div className="overflow-y-auto h-full max-h-screen pb-16">
+          <div className="overflow-y-auto h-full pb-32">
             <div className="max-w-6xl mx-auto p-4 space-y-6">
               {/* Show generated reports if they exist */}
               {reports.length > 0 && (
                 <div className="space-y-6 mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Reports</h3>
-                  <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
+                  <div className="space-y-4 pr-2">
                     {reports.map((report: any) => (
                       <div key={report.id} className="bg-white border border-gray-200 rounded-lg shadow-sm">
                         <div className="p-6">
