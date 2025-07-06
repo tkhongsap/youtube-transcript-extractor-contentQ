@@ -79,12 +79,13 @@ export async function generateMediumReport(
   summary: string = "",
 ): Promise<{ title: string; content: string }> {
   try {
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: `You are a renowned Medium writer known for transforming complex ideas into engaging, accessible articles. Your writing style combines storytelling with insights, making content both informative and compelling.
+    const response = await Promise.race([
+      openai.chat.completions.create({
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content: `You are a renowned Medium writer known for transforming complex ideas into engaging, accessible articles. Your writing style combines storytelling with insights, making content both informative and compelling.
 
 Writing guidelines:
 - Craft attention-grabbing titles that promise value
@@ -94,10 +95,10 @@ Writing guidelines:
 - Write with a conversational yet authoritative tone
 - Use formatting like bullet points and numbered lists for clarity
 - End with thought-provoking conclusions or calls to action`,
-        },
-        {
-          role: "user",
-          content: `Transform this video content into a compelling Medium article${title ? ` based on "${title}"` : ""}. ${summary ? `Key insights from summary: ${summary}` : ""}
+          },
+          {
+            role: "user",
+            content: `Transform this video content into a compelling Medium article${title ? ` based on "${title}"` : ""}. ${summary ? `Key insights from summary: ${summary}` : ""}
 
 Create an article that:
 - Has a captivating title that draws readers in
@@ -110,24 +111,48 @@ Format as JSON with 'title' and 'content' fields.
 
 Source transcript:
 ${transcript}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.8,
-      max_tokens: 3000,
-    });
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.8,
+        max_tokens: 3000,
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout: Medium report generation took too long')), 60000)
+      )
+    ]);
 
-    const content = response.choices[0].message.content;
+    const content = (response as any).choices[0].message.content;
     if (!content) {
       throw new Error('No content received from OpenAI');
     }
-    const result = JSON.parse(content);
+    
+    let result;
+    try {
+      result = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response:', content);
+      throw new Error('Invalid JSON response from AI service');
+    }
+    
+    if (!result.title || !result.content) {
+      throw new Error('Incomplete response from AI service - missing title or content');
+    }
+    
     return {
       title: result.title,
       content: result.content,
     };
   } catch (error) {
     console.error("Error generating Medium report:", error);
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        throw new Error("Medium report generation timed out. Please try again.");
+      }
+      if (error.message.includes('JSON')) {
+        throw new Error("AI service returned invalid response. Please try again.");
+      }
+    }
     throw new Error("Failed to generate Medium-style report");
   }
 }
@@ -542,12 +567,13 @@ export async function generateMediumReportEnhanced(
     : "";
   
   try {
-    const response = await openai.chat.completions.create({
-      model: MODEL,
-      messages: [
-        {
-          role: "system",
-          content: `You are a renowned Medium writer known for transforming complex ideas into engaging, accessible articles. Your writing style combines storytelling with insights, making content both informative and compelling.
+    const response = await Promise.race([
+      openai.chat.completions.create({
+        model: MODEL,
+        messages: [
+          {
+            role: "system",
+            content: `You are a renowned Medium writer known for transforming complex ideas into engaging, accessible articles. Your writing style combines storytelling with insights, making content both informative and compelling.
 
 Writing guidelines:
 - Craft attention-grabbing titles that promise value
@@ -558,10 +584,10 @@ Writing guidelines:
 - Use formatting like bullet points and numbered lists for clarity
 - End with thought-provoking conclusions or calls to action
 ${useEnhanced && emphasizeAdditionalInsights ? "- Highlight and integrate enhanced insights and corrections naturally into the narrative" : ""}`,
-        },
-        {
-          role: "user",
-          content: `Transform this video content into a compelling Medium article${title ? ` based on "${title}"` : ""}. ${summary ? `Key insights from summary: ${summary}` : ""}
+          },
+          {
+            role: "user",
+            content: `Transform this video content into a compelling Medium article${title ? ` based on "${title}"` : ""}. ${summary ? `Key insights from summary: ${summary}` : ""}
 
 Create an article that:
 - Has a captivating title that draws readers in
@@ -575,24 +601,48 @@ Format as JSON with 'title' and 'content' fields.
 
 Source transcript:
 ${targetTranscript}${contextNote}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.8,
-      max_tokens: 3000,
-    });
+          },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.8,
+        max_tokens: 3000,
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout: Enhanced Medium report generation took too long')), 60000)
+      )
+    ]);
 
-    const content = response.choices[0].message.content;
+    const content = (response as any).choices[0].message.content;
     if (!content) {
       throw new Error('No content received from OpenAI');
     }
-    const result = JSON.parse(content);
+    
+    let result;
+    try {
+      result = JSON.parse(content);
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response for enhanced report:', content);
+      throw new Error('Invalid JSON response from AI service');
+    }
+    
+    if (!result.title || !result.content) {
+      throw new Error('Incomplete response from AI service - missing title or content');
+    }
+    
     return {
       title: result.title,
       content: result.content,
     };
   } catch (error) {
     console.error("Error generating enhanced Medium report:", error);
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        throw new Error("Enhanced Medium report generation timed out. Please try again.");
+      }
+      if (error.message.includes('JSON')) {
+        throw new Error("AI service returned invalid response. Please try again.");
+      }
+    }
     throw new Error("Failed to generate Medium-style report");
   }
 }

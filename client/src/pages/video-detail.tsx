@@ -184,7 +184,12 @@ const VideoDetailPage = () => {
   // Mutations for content generation
   const generateMediumReportMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('POST', `/api/videos/${videoId}/generate-report?type=medium`);
+      return apiRequest('POST', `/api/videos/${videoId}/generate-enhanced-report?type=medium`, {
+        transcriptPreference: 'auto', // Uses enhanced if available, original otherwise
+        includeProfessionalContext: true,
+        emphasizeAdditionalInsights: true,
+        enhanceCreativeOutput: true,
+      });
     },
     onSuccess: () => {
       toast({
@@ -194,10 +199,38 @@ const VideoDetailPage = () => {
       queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/reports`] });
       queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Medium article generation error:", error);
+      
+      // Extract detailed error information
+      let title = "Generation Failed";
+      let description = "Failed to generate Medium article";
+      
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        description = errorData.message || description;
+        
+        // Provide specific guidance based on error type
+        if (errorData.error === 'AI_GENERATION_FAILED') {
+          title = "AI Service Temporarily Unavailable";
+          description = "The AI service is currently busy. Please wait a moment and try again.";
+        } else if (errorData.error === 'TIMEOUT_ERROR') {
+          title = "Request Timed Out";
+          description = "The generation is taking longer than usual. Please try again.";
+        } else if (errorData.error === 'JSON_PARSE_ERROR') {
+          title = "AI Response Error";
+          description = "The AI service returned an unexpected response. Please try again.";
+        } else if (errorData.error === 'INCOMPLETE_GENERATION') {
+          title = "Incomplete Generation";
+          description = "The article generation was incomplete. Please try again.";
+        }
+      } else if (error instanceof Error) {
+        description = error.message;
+      }
+      
       toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Failed to generate Medium article",
+        title,
+        description,
         variant: "destructive",
       });
     },
@@ -205,7 +238,12 @@ const VideoDetailPage = () => {
 
   const generateLinkedInPostMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('POST', `/api/videos/${videoId}/generate-report?type=linkedin`);
+      return apiRequest('POST', `/api/videos/${videoId}/generate-enhanced-report?type=linkedin`, {
+        transcriptPreference: 'auto', // Uses enhanced if available, original otherwise
+        includeProfessionalContext: true,
+        emphasizeAdditionalInsights: true,
+        enhanceCreativeOutput: false, // LinkedIn posts should be more professional
+      });
     },
     onSuccess: () => {
       toast({
@@ -215,10 +253,38 @@ const VideoDetailPage = () => {
       queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/reports`] });
       queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("LinkedIn post generation error:", error);
+      
+      // Extract detailed error information
+      let title = "Generation Failed";
+      let description = "Failed to generate LinkedIn post";
+      
+      if (error?.response?.data) {
+        const errorData = error.response.data;
+        description = errorData.message || description;
+        
+        // Provide specific guidance based on error type
+        if (errorData.error === 'AI_GENERATION_FAILED') {
+          title = "AI Service Temporarily Unavailable";
+          description = "The AI service is currently busy. Please wait a moment and try again.";
+        } else if (errorData.error === 'TIMEOUT_ERROR') {
+          title = "Request Timed Out";
+          description = "The generation is taking longer than usual. Please try again.";
+        } else if (errorData.error === 'JSON_PARSE_ERROR') {
+          title = "AI Response Error";
+          description = "The AI service returned an unexpected response. Please try again.";
+        } else if (errorData.error === 'INCOMPLETE_GENERATION') {
+          title = "Incomplete Generation";
+          description = "The post generation was incomplete. Please try again.";
+        }
+      } else if (error instanceof Error) {
+        description = error.message;
+      }
+      
       toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Failed to generate LinkedIn post",
+        title,
+        description,
         variant: "destructive",
       });
     },

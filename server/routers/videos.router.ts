@@ -609,21 +609,46 @@ router.post('/:id/generate-enhanced-report', isAuthenticated, async (req: any, r
       emphasizeAdditionalInsights: config.emphasizeAdditionalInsights,
     };
 
-    const result = type === 'medium'
-      ? await openai.generateMediumReportEnhanced(
-          originalTranscript, 
-          isEnhanced ? transcript : undefined, 
-          video.title, 
-          summaryText,
-          options
-        )
-      : await openai.generateLinkedInPostEnhanced(
-          originalTranscript, 
-          isEnhanced ? transcript : undefined, 
-          video.title, 
-          summaryText,
-          options
-        );
+    console.log(`Generating enhanced ${type} report for video ${video.id} - "${video.title}"`);
+    console.log(`Using enhanced transcript: ${isEnhanced}, transcript length: ${transcript.length} chars`);
+
+    let result;
+    try {
+      result = type === 'medium'
+        ? await openai.generateMediumReportEnhanced(
+            originalTranscript, 
+            isEnhanced ? transcript : undefined, 
+            video.title, 
+            summaryText,
+            options
+          )
+        : await openai.generateLinkedInPostEnhanced(
+            originalTranscript, 
+            isEnhanced ? transcript : undefined, 
+            video.title, 
+            summaryText,
+            options
+          );
+    } catch (openaiError) {
+      console.error(`OpenAI generation failed for ${type} report:`, openaiError);
+      
+      // Return specific error for OpenAI failures
+      return res.status(500).json({ 
+        message: `Failed to generate ${type} report. Please try again in a moment.`,
+        error: 'AI_GENERATION_FAILED',
+        details: openaiError instanceof Error ? openaiError.message : 'Unknown AI error'
+      });
+    }
+
+    if (!result || !result.title || !result.content) {
+      console.error(`Invalid result from OpenAI for ${type} report:`, result);
+      return res.status(500).json({ 
+        message: `Generated ${type} report was incomplete. Please try again.`,
+        error: 'INCOMPLETE_GENERATION'
+      });
+    }
+
+    console.log(`Successfully generated ${type} report: "${result.title}"`);
 
     const saved = await storage.createReport({
       videoId: video.id,
@@ -641,6 +666,8 @@ router.post('/:id/generate-enhanced-report', isAuthenticated, async (req: any, r
       }
     });
   } catch (err) {
+    console.error(`Enhanced report generation error for type ${req.query.type}:`, err);
+    
     if (err instanceof Error) {
       if (err.message === 'Invalid video ID format.') {
         return res.status(400).json({ message: err.message });
@@ -654,8 +681,29 @@ router.post('/:id/generate-enhanced-report', isAuthenticated, async (req: any, r
       if (err.message === 'Rate limit exceeded') {
         return res.status(429).json({ message: err.message });
       }
+      
+      // Handle specific error patterns
+      if (err.message.includes('JSON')) {
+        return res.status(500).json({ 
+          message: 'AI response format error. Please try again.',
+          error: 'JSON_PARSE_ERROR'
+        });
+      }
+      
+      if (err.message.includes('timeout') || err.message.includes('ECONNRESET')) {
+        return res.status(504).json({ 
+          message: 'Request timed out. Please try again.',
+          error: 'TIMEOUT_ERROR'
+        });
+      }
     }
-    next(err);
+    
+    // Generic server error with details for debugging
+    res.status(500).json({ 
+      message: 'An unexpected error occurred while generating the report. Please try again.',
+      error: 'INTERNAL_SERVER_ERROR',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
