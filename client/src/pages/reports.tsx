@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type Report } from "@shared/schema";
-// ReportCard component removed
+import ReportCard from "@/components/content/ReportCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ReportsPage = () => {
@@ -51,10 +51,7 @@ const ReportsPage = () => {
           ) : reports.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {reports.map((report) => (
-                <div key={report.id} className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">{report.title}</h4>
-                  <p className="text-gray-600 text-sm mb-4">Report content preview...</p>
-                </div>
+                <ReportCard key={report.id} report={report} />
               ))}
             </div>
           ) : (

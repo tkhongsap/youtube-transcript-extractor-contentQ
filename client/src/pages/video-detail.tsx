@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import ReportCard from "@/components/content/ReportCard";
 
 const VideoDetailPage = () => {
   const [, params] = useRoute("/videos/:id");
@@ -511,71 +512,15 @@ What are your thoughts on this? Share your experience in the comments! 👇
         );
       case "reports":
         return (
-          <div className="overflow-y-auto h-full pb-32">
+          <div className="overflow-y-auto h-full max-h-screen pb-16">
             <div className="max-w-6xl mx-auto p-4 space-y-6">
               {/* Show generated reports if they exist */}
               {reports.length > 0 && (
                 <div className="space-y-6 mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Reports</h3>
-                  <div className="space-y-4 pr-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2">
                     {reports.map((report: any) => (
-                      <div key={report.id} className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div className="p-6">
-                          <div className="flex justify-between items-start mb-3">
-                            <h4 className="text-md font-medium text-gray-900 capitalize">{report.type} Report</h4>
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs text-gray-500">
-                                {formatDistanceToNow(new Date(report.createdAt), { addSuffix: true })}
-                              </span>
-                              <button
-                                onClick={() => {
-                                  // Generate LinkedIn post from this report
-                                  const linkedinPost = generateLinkedInPostFromReport(report);
-                                  navigator.clipboard.writeText(linkedinPost).then(() => {
-                                    toast({
-                                      title: "LinkedIn Post Generated",
-                                      description: "LinkedIn post copied to clipboard",
-                                    });
-                                  });
-                                }}
-                                className="p-1 text-gray-400 hover:text-blue-600 focus:outline-none"
-                                title="Generate LinkedIn Post"
-                              >
-                                <span className="material-icons text-sm">share</span>
-                              </button>
-                            </div>
-                          </div>
-                          <h5 className="text-lg font-semibold text-gray-800 mb-3">{report.title}</h5>
-                          <div className="prose max-w-none text-gray-700">
-                            <div className="whitespace-pre-wrap max-h-48 overflow-y-auto border border-gray-100 rounded p-3 bg-gray-50">
-                              {report.content}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
-                          <button
-                            onClick={() => navigator.clipboard.writeText(report.content)}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center gap-2"
-                          >
-                            <span className="material-icons text-sm">content_copy</span>
-                            Copy Content
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm(`Are you sure you want to delete "${report.title}"?`)) {
-                                deleteReportMutation.mutate(report.id);
-                              }
-                            }}
-                            disabled={deleteReportMutation.isPending}
-                            className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 flex items-center gap-2"
-                          >
-                            <span className="material-icons text-sm">
-                              {deleteReportMutation.isPending ? "hourglass_empty" : "delete"}
-                            </span>
-                            {deleteReportMutation.isPending ? "Deleting..." : "Delete"}
-                          </button>
-                        </div>
-                      </div>
+                      <ReportCard key={report.id} report={report} />
                     ))}
                   </div>
                 </div>
