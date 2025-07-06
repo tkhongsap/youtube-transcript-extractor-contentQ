@@ -445,7 +445,7 @@ What are your thoughts on this? Share your experience in the comments! 👇
 
   // Transform transcript data to OriginalTranscript format
   const createOriginalTranscript = (): OriginalTranscript | null => {
-    if (!video || !transcriptData?.data?.transcript) return null;
+    if (!video || transcriptData?.data?.transcript === undefined) return null;
     
     return {
       videoId: video.id,
