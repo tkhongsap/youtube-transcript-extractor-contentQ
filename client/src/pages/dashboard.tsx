@@ -4,7 +4,7 @@ import { type Video, type Report, type FlashcardSet } from "@shared/schema";
 import VideoUrlInput from "@/components/video/VideoUrlInput";
 import VideoCard from "@/components/video/VideoCard";
 import ContentTypeTabs from "@/components/content/ContentTypeTabs";
-import ReportCard from "@/components/content/ReportCard";
+// ReportCard component removed
 import FlashcardSetCard from "@/components/content/FlashcardSetCard";
 import IdeaList from "@/components/content/IdeaList";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -125,7 +125,10 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {recentReports?.length ? (
                   recentReports.map((report) => (
-                    <ReportCard key={report.id} report={report} />
+                    <div key={report.id} className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-2">{report.title}</h4>
+                      <p className="text-gray-600 text-sm">Report content preview...</p>
+                    </div>
                   ))
                 ) : (
                   <div className="col-span-full text-center py-10">

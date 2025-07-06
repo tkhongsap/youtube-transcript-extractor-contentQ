@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import VideoDetail from "@/pages/video-detail";
+import ReportsPage from "@/pages/reports";
 import AppLayout from "@/components/layout/AppLayout";
 
 function Router() {
@@ -13,6 +14,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/videos/:id" component={VideoDetail} />
+      <Route path="/reports" component={ReportsPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
