@@ -472,8 +472,8 @@ What are your thoughts on this? Share your experience in the comments! 👇
     switch (activeTab) {
       case "summary":
         return (
-          <div className="overflow-y-auto h-full pb-16">
-            <div className="max-w-6xl mx-auto p-4">
+          <div className="h-full overflow-y-auto">
+            <div className="max-w-6xl mx-auto p-4 pb-16">
               {isLoadingSummary ? (
                 <div className="space-y-6">
                   <div className="bg-white rounded-lg shadow-md p-6">
@@ -506,8 +506,8 @@ What are your thoughts on this? Share your experience in the comments! 👇
         
         if (!originalTranscript) {
           return (
-            <div className="overflow-y-auto h-full pb-16">
-              <div className="max-w-6xl mx-auto p-4">
+            <div className="h-full overflow-y-auto">
+              <div className="max-w-6xl mx-auto p-4 pb-16">
                 <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Transcript</h3>
                   <div className="space-y-3">
@@ -522,8 +522,8 @@ What are your thoughts on this? Share your experience in the comments! 👇
         }
         
         return (
-          <div className="overflow-y-auto h-full pb-16">
-            <div className="max-w-6xl mx-auto p-4">
+          <div className="h-full overflow-y-auto">
+            <div className="max-w-6xl mx-auto p-4 pb-16">
               {/* Transcript Header with Refresh */}
               <div className="bg-white rounded-lg shadow-md p-4 mb-4">
                 <div className="flex justify-between items-center">
@@ -568,8 +568,8 @@ What are your thoughts on this? Share your experience in the comments! 👇
         );
       case "reports":
         return (
-          <div className="overflow-y-auto h-full pb-24">
-            <div className="max-w-6xl mx-auto p-4 space-y-6">
+          <div className="h-full overflow-y-auto">
+            <div className="max-w-6xl mx-auto p-4 pb-24 space-y-6">
               {/* Generation cards */}
               <div className="space-y-6">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -611,13 +611,13 @@ What are your thoughts on this? Share your experience in the comments! 👇
         );
       case "flashcards":
         return (
-          <div className="overflow-y-auto h-full max-h-screen pb-16">
-            <div className="max-w-6xl mx-auto p-4 space-y-6">
+          <div className="h-full overflow-y-auto">
+            <div className="max-w-6xl mx-auto p-4 pb-16 space-y-6">
               {/* Show generated flashcard sets if they exist */}
               {flashcardSets.length > 0 && (
                 <div className="space-y-6 mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Flashcard Sets</h3>
-                  <div className="max-h-[70vh] overflow-y-auto space-y-4 pr-2">
+                  <div className="space-y-4">
                     {flashcardSets.map((set: any) => (
                       <div key={set.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                         <div className="flex justify-between items-start mb-3">
@@ -660,13 +660,13 @@ What are your thoughts on this? Share your experience in the comments! 👇
         );
       case "ideas":
         return (
-          <div className="overflow-y-auto h-full max-h-screen pb-16">
-            <div className="max-w-6xl mx-auto p-4 space-y-6">
+          <div className="h-full overflow-y-auto">
+            <div className="max-w-6xl mx-auto p-4 pb-16 space-y-6">
               {/* Show generated idea sets if they exist */}
               {ideaSets.length > 0 && (
                 <div className="space-y-6 mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Generated Ideas</h3>
-                  <div className="max-h-[70vh] overflow-y-auto space-y-4 pr-2">
+                  <div className="space-y-4">
                     {ideaSets.map((set: any) => (
                       <div key={set.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                         <div className="flex justify-between items-start mb-3">
@@ -753,9 +753,9 @@ What are your thoughts on this? Share your experience in the comments! 👇
       </header>
 
       {/* Main Content with tabs */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Video Details */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
+        <div className="p-4 bg-gray-50 border-b border-gray-200 flex-shrink-0">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row gap-4">
               {isLoadingVideo ? (
@@ -807,7 +807,7 @@ What are your thoughts on this? Share your experience in the comments! 👇
         </div>
 
         {/* Tabs Navigation */}
-        <div className="bg-white border-b border-gray-200">
+        <div className="bg-white border-b border-gray-200 flex-shrink-0">
           <div className="max-w-6xl mx-auto overflow-x-auto">
             <nav className="flex -mb-px whitespace-nowrap">
               <button 
@@ -864,8 +864,10 @@ What are your thoughts on this? Share your experience in the comments! 👇
           </div>
         </div>
 
-        {/* Tab Content */}
-        {renderTabContent()}
+        {/* Tab Content - Now properly constrained for scrolling */}
+        <div className="flex-1 min-h-0">
+          {renderTabContent()}
+        </div>
       </div>
     </div>
   );
