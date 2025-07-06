@@ -170,6 +170,52 @@ Well-structured PostgreSQL schema with entities:
 - Consistent variant system using CVA
 - Dark/light mode support via next-themes
 
+## Critical Development Patterns
+
+### Data Sanitization for AI Content
+- AI-generated content often contains special Unicode characters that must be normalized
+- Character normalization pattern in `server/storage.ts` for `keyTopics`:
+  ```typescript
+  .replace(/['']/g, "'")  // Replace smart quotes with regular quotes
+  .replace(/[""]/g, '"')  // Replace smart double quotes
+  .replace(/[–—]/g, '-')  // Replace em/en dashes with hyphens
+  ```
+- Always use Drizzle ORM's built-in array support rather than manual PostgreSQL literals
+
+### YouTube Transcript Extraction Resilience
+- YouTube API is unreliable - implement multiple fallback strategies
+- 5-strategy fallback system in `server/youtube.ts`:
+  1. youtube-transcript-plus library
+  2. Multiple API variants with common English languages
+  3. Auto-detection without language specification
+  4. Extended language list (en-GB, en-CA, etc.)
+  5. Retry mechanism with multiple attempts
+- Always handle captcha and rate limit errors gracefully
+
+### Enhanced Transcript Processing
+- Core feature: `server/transcriptEnhancement.ts` merges original transcripts with user additions
+- Supports timestamped and non-timestamped enhancements
+- Enhanced versions of all AI functions use improved transcripts when available
+- Critical for improving AI content generation quality
+
+### Rate Limiting Implementation
+- Simple in-memory rate limiting: 10 requests per hour per user
+- Applied before all AI generation operations in `server/rateLimiter.ts`
+- Prevents API abuse and manages OpenAI costs
+
+### OpenAI Integration Patterns
+- Robust JSON response cleaning for AI parsing errors
+- Temperature and max_tokens optimization for different content types
+- Consistent error handling with graceful degradation
+- Enhanced transcript processing significantly improves AI output quality
+
+### Debugging and Troubleshooting
+- Extensive console logging throughout critical operations
+- YouTube transcript extraction progress logging
+- Character normalization logging in database storage
+- AI processing step logging
+- Error details in development mode for external API debugging
+
 ## Testing and Deployment
 - Project optimized for Replit deployment
 - Custom Vite plugins for development experience
@@ -177,3 +223,5 @@ Well-structured PostgreSQL schema with entities:
 - Real-time error overlay in development mode
 - PostgreSQL session management
 - Background job processing for content generation
+- Integration tests mock OpenAI functions to avoid external API dependencies
+- Test user creation and deletion patterns for reliable testing

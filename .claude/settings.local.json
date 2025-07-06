@@ -14,7 +14,8 @@
       "Bash(npm run test:run:*)",
       "Bash(npm run:*)",
       "Bash(pkill:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(printenv)"
     ],
     "deny": []
   }
