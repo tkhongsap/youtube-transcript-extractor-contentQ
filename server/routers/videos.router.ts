@@ -394,8 +394,17 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res, next) => {
       });
     }
     
-    // Only fetch fresh transcript if explicitly requested or transcript missing
-    console.log(`Fetching fresh transcript for video: ${video.youtubeId}${refresh ? ' (refresh requested)' : ' (no stored transcript)'}`);
+    // If no stored transcript and refresh not explicitly requested, return empty transcript to allow enhancement features
+    if (!video.transcript && !refresh) {
+      console.log(`No stored transcript for video: ${video.youtubeId}, returning empty transcript to allow enhancement`);
+      return res.json({
+        format: 'text-empty',
+        data: { transcript: '' }
+      });
+    }
+    
+    // Only fetch fresh transcript if explicitly requested
+    console.log(`Fetching fresh transcript for video: ${video.youtubeId} (refresh requested)`);
     
     if (format === 'timestamped') {
       try {
