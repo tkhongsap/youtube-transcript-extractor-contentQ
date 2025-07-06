@@ -22,6 +22,7 @@ const VideoDetailPage = () => {
   
   const [activeTab, setActiveTab] = useState("transcript");
   const [isReprocessing, setIsReprocessing] = useState(false);
+  const [refreshTranscript, setRefreshTranscript] = useState(false);
   
   // Fetch video details
   const { data: video, isLoading: isLoadingVideo } = useQuery<Video>({
@@ -36,8 +37,18 @@ const VideoDetailPage = () => {
   });
 
   // Fetch transcript data for enhancement
-  const { data: transcriptData } = useQuery<{ format: string; data: { transcript: string } }>({
-    queryKey: [`/api/videos/${videoId}/transcript`],
+  const { data: transcriptData, isLoading: isLoadingTranscript, refetch: refetchTranscript } = useQuery<{ format: string; data: { transcript: string } }>({
+    queryKey: [`/api/videos/${videoId}/transcript`, refreshTranscript],
+    queryFn: async () => {
+      const url = `/api/videos/${videoId}/transcript${refreshTranscript ? '?refresh=true' : ''}`;
+      const response = await fetch(url, {
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch transcript');
+      }
+      return response.json();
+    },
     enabled: !!videoId,
   });
 
@@ -392,6 +403,25 @@ const VideoDetailPage = () => {
     navigate("/");
   };
 
+  const handleRefreshTranscript = async () => {
+    setRefreshTranscript(true);
+    try {
+      await refetchTranscript();
+      toast({
+        title: "Transcript Refreshed",
+        description: "Fresh transcript fetched from YouTube",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh Failed",
+        description: "Could not fetch fresh transcript",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshTranscript(false);
+    }
+  };
+
   // Generate LinkedIn post from report content
   const generateLinkedInPostFromReport = (report: any): string => {
     const title = report.title;
@@ -494,6 +524,32 @@ What are your thoughts on this? Share your experience in the comments! 👇
         return (
           <div className="overflow-y-auto h-full pb-16">
             <div className="max-w-6xl mx-auto p-4">
+              {/* Transcript Header with Refresh */}
+              <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Video Transcript</h3>
+                    <p className="text-sm text-gray-500">
+                      {transcriptData?.format === 'text-stored' 
+                        ? 'Using cached transcript (loads instantly)' 
+                        : 'Fresh transcript from YouTube'
+                      }
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleRefreshTranscript}
+                    disabled={isLoadingTranscript || refreshTranscript}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <span className="material-icons text-sm mr-2">
+                      {isLoadingTranscript || refreshTranscript ? "hourglass_empty" : "refresh"}
+                    </span>
+                    {isLoadingTranscript || refreshTranscript ? "Refreshing..." : "Refresh"}
+                  </Button>
+                </div>
+              </div>
+              
               <TranscriptEnhancement
                 originalTranscript={originalTranscript}
                 additionalTextCollection={additionalTextCollection}

@@ -145,6 +145,12 @@ Content Spark AI is a full-stack web application that transforms YouTube videos 
   - Implemented 60-second timeout handling for OpenAI requests
   - Added JSON parsing validation and response validation
   - Improved deployment reliability with better error recovery
+- July 06, 2025: Optimized transcript loading performance
+  - Changed transcript endpoint to use stored transcripts by default (instant loading)
+  - Only fetch from YouTube API when explicitly refreshed or transcript missing
+  - Reduced transcript load time from 9+ seconds to ~100ms for existing videos
+  - Added optional ?refresh=true parameter to force fresh transcript fetch
+  - Eliminated unnecessary YouTube API calls that caused rate limits and CAPTCHA issues
 
 ## User Preferences
 

@@ -382,11 +382,29 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res, next) => {
       return next(error);
     }
     
-    console.log(`Fetching fresh transcript for video: ${video.youtubeId}`);
+    // Check if refresh is explicitly requested
+    const refresh = req.query.refresh === 'true';
+    
+    // If we have stored transcript and refresh not requested, use stored version immediately
+    if (video.transcript && !refresh) {
+      console.log(`Using stored transcript for video: ${video.youtubeId} (${video.transcript.length} chars)`);
+      return res.json({
+        format: 'text-stored',
+        data: { transcript: video.transcript }
+      });
+    }
+    
+    // Only fetch fresh transcript if explicitly requested or transcript missing
+    console.log(`Fetching fresh transcript for video: ${video.youtubeId}${refresh ? ' (refresh requested)' : ' (no stored transcript)'}`);
     
     if (format === 'timestamped') {
       try {
         const timestampedTranscript = await youtube.getVideoTranscriptWithTimestamps(video.youtubeId);
+        // Update stored transcript if we got a fresh one
+        if (timestampedTranscript && Array.isArray(timestampedTranscript)) {
+          const textTranscript = timestampedTranscript.map(item => item.text).join(' ');
+          await storage.updateVideo(video.id, { transcript: textTranscript });
+        }
         return res.json({
           format: 'timestamped',
           data: { transcript: timestampedTranscript }
@@ -408,8 +426,12 @@ router.get('/:id/transcript', isAuthenticated, async (req: any, res, next) => {
     } else {
       try {
         const fullTranscriptText = await youtube.getVideoTranscriptWithFallbacks(video.youtubeId);
+        // Update stored transcript if we got a fresh one
+        if (fullTranscriptText) {
+          await storage.updateVideo(video.id, { transcript: fullTranscriptText });
+        }
         return res.json({
-          format: 'text',
+          format: 'text-fresh',
           data: { transcript: fullTranscriptText }
         });
       } catch (error) {
