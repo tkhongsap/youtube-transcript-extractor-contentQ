@@ -353,6 +353,28 @@ const VideoDetailPage = () => {
     },
   });
 
+  // Delete report mutation
+  const deleteReportMutation = useMutation({
+    mutationFn: async (reportId: number) => {
+      return apiRequest('DELETE', `/api/reports/${reportId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Report Deleted",
+        description: "The report has been successfully deleted",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/videos/${videoId}/reports`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Delete Failed",
+        description: error?.response?.data?.message || "Failed to delete report",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Query for additional text collection
   const { data: additionalTextResponse } = useQuery<{success: boolean; data: any}>({
     queryKey: [`/api/videos/${videoId}/additional-text`],
@@ -468,7 +490,7 @@ const VideoDetailPage = () => {
         );
       case "reports":
         return (
-          <div className="overflow-y-auto h-full max-h-screen pb-16">
+          <div className="overflow-y-auto pb-16">
             <div className="max-w-6xl mx-auto p-4 space-y-6">
               {/* Show generated reports if they exist */}
               {reports.length > 0 && (
@@ -488,13 +510,26 @@ const VideoDetailPage = () => {
                           {report.content}
                         </div>
                       </div>
-                      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end">
+                      <div className="mt-4 pt-3 border-t border-gray-100 flex justify-end space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigator.clipboard.writeText(report.content)}
                         >
                           Copy Content
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete "${report.title}"?`)) {
+                              deleteReportMutation.mutate(report.id);
+                            }
+                          }}
+                          disabled={deleteReportMutation.isPending}
+                          className="text-red-600 hover:text-red-700 hover:border-red-300"
+                        >
+                          {deleteReportMutation.isPending ? "Deleting..." : "Delete"}
                         </Button>
                       </div>
                     </div>
