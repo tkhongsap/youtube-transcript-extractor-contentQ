@@ -808,7 +808,7 @@ What are your thoughts on this? Share your experience in the comments! 👇
 
         {/* Tabs Navigation */}
         <div className="bg-white border-b border-gray-200 flex-shrink-0">
-          <div className="max-w-6xl mx-auto overflow-x-auto">
+          <div className="max-w-6xl mx-auto overflow-x-auto scrollbar-hide">
             <nav className="flex -mb-px whitespace-nowrap">
               <button 
                 className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm ${
