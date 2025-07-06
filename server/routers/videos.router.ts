@@ -59,6 +59,8 @@ async function validateVideoForEnhancedGeneration(
   // Get appropriate transcript based on configuration
   const { transcript, isEnhanced } = await getTranscriptForAI(video.id, config.transcriptPreference);
   
+  console.log(`[Enhanced Generation] Video ${video.id}: isEnhanced=${isEnhanced}, transcript length=${transcript?.length || 0}, original length=${originalTranscript?.length || 0}`);
+  
   const finalTranscript = transcript || originalTranscript;
   
   // Ensure we have some transcript available

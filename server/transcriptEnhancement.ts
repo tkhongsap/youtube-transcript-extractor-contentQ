@@ -32,25 +32,31 @@ export async function getEnhancedTranscript(
 
   // Get video and additional text entries
   const video = await storage.getVideo(videoId);
-  if (!video || !video.transcript) {
+  if (!video) {
     return null;
   }
 
   const additionalTextEntries = await storage.getAdditionalTextByVideoId(videoId);
+  const originalTranscript = video.transcript || '';
   
-  // If no additional text, return original transcript
+  // If no additional text and no original transcript, return null
+  if (additionalTextEntries.length === 0 && !originalTranscript) {
+    return null;
+  }
+  
+  // If no additional text but has original transcript, return original
   if (additionalTextEntries.length === 0) {
     return {
-      originalTranscript: video.transcript,
-      enhancedTranscript: video.transcript,
+      originalTranscript,
+      enhancedTranscript: originalTranscript,
       additionalTextEntries: [],
       enhancementCount: 0,
       hasEnhancements: false,
     };
   }
 
-  // Create enhanced transcript
-  let enhancedTranscript = video.transcript;
+  // Create enhanced transcript (even if original is empty)
+  let enhancedTranscript = originalTranscript;
 
   if (separateAdditionalText) {
     // Add additional text as separate sections
@@ -114,7 +120,7 @@ export async function getEnhancedTranscript(
   }
 
   return {
-    originalTranscript: video.transcript,
+    originalTranscript,
     enhancedTranscript,
     additionalTextEntries,
     enhancementCount: additionalTextEntries.length,
@@ -155,9 +161,11 @@ export async function getTranscriptForAI(
   userPreference?: 'original' | 'enhanced' | 'auto'
 ): Promise<{ transcript: string; isEnhanced: boolean }> {
   const useEnhanced = await shouldUseEnhancedTranscript(videoId, userPreference);
+  console.log(`[getTranscriptForAI] Video ${videoId}: useEnhanced=${useEnhanced}, preference=${userPreference}`);
   
   if (useEnhanced) {
     const enhancedResult = await getEnhancedTranscript(videoId);
+    console.log(`[getTranscriptForAI] Enhanced result: ${enhancedResult ? `has ${enhancedResult.enhancementCount} enhancements, transcript length=${enhancedResult.enhancedTranscript.length}` : 'null'}`);
     if (enhancedResult && enhancedResult.hasEnhancements) {
       return {
         transcript: enhancedResult.enhancedTranscript,
@@ -168,6 +176,7 @@ export async function getTranscriptForAI(
   
   // Fallback to original transcript
   const video = await storage.getVideo(videoId);
+  console.log(`[getTranscriptForAI] Falling back to original transcript, length=${video?.transcript?.length || 0}`);
   return {
     transcript: video?.transcript || '',
     isEnhanced: false,
