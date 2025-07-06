@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Content Spark AI** - Full-stack video content processing and educational content generation platform.
+**Content Spark** - Full-stack video content processing and educational content generation platform.
 
 **Technology Stack:**
 - Frontend: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui

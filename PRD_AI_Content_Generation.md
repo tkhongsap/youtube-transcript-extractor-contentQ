@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-This PRD outlines the implementation of AI-powered content generation tabs for Content Spark AI. The feature enables users to generate summaries, reports, flashcards, and ideas from video transcripts through explicit user actions, optimizing computing costs while providing persistent, high-quality content.
+This PRD outlines the implementation of AI-powered content generation tabs for Content Spark. The feature enables users to generate summaries, reports, flashcards, and ideas from video transcripts through explicit user actions, optimizing computing costs while providing persistent, high-quality content.
 
 ## 2. Problem Statement
 

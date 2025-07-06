@@ -1,10 +1,10 @@
-# Content Spark AI
+# Content Spark
 
 Transform YouTube videos into valuable educational content with AI-powered analysis and generation.
 
 ## Overview
 
-Content Spark AI is a full-stack platform that processes YouTube video transcripts and generates various types of educational content using AI. Users can enhance transcripts with additional context, corrections, and insights to improve AI output quality.
+Content Spark is a full-stack platform that processes YouTube video transcripts and generates various types of educational content using AI. Users can enhance transcripts with additional context, corrections, and insights to improve AI output quality.
 
 ### Key Features
 

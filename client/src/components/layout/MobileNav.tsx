@@ -9,7 +9,7 @@ const MobileNav = ({ onOpenMenu }: MobileNavProps) => {
         <div className="flex items-center justify-center h-8 w-8 rounded-md bg-primary text-white mr-2">
           <span className="material-icons text-lg">auto_awesome</span>
         </div>
-        <h1 className="text-lg font-semibold text-gray-900">Content Spark AI</h1>
+        <h1 className="text-lg font-semibold text-gray-900">Content Spark</h1>
       </div>
       <button 
         onClick={onOpenMenu}

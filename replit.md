@@ -1,8 +1,8 @@
-# Content Spark AI - Video Content Processing Platform
+# Content Spark - Video Content Processing Platform
 
 ## Overview
 
-Content Spark AI is a full-stack web application that transforms YouTube videos into valuable content assets using AI-powered transcription, summarization, and content generation. The platform enables users to extract transcripts, generate summaries, create reports, build flashcards, and mine content ideas from video content.
+Content Spark is a full-stack web application that transforms YouTube videos into valuable content assets using AI-powered transcription, summarization, and content generation. The platform enables users to extract transcripts, generate summaries, create reports, build flashcards, and mine content ideas from video content.
 
 ## System Architecture
 
@@ -151,6 +151,10 @@ Content Spark AI is a full-stack web application that transforms YouTube videos 
   - Reduced transcript load time from 9+ seconds to ~100ms for existing videos
   - Added optional ?refresh=true parameter to force fresh transcript fetch
   - Eliminated unnecessary YouTube API calls that caused rate limits and CAPTCHA issues
+- July 06, 2025: Rebranded from "Content Spark AI" to "Content Spark"
+  - Updated all instances across codebase, documentation, and UI components
+  - Modernized landing page with artistic design, gradients, and improved copy
+  - Enhanced visual identity with punchy tagline "Turn Any Video Into Content Gold"
 
 ## User Preferences
 
